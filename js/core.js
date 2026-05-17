@@ -897,6 +897,9 @@ if (customIntros && customIntros.length > 0) {
             renderMessages();
 
             function syncAllToggles() {
+            if (typeof window.groupChatSettings === 'undefined') {
+                window.groupChatSettings = { enabled: false, showName: false };
+            }
                 // ---------- 基于 settings 的开关 ----------
                 const toggleMap = [
                     { selector: '#reply-toggle', prop: 'replyEnabled', invert: false },
@@ -977,6 +980,42 @@ if (customIntros && customIntros.length > 0) {
                         if (checkbox && typeof window.S !== 'undefined') checkbox.checked = window.S.enabled;
                     }
                 });
+                
+                // ---------- 补充分割线：额外特殊开关 ----------
+
+                // 1. 正在输入指示器的“显示头像”开关（存储在 localStorage）
+                const tiAvatarRow = document.getElementById('ti-avatar-toggle');
+                if (tiAvatarRow) {
+                    const tiShowAvatar = localStorage.getItem('tiSettings_showAvatar') !== 'false';
+                    tiAvatarRow.classList.toggle('active', tiShowAvatar);
+                    const tiAvatarPill = tiAvatarRow.querySelector('#ti-avatar-pill');
+                    if (tiAvatarPill) tiAvatarPill.classList.toggle('active', tiShowAvatar);
+                }
+                
+                // 2. 确保群聊模式开关（依赖 groupChatSettings，可能加载较晚）
+                if (typeof window.groupChatSettings !== 'undefined' && window.groupChatSettings) {
+                    const groupModeRow = document.querySelector('#group-mode-toggle');
+                    if (groupModeRow) groupModeRow.classList.toggle('active', window.groupChatSettings.enabled);
+                    const groupShowNameRow = document.querySelector('#group-show-name-toggle');
+                    if (groupShowNameRow) groupShowNameRow.classList.toggle('active', window.groupChatSettings.showName);
+                }
+                
+                // 3. 延迟二次同步视频通话开关（等待 call.js 完全加载）
+                setTimeout(() => {
+                    const callToggle = document.getElementById('call-enabled-toggle');
+                    if (callToggle && typeof window.S !== 'undefined' && window.S.enabled !== undefined) {
+                        callToggle.checked = window.S.enabled;
+                        const callBtn = document.getElementById('call-toolbar-btn');
+                        if (callBtn) callBtn.style.display = window.S.enabled ? '' : 'none';
+                    }
+                    // 再次检查群聊模式，防止第一次 groupChatSettings 未定义
+                    if (typeof window.groupChatSettings !== 'undefined' && window.groupChatSettings) {
+                        const groupModeRow = document.querySelector('#group-mode-toggle');
+                        if (groupModeRow) groupModeRow.classList.toggle('active', window.groupChatSettings.enabled);
+                        const groupShowNameRow = document.querySelector('#group-show-name-toggle');
+                        if (groupShowNameRow) groupShowNameRow.classList.toggle('active', window.groupChatSettings.showName);
+                    }
+                }, 300);
             }            
         };
 

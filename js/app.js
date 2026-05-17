@@ -165,6 +165,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof syncAllToggles === 'function') syncAllToggles();
     }, 1500);    
     
+    setTimeout(() => {
+        if (typeof syncAllToggles === 'function') syncAllToggles();
+    }, 2500);    
+    
 });
 const stickerInput = document.getElementById('sticker-file-input');
             if (stickerInput) {
