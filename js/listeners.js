@@ -1327,6 +1327,24 @@ autoSendToggle.addEventListener('click', () => {
     showNotification(`主动发送已${settings.autoSendEnabled ? '开启' : '关闭'}`, 'success');
 });
 
+// 主动留言开关
+const boardPartnerWriteToggle = document.getElementById('board-partner-write-toggle');
+if (boardPartnerWriteToggle) {
+    // 初始化 UI 状态
+    boardPartnerWriteToggle.classList.toggle('active', !!settings.boardPartnerWriteEnabled);
+    boardPartnerWriteToggle.addEventListener('click', () => {
+        settings.boardPartnerWriteEnabled = !settings.boardPartnerWriteEnabled;
+        throttledSaveData();
+        boardPartnerWriteToggle.classList.toggle('active', settings.boardPartnerWriteEnabled);
+        showNotification(`主动留言已${settings.boardPartnerWriteEnabled ? '开启' : '关闭'}`, 'success');
+        
+        // 通知留言板模块重置定时器
+        if (typeof window._resetBoardAutoSend === 'function') {
+            window._resetBoardAutoSend();
+        }
+    });
+}
+
 autoSendSlider.value = settings.autoSendInterval || 5;
 autoSendValue.textContent = `${settings.autoSendInterval || 5}分钟`;
 

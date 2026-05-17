@@ -188,6 +188,7 @@ function loadMoreHistory() {
                 bottomCollapseMode: false,
                 emojiMixEnabled: true,
                 phraseCombiningEnabled: false,
+                boardPartnerWriteEnabled: false,   // 主动留言开关，默认关闭
                 enterToSend: true,          // 默认回车发送
                 keepKeyboardAfterSend: false // 默认发送后不保留键盘
             };
