@@ -3243,6 +3243,29 @@
             margin: 12px 0;
             user-select: none;
         }
+        
+        /* 留言板弹窗固定尺寸，避免切换选项卡时弹窗大小变化 */
+        #envelope-board-modal .modal-content {
+            width: 92vw;
+            max-width: 480px;
+            height: 85vh;           /* 固定高度，不再随内容改变 */
+            max-height: 85vh;
+            padding: 0 !important;
+        }
+        
+        #envelope-board-modal .env-wrapper {
+            height: 100%;
+            max-height: none;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #envelope-board-modal .env-body {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;          /* 确保滚动区域正常工作 */
+        }   
+     
         /* 留言板导出格式弹窗专用遮罩 */
         .modal-overlay {
             position: fixed !important;
