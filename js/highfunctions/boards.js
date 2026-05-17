@@ -18,6 +18,8 @@ let boardData = {
   }
 };
 
+let boardAutoSendTimer = null;
+
 // --- 工具函数 ---
 function genId() { return 'v2_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6); }
 function formatTime(ts) { return new Date(ts).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
@@ -60,6 +62,8 @@ async function loadData() {
     } catch(e) {
         console.warn('BoardV2 load error', e);
     }
+    // 主动留言调度
+    scheduleBoardAutoSend();
 }
 
 // 老版迁移
@@ -181,6 +185,76 @@ function checkStatus() {
             }
         }
     }
+}
+
+// 停止主动留言定时器
+function stopBoardAutoSend() {
+    if (boardAutoSendTimer) {
+        clearTimeout(boardAutoSendTimer);
+        boardAutoSendTimer = null;
+    }
+}
+
+// 执行一次主动留言（概率触发）
+async function tryBoardPartnerAutoWrite() {
+    // 检查开关
+    if (!settings.boardPartnerWriteEnabled) return;
+    // 10% 概率
+    if (Math.random() >= 0.1) return;
+    
+    // 确保字卡池同步
+    syncReplyPool();
+    if (!boardData.boardReplyPool || boardData.boardReplyPool.length === 0) {
+        console.warn('[主动留言] 字卡池为空，无法生成留言');
+        return;
+    }
+    
+    // 生成回复内容 (复用 generatePartnerReply)
+    const replyObjArray = generatePartnerReply();
+    if (!replyObjArray || replyObjArray.length === 0) return;
+    
+    const newThread = {
+        id: genId(),
+        starter: 'partner',
+        createdAt: Date.now(),
+        replies: replyObjArray,
+        unread: true
+    };
+    
+    boardData.partnerThreads.push(newThread);
+    await saveData();
+    
+    // 通知用户
+    const partnerName = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
+    if (typeof showNotification === 'function') {
+        showNotification(`${partnerName} 在留言板写下了新留言 ✨`, 'info', 4500);
+    }
+    if (typeof window._sendPartnerNotification === 'function') {
+        window._sendPartnerNotification('留言板新动态', `${partnerName} 给你留了新言`);
+    }
+    if (typeof playSound === 'function') playSound('message');
+    
+    // 如果当前留言板模态框打开且处于对方页签，刷新列表
+    const modal = document.getElementById('envelope-board-modal');
+    if (modal && modal.style.display !== 'none' && currentView === 'partner') {
+        switchTab('partner');
+    }
+}
+
+// 调度下一次主动留言检查（递归定时）
+function scheduleBoardAutoSend() {
+    stopBoardAutoSend();
+    if (!settings.boardPartnerWriteEnabled) return;
+    
+    // 随机 4~6 小时（毫秒）
+    const minDelay = 4 * 60 * 60 * 1000;
+    const maxDelay = 6 * 60 * 60 * 1000;
+    const delay = minDelay + Math.random() * (maxDelay - minDelay);
+    
+    boardAutoSendTimer = setTimeout(async () => {
+        await tryBoardPartnerAutoWrite();
+        scheduleBoardAutoSend();  // 继续下一次调度
+    }, delay);
 }
 
 function generatePartnerReply() {
@@ -768,7 +842,15 @@ window._bv2_openCompose = openCompose;
 window._bv2_submitPost = submitPost;
 window._bv2_handleImgSelect = handleImgSelect;
 window._bv2_deleteThread = deleteThread;
+window._resetBoardAutoSend = scheduleBoardAutoSend;
 
 loadData().then(() => { setInterval(checkStatus, 60000); checkStatus(); });
+
+// 页面启动时自动初始化主动留言定时器（无需打开留言板）
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { scheduleBoardAutoSend(); });
+} else {
+    scheduleBoardAutoSend();
+}
 
 })();
