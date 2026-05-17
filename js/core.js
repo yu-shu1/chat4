@@ -889,6 +889,58 @@ if (customIntros && customIntros.length > 0) {
             if (_immToggle) _immToggle.classList.toggle('active', document.body.classList.contains('immersive-mode'));
 
             renderMessages();
+            
+            // 在 updateUI 函数末尾添加
+            function syncAllToggles() {
+                // 定义开关映射：选择器 -> settings属性名（或计算表达式）
+                const toggleMap = [
+                    { selector: '#reply-toggle', prop: 'replyEnabled', invert: false },
+                    { selector: '#sound-toggle', prop: 'soundEnabled', invert: false },
+                    { selector: '#read-receipts-toggle', prop: 'readReceiptsEnabled', invert: false },
+                    { selector: '#typing-indicator-toggle', prop: 'typingIndicatorEnabled', invert: false },
+                    { selector: '#read-no-reply-toggle', prop: 'allowReadNoReply', invert: false },
+                    { selector: '#emoji-mix-toggle', prop: 'emojiMixEnabled', invert: false, default: true },
+                    { selector: '#auto-send-toggle', prop: 'autoSendEnabled', invert: false },
+                    { selector: '#phrase-combining-toggle', prop: 'phraseCombiningEnabled', invert: false },
+                    { selector: '#enter-to-send-toggle', prop: 'enterToSend', invert: false, default: true },
+                    { selector: '#keep-keyboard-toggle', prop: 'keepKeyboardAfterSend', invert: false },
+                    { selector: '#immersive-toggle', prop: null, custom: () => document.body.classList.contains('immersive-mode') },
+                    // 分组相关开关（若存在）
+                    { selector: '#group-mode-toggle', prop: null, custom: () => groupChatSettings && groupChatSettings.enabled },
+                    { selector: '#group-show-name-toggle', prop: null, custom: () => groupChatSettings && groupChatSettings.showName },
+                ];
+            
+                toggleMap.forEach(item => {
+                    const el = document.querySelector(item.selector);
+                    if (!el) return;
+                    let isActive = false;
+                    if (item.custom) {
+                        isActive = item.custom();
+                    } else if (item.prop) {
+                        let val = settings[item.prop];
+                        if (val === undefined && item.default !== undefined) val = item.default;
+                        isActive = item.invert ? !val : !!val;
+                    }
+                    el.classList.toggle('active', isActive);
+                });
+            
+                // 特殊处理：在聊天设置模态框内的开关同步（如果模态框已存在）
+                const csPanels = document.querySelectorAll('.cs-panel .setting-pill-row');
+                csPanels.forEach(row => {
+                    const id = row.id;
+                    if (id === 'reply-toggle') row.classList.toggle('active', !!settings.replyEnabled);
+                    else if (id === 'sound-toggle') row.classList.toggle('active', !!settings.soundEnabled);
+                    else if (id === 'read-receipts-toggle') row.classList.toggle('active', !!settings.readReceiptsEnabled);
+                    else if (id === 'typing-indicator-toggle') row.classList.toggle('active', !!settings.typingIndicatorEnabled);
+                    else if (id === 'read-no-reply-toggle') row.classList.toggle('active', !!settings.allowReadNoReply);
+                    else if (id === 'emoji-mix-toggle') row.classList.toggle('active', settings.emojiMixEnabled !== false);
+                    else if (id === 'phrase-combining-toggle') row.classList.toggle('active', !!settings.phraseCombiningEnabled);
+                    else if (id === 'enter-to-send-toggle') row.classList.toggle('active', settings.enterToSend !== false);
+                    else if (id === 'keep-keyboard-toggle') row.classList.toggle('active', !!settings.keepKeyboardAfterSend);
+                });
+            }
+            
+            syncAllToggles();            
         };
 
         const updateAvatar = (element, src) => {
