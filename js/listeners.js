@@ -434,10 +434,12 @@ window.setReadReceiptStyle = function(style) {
 const enterToSendToggle = document.getElementById('enter-to-send-toggle');
 const keepKeyboardToggle = document.getElementById('keep-keyboard-toggle');
 if (enterToSendToggle) {
-    enterToSendToggle.classList.toggle('active', settings.enterToSend !== false);
+    // 删除下面这行，不要在初始化时设置 class
+    // enterToSendToggle.classList.toggle('active', settings.enterToSend !== false);
 }
 if (keepKeyboardToggle) {
-    keepKeyboardToggle.classList.toggle('active', !!settings.keepKeyboardAfterSend);
+    // 删除下面这行
+    // keepKeyboardToggle.classList.toggle('active', !!settings.keepKeyboardAfterSend);
 }
 
 // 回车发送开关
@@ -445,7 +447,8 @@ if (enterToSendToggle) {
     enterToSendToggle.addEventListener('click', () => {
         settings.enterToSend = !settings.enterToSend;
         throttledSaveData();
-        enterToSendToggle.classList.toggle('active', settings.enterToSend);
+        // 删除下面这行，由 syncAllToggles 负责
+        // enterToSendToggle.classList.toggle('active', settings.enterToSend);
         showNotification(`回车${settings.enterToSend ? '发送' : '换行'}模式`, 'success');
     });
 }
@@ -455,11 +458,11 @@ if (keepKeyboardToggle) {
     keepKeyboardToggle.addEventListener('click', () => {
         settings.keepKeyboardAfterSend = !settings.keepKeyboardAfterSend;
         throttledSaveData();
-        keepKeyboardToggle.classList.toggle('active', settings.keepKeyboardAfterSend);
+        // 删除下面这行
+        // keepKeyboardToggle.classList.toggle('active', settings.keepKeyboardAfterSend);
         showNotification(`发送后${settings.keepKeyboardAfterSend ? '保留' : '收起'}键盘`, 'success');
     });
 }
-
 
 const _chatSettingsEl = document.getElementById('chat-settings');
 if (_chatSettingsEl) _chatSettingsEl.addEventListener('click', () => {
@@ -1101,14 +1104,15 @@ if (_chatSettingsEl) _chatSettingsEl.addEventListener('click', () => {
                     '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情混入消息' }
             };
 
-            // 字卡组合开关
             const phraseCombiningToggle = document.getElementById('phrase-combining-toggle');
             if (phraseCombiningToggle) {
-                phraseCombiningToggle.classList.toggle('active', !!settings.phraseCombiningEnabled);
+                // 删除下面这行
+                // phraseCombiningToggle.classList.toggle('active', !!settings.phraseCombiningEnabled);
                 phraseCombiningToggle.addEventListener('click', () => {
                     settings.phraseCombiningEnabled = !settings.phraseCombiningEnabled;
                     throttledSaveData();
-                    phraseCombiningToggle.classList.toggle('active', settings.phraseCombiningEnabled);
+                    // 删除下面这行
+                    // phraseCombiningToggle.classList.toggle('active', settings.phraseCombiningEnabled);
                     showNotification(`字卡组合已${settings.phraseCombiningEnabled ? '开启' : '关闭'}`, 'success');
                 });
             }
@@ -1330,18 +1334,15 @@ autoSendToggle.addEventListener('click', () => {
 // 主动留言开关
 const boardPartnerWriteToggle = document.getElementById('board-partner-write-toggle');
 if (boardPartnerWriteToggle) {
-    // 初始化 UI 状态
-    boardPartnerWriteToggle.classList.toggle('active', !!settings.boardPartnerWriteEnabled);
+    // 删除或注释掉下面这行（或确保它不会错误地覆盖 active 状态）
+    // boardPartnerWriteToggle.classList.toggle('active', !!settings.boardPartnerWriteEnabled);
+    // 只保留事件监听，UI 同步交给 syncAllToggles
     boardPartnerWriteToggle.addEventListener('click', () => {
         settings.boardPartnerWriteEnabled = !settings.boardPartnerWriteEnabled;
         throttledSaveData();
-        boardPartnerWriteToggle.classList.toggle('active', settings.boardPartnerWriteEnabled);
+        // boardPartnerWriteToggle.classList.toggle('active', settings.boardPartnerWriteEnabled); // 这行也删除
         showNotification(`主动留言已${settings.boardPartnerWriteEnabled ? '开启' : '关闭'}`, 'success');
-        
-        // 通知留言板模块重置定时器
-        if (typeof window._resetBoardAutoSend === 'function') {
-            window._resetBoardAutoSend();
-        }
+        if (typeof window._resetBoardAutoSend === 'function') window._resetBoardAutoSend();
     });
 }
 
