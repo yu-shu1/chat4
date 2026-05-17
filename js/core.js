@@ -430,11 +430,17 @@ const loadData = async () => {
         setTimeout(() => {
             applyAllAvatarFrames();
             scheduleAutoSend();
-            updateUI();
+            updateUI();                // 内部已有 syncAllToggles，但为了保险再加一次
+            syncAllToggles();         // ← 添加这一行
             if (settings.customBubbleCss) {
                 try { applyCustomBubbleCss(settings.customBubbleCss); } catch(e) {}
             }
-        }, 100);
+        }, 100);        
+        
+        // 在 loadData 函数的最后，setTimeout 之后
+        setTimeout(() => {
+            syncAllToggles();
+        }, 50);
 
     } catch (e) {
         console.error("LoadData 内部致命错误:", e);
@@ -889,10 +895,9 @@ if (customIntros && customIntros.length > 0) {
             if (_immToggle) _immToggle.classList.toggle('active', document.body.classList.contains('immersive-mode'));
 
             renderMessages();
-            
-            // 在 updateUI 函数末尾添加
+
             function syncAllToggles() {
-                // 定义开关映射：选择器 -> settings属性名（或计算表达式）
+                // ---------- 基于 settings 的开关 ----------
                 const toggleMap = [
                     { selector: '#reply-toggle', prop: 'replyEnabled', invert: false },
                     { selector: '#sound-toggle', prop: 'soundEnabled', invert: false },
@@ -904,10 +909,11 @@ if (customIntros && customIntros.length > 0) {
                     { selector: '#phrase-combining-toggle', prop: 'phraseCombiningEnabled', invert: false },
                     { selector: '#enter-to-send-toggle', prop: 'enterToSend', invert: false, default: true },
                     { selector: '#keep-keyboard-toggle', prop: 'keepKeyboardAfterSend', invert: false },
+                    { selector: '#bottom-collapse-cs-toggle', prop: 'bottomCollapseMode', invert: false },
                     { selector: '#immersive-toggle', prop: null, custom: () => document.body.classList.contains('immersive-mode') },
-                    // 分组相关开关（若存在）
-                    { selector: '#group-mode-toggle', prop: null, custom: () => groupChatSettings && groupChatSettings.enabled },
-                    { selector: '#group-show-name-toggle', prop: null, custom: () => groupChatSettings && groupChatSettings.showName },
+                    // 群聊相关（需全局 groupChatSettings）
+                    { selector: '#group-mode-toggle', prop: null, custom: () => window.groupChatSettings && window.groupChatSettings.enabled },
+                    { selector: '#group-show-name-toggle', prop: null, custom: () => window.groupChatSettings && window.groupChatSettings.showName },
                 ];
             
                 toggleMap.forEach(item => {
@@ -924,7 +930,34 @@ if (customIntros && customIntros.length > 0) {
                     el.classList.toggle('active', isActive);
                 });
             
-                // 特殊处理：在聊天设置模态框内的开关同步（如果模态框已存在）
+                // ---------- 不在 settings 中的特殊开关 ----------
+                // 1. 主动留言开关
+                const boardToggle = document.getElementById('board-partner-write-toggle');
+                if (boardToggle) boardToggle.classList.toggle('active', !!settings.boardPartnerWriteEnabled);
+            
+                // 2. 视频通话开关（call-enabled-toggle）
+                const callToggle = document.getElementById('call-enabled-toggle');
+                if (callToggle && typeof window.S !== 'undefined' && window.S.enabled !== undefined) {
+                    callToggle.checked = window.S.enabled;
+                    const callBtn = document.getElementById('call-toolbar-btn');
+                    if (callBtn) callBtn.style.display = window.S.enabled ? '' : 'none';
+                }
+            
+                // 3. 保活音频开关（keepalive-audio-toggle）
+                const keepaliveRow = document.getElementById('keepalive-audio-toggle');
+                if (keepaliveRow) {
+                    const isKeepaliveOn = localStorage.getItem('keepaliveAudioEnabled') === 'true';
+                    keepaliveRow.classList.toggle('active', isKeepaliveOn);
+                    const switchDiv = keepaliveRow.querySelector('.setting-pill-switch');
+                    if (switchDiv) switchDiv.classList.toggle('active', isKeepaliveOn);
+                }
+            
+                // 4. 顶部栏常驻清晰开关
+                const headerClear = localStorage.getItem('headerAlwaysClear') === 'true';
+                const headerToggleRow = document.getElementById('header-opacity-toggle');
+                if (headerToggleRow) headerToggleRow.classList.toggle('active', headerClear);
+            
+                // ---------- 聊天设置模态框内的所有开关（二次确保） ----------
                 const csPanels = document.querySelectorAll('.cs-panel .setting-pill-row');
                 csPanels.forEach(row => {
                     const id = row.id;
@@ -937,10 +970,14 @@ if (customIntros && customIntros.length > 0) {
                     else if (id === 'phrase-combining-toggle') row.classList.toggle('active', !!settings.phraseCombiningEnabled);
                     else if (id === 'enter-to-send-toggle') row.classList.toggle('active', settings.enterToSend !== false);
                     else if (id === 'keep-keyboard-toggle') row.classList.toggle('active', !!settings.keepKeyboardAfterSend);
+                    else if (id === 'auto-send-toggle') row.classList.toggle('active', !!settings.autoSendEnabled);
+                    else if (id === 'board-partner-write-toggle') row.classList.toggle('active', !!settings.boardPartnerWriteEnabled);
+                    else if (id === 'call-feature-toggle-row') {
+                        const checkbox = row.querySelector('#call-enabled-toggle');
+                        if (checkbox && typeof window.S !== 'undefined') checkbox.checked = window.S.enabled;
+                    }
                 });
-            }
-            
-            syncAllToggles();            
+            }            
         };
 
         const updateAvatar = (element, src) => {
