@@ -159,6 +159,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateLoader('加载遇到问题，已强制进入...', '100%');
         setTimeout(hideWelcomeScreen, 3500);
     }
+    
+    // 确保所有开关在页面完全加载后同步
+    setTimeout(() => {
+        if (typeof syncAllToggles === 'function') syncAllToggles();
+    }, 1500);    
+    
 });
 const stickerInput = document.getElementById('sticker-file-input');
             if (stickerInput) {
