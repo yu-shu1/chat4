@@ -1,7 +1,4 @@
-/**
- * board-v2.js - 双向线程留言板 (绝对隔离引擎版)
- * 修复：缺失元素判空、字卡库实时同步、防止初始化报错
- */
+/** * board-v2.js - 双向线程留言板 (绝对隔离引擎版) */
 (function() {
 'use strict';
 
@@ -12,9 +9,10 @@ let currentComposeMode = null;
 let currentComposeType = null;
 let selectedImage = null;
 
+
 // --- 完全隔离的底层数据与配置 ---
 let boardData = {
-  myThreads: [], partnerThreads: [], boardReplyPool: [], unreadPartnerCount: 0,
+  myThreads: [], partnerThreads: [], boardReplyPool: [],unreadPartnerCount: 0,
   settings: {
     autoPostEnabled: false, nextAutoPostTime: 0
   }
@@ -32,20 +30,21 @@ function getUniqueShuffled(arr, count) {
   return unique;
 }
 
-// 强制把最新的主回复库同步给留言板，解决删除不同步的问题
+// 强制把最新的主回复库同步给留言板
 function syncReplyPool() {
   if (typeof customReplies !== 'undefined') {
     boardData.boardReplyPool = [...customReplies];
-    saveData(); // 存进本地，防止刷新页面后又变回老数据
+    saveData();
   }
 }
+
 
 async function loadData() {
     try {
         const saved = await localforage.getItem(STORAGE_KEY);
         if (saved) boardData = { ...boardData, ...saved };
         
-        // 精准吞噬老版 board.js 的 outbox/inbox 数据
+        // 老版迁移
         if (boardData.myThreads.length === 0 && boardData.partnerThreads.length === 0) {
             const count = await migrateOldBoardData();
             if (count > 0 && typeof showNotification === 'function') {
@@ -53,7 +52,6 @@ async function loadData() {
             }
         }
 
-        // 保证回复池不为空（从 customReplies 同步）
         if (boardData.boardReplyPool.length === 0 && typeof customReplies !== 'undefined' && customReplies.length > 0) {
             boardData.boardReplyPool = JSON.parse(JSON.stringify(customReplies));
             await saveData();
@@ -64,7 +62,7 @@ async function loadData() {
     }
 }
 
-// 针对老版 board.js 的无损迁移
+// 老版迁移
 async function migrateOldBoardData() {
     try {
         const keys = await localforage.keys();
@@ -79,6 +77,7 @@ async function migrateOldBoardData() {
         if (outbox.length === 0) return 0;
 
         console.log(`[BoardV2] 扫描到老版留言：${outbox.length} 条发件，${inbox.length} 条回复，开始拼接...`);
+
         outbox.forEach(letter => {
             const newThread = {
                 id: letter.id || genId(),
@@ -93,6 +92,7 @@ async function migrateOldBoardData() {
                     timestamp: letter.sentTime || Date.now()
                 }]
             };
+
             const matchedReply = inbox.find(r => r.refId === letter.id);
             if (matchedReply) {
                 newThread.replies.push({
@@ -103,12 +103,16 @@ async function migrateOldBoardData() {
                     sticker: null,
                     timestamp: matchedReply.receivedTime || Date.now()
                 });
-                if (matchedReply.isNew) newThread.unread = true;
+                if (matchedReply.isNew) {
+                    newThread.unread = true;
+                }
             } else if (letter.status === 'pending' && letter.replyTime) {
                 newThread.expectedReplyTime = letter.replyTime;
             }
+
             boardData.myThreads.push(newThread);
         });
+
         await saveData();
         return outbox.length;
     } catch (e) {
@@ -119,63 +123,69 @@ async function migrateOldBoardData() {
 
 async function saveData() { try { await localforage.setItem(STORAGE_KEY, boardData); window.boardDataV2 = boardData; } catch(e) { console.warn('BoardV2 save error', e); } }
 
-// 时间锚点引擎
+// 检查回复和主动留言
 function checkStatus() {
-  const now = Date.now();
-  const processReplies = (threads) => {
-    threads.forEach(thread => {
-      if (!thread.expectedReplyTime && thread.replies.length > 0) {
-        const last = thread.replies[thread.replies.length - 1];
-        if (last.sender === 'me') {
-          thread.expectedReplyTime = last.timestamp + ((6 + Math.random() * 6) * 3600 * 1000);
-          saveData();
-        }
-      }
-      if (thread.expectedReplyTime && now >= thread.expectedReplyTime) {
-          const reply = generatePartnerReply();
-          if (reply) {
-            thread.replies.push(...reply);
-            delete thread.expectedReplyTime;
-            thread.unread = true;
-            saveData();
-            if (currentThreadId === thread.id) setTimeout(() => openDetail(thread.id, currentView), 1000);
-          }
-        }
-    });
-  };
-  processReplies(boardData.myThreads);
-  processReplies(boardData.partnerThreads);
+    const now = Date.now();
+    const processReplies = (threads) => {
+        threads.forEach(thread => {
+            if (!thread.expectedReplyTime && thread.replies.length > 0) {
+                const last = thread.replies[thread.replies.length - 1];
+                if (last.sender === 'me') {
+                    thread.expectedReplyTime = last.timestamp + ((6 + Math.random() * 6) * 3600 * 1000);
+                    saveData();
+                }
+            }
+            if (thread.expectedReplyTime && now >= thread.expectedReplyTime) {
+                const reply = generatePartnerReply();
+                if (reply) {
+                    thread.replies.push(...reply);
+                    delete thread.expectedReplyTime;
+                    thread.unread = true;
+                    saveData();
+                    if (currentThreadId === thread.id) setTimeout(() => openDetail(thread.id, currentView), 1000);
+                }
+            }
+        });
+    };
+    processReplies(boardData.myThreads);
+    processReplies(boardData.partnerThreads);
 
-  // 主动留言逻辑
-  if (boardData.settings.autoPostEnabled && (typeof settings === 'undefined' || settings.boardPartnerWriteEnabled)) {
-    if (!boardData.settings.nextAutoPostTime || now >= boardData.settings.nextAutoPostTime) {
-      boardData.settings.nextAutoPostTime = now + (4 * 3600 * 1000);
-      saveData();
-      if (Math.random() < 0.2) {
-        const reply = generatePartnerReply();
-        if (reply) {
-          boardData.partnerThreads.push({ id: genId(), starter: 'partner', createdAt: now, replies: reply, unread: true });
-          if (typeof showNotification === 'function') {
-            const partnerName = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
-            showNotification(partnerName + '在留言板写了新内容', 'info', 2000);
-          }
-          if (typeof window._sendPartnerNotification === 'function') {
-            const partnerName = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
-            window._sendPartnerNotification('留言板新动态', partnerName + '给你留了言');
-          }
-          saveData();
-          if (currentView === 'partner') switchTab('partner');
+    // 主动留言（对方主动发）
+    if (typeof settings !== 'undefined' && settings.boardPartnerWriteEnabled) {
+        boardData.settings.autoPostEnabled = true;
+        if (!boardData.settings.nextAutoPostTime || now >= boardData.settings.nextAutoPostTime) {
+            boardData.settings.nextAutoPostTime = now + ((4 + Math.random() * 2) * 3600 * 1000);
+            saveData();
+            if (Math.random() < 0.2) {
+                const reply = generatePartnerReply();
+                if (reply) {
+                    boardData.partnerThreads.push({
+                        id: genId(),
+                        starter: 'partner',
+                        createdAt: now,
+                        replies: reply,
+                        unread: true
+                    });
+                    if (typeof showNotification === 'function') {
+                        const partnerName = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
+                        showNotification(partnerName + '在留言板写了新内容 ✦', 'info', 3000);
+                    }
+                    if (typeof window._sendPartnerNotification === 'function') {
+                        const partnerName = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
+                        window._sendPartnerNotification('留言板新动态', partnerName + '给你留了言');
+                    }
+                    if (typeof playSound === 'function') playSound('message');
+                    saveData();
+                    if (currentView === 'partner') switchTab('partner');
+                }
+            }
         }
-      }
     }
-  }
 }
 
 function generatePartnerReply() {
-    if (boardData.boardReplyPool.length === 0) {
-        if (typeof showNotification === 'function') {
-            showNotification('请先在自定义回复中添加字卡，留言板才能收到回复', 'warning', 4000);
-        }
+    if (boardData.boardReplyPool.length === 0 && typeof showNotification === 'function') {
+        showNotification('请先在自定义回复中添加字卡，留言板才能收到回复', 'warning', 4000);
         return null;
     }
     const pool = boardData.boardReplyPool;
@@ -224,71 +234,26 @@ function generatePartnerReply() {
     return [replyObj];
 }
 
-// 绑定所有静态事件（修复：所有元素判空）
+function initModals() {
+    bindStaticEvents();
+}
+
 function bindStaticEvents() {
-    // 列表关闭按钮
-    const closeListBtn = document.getElementById('board-list-close-btn');
-    if (closeListBtn) closeListBtn.onclick = () => hideModal(document.getElementById('envelope-board-modal'));
+    document.getElementById('board-list-close-btn').onclick = () => hideModal(document.getElementById('envelope-board-modal'));
+    document.getElementById('board-new-post-btn').onclick = () => window._bv2_openCompose('new', null, 'me');
 
-    // 导出、批量等按钮（原设计可能不存在，保险判空）
-    const exportBtn = document.getElementById('board-export-btn');
-    if (exportBtn) exportBtn.onclick = () => window._bv2_exportTxt(currentView);
-
-    const cancelSelect = document.getElementById('board-cancel-select-btn');
-    if (cancelSelect) cancelSelect.onclick = exitMultiSelectMode;
-    const selectAll = document.getElementById('board-select-all-btn');
-    if (selectAll) selectAll.onclick = () => {
-        const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
-        threads.forEach(t => selectedThreadIds.add(t.id));
-        switchTab(currentView);
-    };
-    const confirmSelect = document.getElementById('board-confirm-select-btn');
-    if (confirmSelect) confirmSelect.onclick = () => {
-        if (selectedThreadIds.size === 0) {
-            if(typeof showNotification === 'function') showNotification('请至少选择一条留言', 'warning');
-            return;
-        }
-        const formatModal = document.getElementById('board-format-modal');
-        if (formatModal && typeof showModal === 'function') showModal(formatModal);
-        else if (formatModal) formatModal.style.display = 'flex';
-    };
-    const finalTxt = document.getElementById('final-export-txt');
-    if (finalTxt) finalTxt.onclick = () => {
-        const formatModal = document.getElementById('board-format-modal');
-        if (formatModal) formatModal.style.display = 'none';
-        window._bv2_exportSelected('txt');
-    };
-    const finalImg = document.getElementById('final-export-img');
-    if (finalImg) finalImg.onclick = () => {
-        const formatModal = document.getElementById('board-format-modal');
-        if (formatModal) formatModal.style.display = 'none';
-        window._bv2_exportSelected('img');
-    };
-
-    // 新建留言按钮
-    const newPostBtn = document.getElementById('board-new-post-btn');
-    if (newPostBtn) newPostBtn.onclick = () => window._bv2_openCompose('new', null, 'me');
-
-    // 详情层按钮
-    const backBtn = document.getElementById('board-detail-back-btn');
-    if (backBtn) backBtn.onclick = () => {
+    document.getElementById('board-detail-back-btn').onclick = () => {
         hideModal(document.getElementById('board-detail-modal'));
         showModal(document.getElementById('envelope-board-modal'));
     };
-    const globalEditBtn = document.getElementById('board-global-edit-btn');
-    if (globalEditBtn) globalEditBtn.onclick = () => window._bv2_toggleGlobalEdit();
-    const deleteThreadBtn = document.getElementById('board-delete-thread-btn');
-    if (deleteThreadBtn) deleteThreadBtn.onclick = () => {
+    document.getElementById('board-global-edit-btn').onclick = () => window._bv2_toggleGlobalEdit();
+    document.getElementById('board-delete-thread-btn').onclick = () => {
         if (currentThreadId) window._bv2_deleteThread(currentThreadId, currentView);
     };
-    const editCancelBtn = document.getElementById('board-edit-cancel-btn');
-    if (editCancelBtn) editCancelBtn.onclick = () => window._bv2_cancelGlobalEdit();
-    const editSaveBtn = document.getElementById('board-edit-save-btn');
-    if (editSaveBtn) editSaveBtn.onclick = () => window._bv2_saveGlobalEdit();
+    document.getElementById('board-edit-cancel-btn').onclick = () => window._bv2_cancelGlobalEdit();
+    document.getElementById('board-edit-save-btn').onclick = () => window._bv2_saveGlobalEdit();
 
-    // 撰写层按钮
-    const composeClose = document.getElementById('board-compose-close-btn');
-    if (composeClose) composeClose.onclick = () => {
+    document.getElementById('board-compose-close-btn').onclick = () => {
         hideModal(document.getElementById('board-compose-modal'));
         if (!window._bv2_composeFromDetail) {
             showModal(document.getElementById('envelope-board-modal'));
@@ -296,8 +261,7 @@ function bindStaticEvents() {
             showModal(document.getElementById('board-detail-modal'));
         }
     };
-    const composeCancel = document.getElementById('board-compose-cancel-btn');
-    if (composeCancel) composeCancel.onclick = () => {
+    document.getElementById('board-compose-cancel-btn').onclick = () => {
         hideModal(document.getElementById('board-compose-modal'));
         if (!window._bv2_composeFromDetail) {
             showModal(document.getElementById('envelope-board-modal'));
@@ -305,23 +269,17 @@ function bindStaticEvents() {
             showModal(document.getElementById('board-detail-modal'));
         }
     };
-    const composeSend = document.getElementById('board-compose-send-btn');
-    if (composeSend) composeSend.onclick = () => window._bv2_submitPost();
-    const imgInput = document.getElementById('bv2-compose-img-input');
-    if (imgInput) imgInput.onchange = (e) => window._bv2_handleImgSelect(e);
+    document.getElementById('board-compose-send-btn').onclick = () => window._bv2_submitPost();
+    document.getElementById('bv2-compose-img-input').onchange = (e) => window._bv2_handleImgSelect(e);
 
-    // 图片操作框
-    const imgActionCancel = document.getElementById('board-img-action-cancel');
-    if (imgActionCancel) imgActionCancel.onclick = () => hideModal(document.getElementById('board-img-action-modal'));
-    const imgReplace = document.getElementById('board-img-replace-action');
-    if (imgReplace) imgReplace.onclick = () => {
+    document.getElementById('board-img-action-cancel').onclick = () => hideModal(document.getElementById('board-img-action-modal'));
+    document.getElementById('board-img-replace-action').onclick = () => {
         hideModal(document.getElementById('board-img-action-modal'));
         if (window._bv2_pendingImgId) {
             document.getElementById('bv2-detail-img-input').click();
         }
     };
-    const imgDelete = document.getElementById('board-img-delete-action');
-    if (imgDelete) imgDelete.onclick = () => {
+    document.getElementById('board-img-delete-action').onclick = () => {
         hideModal(document.getElementById('board-img-action-modal'));
         if (window._bv2_pendingImgId && confirm('确定要删除这张图片吗？')) {
             if (!window._bv2_imgEdits) window._bv2_imgEdits = {};
@@ -332,107 +290,122 @@ function bindStaticEvents() {
         }
     };
 
-    // 详情页替换图片用的文件选择器
-    const detailImgInput = document.getElementById('bv2-detail-img-input');
-    if (detailImgInput) {
-        detailImgInput.onchange = async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            let base64 = '';
-            if (typeof optimizeImage === 'function') {
-                base64 = await optimizeImage(file);
-            } else {
-                base64 = await new Promise(resolve => {
-                    const r = new FileReader();
-                    r.onload = ev => resolve(ev.target.result);
-                    r.readAsDataURL(file);
-                });
-            }
-            if (window._bv2_pendingImgId) {
-                if (!window._bv2_imgEdits) window._bv2_imgEdits = {};
-                window._bv2_imgEdits[window._bv2_pendingImgId] = { action: 'replace', data: base64 };
-                const imgWrapper = document.querySelector(`#bv2-img-${window._bv2_pendingImgId} img`);
-                if (imgWrapper) imgWrapper.src = base64;
-                window._bv2_pendingImgId = null;
-            }
-            e.target.value = '';
-        };
-    }
+    document.getElementById('bv2-detail-img-input').onchange = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        let base64 = '';
+        if (typeof optimizeImage === 'function') {
+            base64 = await optimizeImage(file);
+        } else {
+            base64 = await new Promise(resolve => {
+                const r = new FileReader();
+                r.onload = ev => resolve(ev.target.result);
+                r.readAsDataURL(file);
+            });
+        }
+        if (window._bv2_pendingImgId) {
+            if (!window._bv2_imgEdits) window._bv2_imgEdits = {};
+            window._bv2_imgEdits[window._bv2_pendingImgId] = { action: 'replace', data: base64 };
+            const imgEl = document.querySelector(`#bv2-img-${window._bv2_pendingImgId} img`);
+            if (imgEl) imgEl.src = base64;
+            window._bv2_pendingImgId = null;
+        }
+        e.target.value = '';
+    };
 }
 
-function initModals() {
-  bindStaticEvents(); // 所有绑定都在此完成
-}
-
-// 打开留言板主界面
 window.renderEnvelopeBoard = async function() {
     await loadData();
-    syncReplyPool();      // 同步最新字卡库
+    syncReplyPool();
     initModals();
-    // 如果关闭了对方主动写留言板，且当前在对方界面，强制切回我的
     if (!(typeof settings !== 'undefined' && settings.boardPartnerWriteEnabled) && currentView === 'partner') {
         currentView = 'me';
     }
     switchTab(currentView);
-    const modal = document.getElementById('envelope-board-modal');
+    const modal = document.getElementById('envelope-board-modal') || document.getElementById('envelope-modal');
     if (modal && typeof showModal === 'function') showModal(modal);
 };
 
+// ========== 核心：选项卡切换 + 列表渲染（信封风格） ==========
 function switchTab(type) {
-    const canAutoPost = typeof settings !== 'undefined' && settings.boardPartnerWriteEnabled;
     currentView = type;
     const isMe = type === 'me';
     const threads = isMe ? boardData.myThreads : boardData.partnerThreads;
     const myName = (typeof settings !== 'undefined' && settings.myName) || '我';
     const partnerName = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
 
-    // 渲染标签
+    // 渲染选项卡（信封投递同款样式）
     const tabArea = document.getElementById('board-tab-area');
     if (tabArea) {
         tabArea.innerHTML = `
-        <div style="display:flex; gap:8px; align-items:center;">
-            <button class="board-tab-btn ${isMe ? 'active' : ''}" data-tab="me" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border-color); background:${isMe ? 'var(--accent-color)' : 'transparent'}; color:${isMe ? '#fff' : 'var(--text-secondary)'}; font-size:12px; font-weight:600; cursor:pointer; position:relative;">
-                ${myName}${boardData.myThreads.some(t => t.unread) ? '<span style="position:absolute;top:-6px;right:-6px;font-size:14px;">✨</span>' : ''}
-            </button>
-            <button class="board-tab-btn ${!isMe ? 'active' : ''}" data-tab="partner" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border-color); background:${!isMe ? 'var(--accent-color)' : 'transparent'}; color:${!isMe ? '#fff' : 'var(--text-secondary)'}; font-size:12px; font-weight:600; cursor:pointer; position:relative;">
-                ${partnerName}${boardData.partnerThreads.some(t => t.unread) ? '<span style="position:absolute;top:-6px;right:-6px;font-size:14px;">✨</span>' : ''}
-            </button>
-        </div>`;
+            <div style="display: flex; gap: 6px; width: 100%;">
+                <button class="env-tab-btn ${isMe ? 'active' : ''}" data-tab="me" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="4" width="20" height="16" rx="2"/>
+                        <path d="M22 7l-10 7L2 7"/>
+                    </svg>
+                    ${myName}
+                    ${boardData.myThreads.some(t => t.unread) ? '<span style="margin-left: 4px;">✨</span>' : ''}
+                </button>
+                <button class="env-tab-btn ${!isMe ? 'active' : ''}" data-tab="partner" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 13V19a2 2 0 01-2 2H4a2 2 0 01-2-2v-6"/>
+                        <polyline points="15 3 21 3 21 9"/>
+                        <line x1="21" y1="3" x2="10" y2="14"/>
+                    </svg>
+                    ${partnerName}
+                    ${boardData.partnerThreads.some(t => t.unread) ? '<span style="margin-left: 4px;">✨</span>' : ''}
+                </button>
+            </div>
+        `;
         tabArea.querySelectorAll('[data-tab]').forEach(btn => {
-            btn.onclick = () => switchTab(btn.dataset.tab);
+            btn.onclick = () => {
+                switchTab(btn.dataset.tab);
+            };
         });
     }
 
-    // 列表内容
+    // 列表内容渲染（空状态改为信封风格）
     const listBody = document.getElementById('board-list-body');
-    if (listBody) {
-        if (threads.length === 0) {
-            listBody.innerHTML = `<div class="board-empty"><i class="fas fa-sticky-note"></i><p>${isMe ? '还没有留言' : 'Ta还没有主动留言'}</p></div>`;
-        } else {
-            listBody.innerHTML = threads.slice().reverse().map(t => {
-                const last = t.replies[t.replies.length - 1];
-                let statusText = '等待回复', statusClass = 'pending';
-                if (last && ((isMe && last.sender === 'partner') || (!isMe && last.sender === 'me'))) {
-                    statusText = '已回复'; statusClass = 'replied';
-                }
-                const preview = t.replies[0] ? (t.replies[0].image ? '🖼 图片留言' : escapeHtml((t.replies[0].text || '').substring(0, 40))) : '';
-                const unreadStar = t.unread ? '<span style="position:absolute;top:12px;right:12px;font-size:14px;z-index:2;">✨</span>' : '';
-                return `<div class="board-card" data-thread-id="${t.id}" style="position:relative;cursor:pointer;">${unreadStar}<div class="board-card-top-line"></div><div class="board-card-body"><div class="board-card-preview">${preview}</div><div class="board-card-meta"><span class="board-card-date">${formatTime(t.createdAt)}</span><span class="board-card-status ${statusClass}">${statusText}</span></div></div></div>`;
-            }).join('');
-            listBody.querySelectorAll('[data-thread-id]').forEach(card => {
-                card.onclick = () => {
-                    const tid = card.dataset.threadId;
-                    openDetail(tid, currentView);
-                };
-            });
-        }
+    if (!listBody) return;
+
+    if (threads.length === 0) {
+        listBody.innerHTML = `
+            <div class="env-empty" style="padding: 48px 20px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <path d="M22 7l-10 7L2 7"/>
+                    <polyline points="22 13 12 13"/>
+                    <path d="M19 16l-5-3-5 3"/>
+                </svg>
+                <div style="font-size:14px;font-weight:500;margin-top:4px;">${isMe ? '还没有留言' : 'Ta还没有主动留言'}</div>
+                <div style="font-size:12px;margin-top:6px;opacity:0.6;">${isMe ? '写下想说的话吧～' : '耐心等待，Ta可能会悄悄留言'}</div>
+            </div>
+        `;
+    } else {
+        listBody.innerHTML = threads.slice().reverse().map(t => {
+            const last = t.replies[t.replies.length - 1];
+            let statusText = '等待回复', statusClass = 'pending';
+            if (last && ((isMe && last.sender === 'partner') || (!isMe && last.sender === 'me'))) {
+                statusText = '已回复'; statusClass = 'replied';
+            }
+            const preview = t.replies[0] ? (t.replies[0].image ? '🖼 图片留言' : escapeHtml((t.replies[0].text || '').substring(0, 40))) : '';
+            const unreadStar = t.unread ? '<span style="position:absolute;top:12px;right:12px;font-size:14px;z-index:2;">✨</span>' : '';
+            return `<div class="board-card" data-thread-id="${t.id}" style="position:relative;cursor:pointer;">${unreadStar}<div class="board-card-top-line"></div><div class="board-card-body"><div class="board-card-preview">${preview}</div><div class="board-card-meta"><span class="board-card-date">${formatTime(t.createdAt)}</span><span class="board-card-status ${statusClass}">${statusText}</span></div></div></div>`;
+        }).join('');
+        listBody.querySelectorAll('[data-thread-id]').forEach(card => {
+            card.onclick = () => {
+                openDetail(card.dataset.threadId, currentView);
+            };
+        });
     }
 
-    // 底部按钮（仅“我”的视图显示新建按钮）
+    // 底部新建按钮显示控制
     const newPostBtn = document.getElementById('board-new-post-btn');
     if (newPostBtn) newPostBtn.style.display = isMe ? 'flex' : 'none';
 }
 
+// ========== 以下为详情页、撰写页等原有函数，无改动 ==========
 function openDetail(threadId, type) {
     currentThreadId = threadId;
     const threads = type === 'me' ? boardData.myThreads : boardData.partnerThreads;
@@ -468,9 +441,9 @@ function openDetail(threadId, type) {
         const senderName = isSenderMe ? myName : partnerName;
         bodyHtml += `<div class="${sectionClass}" id="bv2-section-${r.id}"><div class="${labelClass}">${senderName}${labelText}</div>${cHtml}</div>`;
 
-        // 系统提示（点赞等）
         const isLast = idx === thread.replies.length - 1;
         const nextIsPartner = thread.replies[idx + 1]?.sender === 'partner';
+
         if (!isMe && isLast && r.sender === 'partner' && r.liked) {
             bodyHtml += `<div class="board-system-hint">${myName} 赞了 ${partnerName} 的留言</div>`;
         } else if (!isMe && !isLast && r.sender === 'partner' && r.liked && thread.replies[idx + 1]?.sender === 'me') {
@@ -484,7 +457,7 @@ function openDetail(threadId, type) {
     let actionHtml = '';
     if (last) {
         if (!isMe && last.sender === 'partner') {
-            actionHtml = `<button class="board-add-btn" style="margin-top:16px;" id="board-reply-btn"><i class="fas fa-pen"></i> 回复</button>`;
+            actionHtml = `<button class="board-add-btn" style="margin-top:16px;" id="board-reply-btn"><i class="fas fa-reply"></i> 回复</button>`;
         } else if (isMe && last.sender === 'partner') {
             actionHtml = `<button class="board-add-btn" style="margin-top:16px;" id="board-continue-btn"><i class="fas fa-pen"></i> 继续留言</button>`;
         } else {
@@ -492,10 +465,8 @@ function openDetail(threadId, type) {
         }
     }
 
-    const detailBody = document.getElementById('board-detail-body');
-    if (detailBody) detailBody.innerHTML = bodyHtml + actionHtml;
-    const detailDate = document.getElementById('board-detail-date');
-    if (detailDate) detailDate.textContent = new Date(thread.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    document.getElementById('board-detail-body').innerHTML = bodyHtml + actionHtml;
+    document.getElementById('board-detail-date').textContent = new Date(thread.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
     const continueBtn = document.getElementById('board-continue-btn');
     const replyBtn = document.getElementById('board-reply-btn');
@@ -517,37 +488,31 @@ function openCompose(mode, threadId, type) {
     window._bv2_composeFromDetail = (mode !== 'new');
     selectedImage = null;
     const titleMap = { new: '写新留言', continue: '继续留言', reply: '回复Ta' };
-    const titleEl = document.getElementById('board-compose-title-text');
-    if (titleEl) titleEl.textContent = titleMap[mode] || '写新留言';
-    const textarea = document.getElementById('bv2-compose-text');
-    if (textarea) textarea.value = '';
-    const imgHint = document.getElementById('bv2-img-hint');
-    if (imgHint) imgHint.style.display = 'none';
-    const imgInput = document.getElementById('bv2-compose-img-input');
-    if (imgInput) imgInput.value = '';
+    document.getElementById('board-compose-title-text').textContent = titleMap[mode] || '写新留言';
+    document.getElementById('bv2-compose-text').value = '';
+    document.getElementById('bv2-img-hint').style.display = 'none';
+    document.getElementById('bv2-compose-img-input').value = '';
 
     hideModal(document.getElementById('board-detail-modal'));
     setTimeout(() => {
         showModal(document.getElementById('board-compose-modal'));
-        if (textarea) textarea.focus();
+        document.getElementById('bv2-compose-text')?.focus();
     }, 100);
 }
 
 function handleImgSelect(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     if (typeof optimizeImage === 'function') {
-        optimizeImage(file).then(b => { selectedImage = b; const hint = document.getElementById('bv2-img-hint'); if (hint) hint.style.display = 'inline'; });
+        optimizeImage(file).then(b => { selectedImage = b; document.getElementById('bv2-img-hint').style.display = 'inline'; });
     } else {
         const r = new FileReader();
-        r.onload = ev => { selectedImage = ev.target.result; const hint = document.getElementById('bv2-img-hint'); if (hint) hint.style.display = 'inline'; };
+        r.onload = ev => { selectedImage = ev.target.result; document.getElementById('bv2-img-hint').style.display = 'inline'; };
         r.readAsDataURL(file);
     }
 }
 
 async function submitPost() {
-    const textarea = document.getElementById('bv2-compose-text');
-    const text = textarea ? textarea.value.trim() : '';
+    const text = document.getElementById('bv2-compose-text')?.value.trim() || '';
     if (!text && !selectedImage) {
         if (typeof showNotification === 'function') showNotification('内容不能为空', 'warning');
         return;
@@ -556,8 +521,7 @@ async function submitPost() {
     if (currentComposeMode === 'new') {
         boardData.myThreads.push({ id: genId(), starter: 'me', createdAt: Date.now(), replies: [newReply] });
     } else {
-        const threads = (currentComposeType === 'me' ? boardData.myThreads : boardData.partnerThreads);
-        const t = threads.find(t => t.id === currentThreadId);
+        const t = (currentComposeType === 'me' ? boardData.myThreads : boardData.partnerThreads).find(t => t.id === currentThreadId);
         if (t) { t.replies.push(newReply); delete t.expectedReplyTime; }
     }
     await saveData();
@@ -606,9 +570,9 @@ async function saveEdit(replyId) {
     const textEl = document.getElementById(`bv2-text-${replyId}`);
     if (!textEl) return;
     const newText = textEl.textContent.trim();
-    if (!newText) { if(typeof showNotification === 'function') showNotification('内容不能为空', 'warning'); return; }
+    if (!newText) { if (typeof showNotification === 'function') showNotification('内容不能为空', 'warning'); return; }
     const reply = findReplyById(replyId);
-    if (reply) { reply.text = newText; await saveData(); if(typeof showNotification === 'function') showNotification('已保存', 'success'); }
+    if (reply) { reply.text = newText; await saveData(); if (typeof showNotification === 'function') showNotification('已保存', 'success'); }
     exitEditMode(replyId);
 }
 
@@ -621,7 +585,7 @@ function cancelEdit(replyId) {
 
 function exitEditMode(replyId) {
     const textEl = document.getElementById(`bv2-text-${replyId}`);
-    if(textEl) { textEl.contentEditable = false; textEl.classList.remove('editing'); delete textEl.dataset.originalText; }
+    if (textEl) { textEl.contentEditable = false; textEl.classList.remove('editing'); delete textEl.dataset.originalText; }
     const section = document.getElementById(`bv2-section-${replyId}`);
     if (section) { const actions = section.querySelector('.board-edit-actions'); if (actions) actions.remove(); }
 }
@@ -635,112 +599,110 @@ async function deleteThread(id, type) {
     hideModal(document.getElementById('board-detail-modal'));
     switchTab(type);
     showModal(document.getElementById('envelope-board-modal'));
-    if(typeof showNotification === 'function') showNotification('已删除', 'success');
+    if (typeof showNotification === 'function') showNotification('已删除', 'success');
 }
 
-// 全局编辑
 window._bv2_toggleGlobalEdit = function() {
-  const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
-  const thread = threads.find(t => t.id === currentThreadId);
-  if (!thread) return;
-  const editBar = document.getElementById('board-edit-actions-bar');
-  const penBtn = document.getElementById('board-global-edit-btn');
-  const deleteBtn = document.getElementById('board-delete-thread-btn');
-  if (editBar && editBar.style.display === 'flex') {
-    window._bv2_saveGlobalEdit();
-    return;
-  }
-  window._bv2_imgEdits = {};
-
-  const hasImg = thread.replies.some(r => r.image);
-  if (hasImg) {
-    const hint = document.createElement('div');
-    hint.id = 'bv2-img-edit-hint';
-    hint.style.cssText = 'font-size:12px; color:var(--text-secondary); margin-bottom:12px; text-align:center;';
-    hint.textContent = '点击图片可进行替换或删除';
-    if (editBar && editBar.parentElement) editBar.parentElement.insertBefore(hint, editBar);
-  }
-
-  thread.replies.forEach(r => {
-    if (r.text) {
-      const el = document.getElementById(`bv2-text-${r.id}`);
-      if (el) {
-        el.dataset.originalText = el.textContent;
-        el.contentEditable = true;
-        el.classList.add('editing');
-      }
+    const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
+    const thread = threads.find(t => t.id === currentThreadId);
+    if (!thread) return;
+    const editBar = document.getElementById('board-edit-actions-bar');
+    const penBtn = document.getElementById('board-global-edit-btn');
+    const deleteBtn = document.getElementById('board-delete-thread-btn');
+    if (editBar && editBar.style.display === 'flex') {
+        window._bv2_saveGlobalEdit();
+        return;
     }
-  });
+    window._bv2_imgEdits = {};
 
-  thread.replies.forEach(r => {
-    if (r.image) {
-      const imgWrapper = document.getElementById(`bv2-img-${r.id}`);
-      const imgEl = imgWrapper ? imgWrapper.querySelector('img') : null;
-      if (imgEl) {
-        imgEl.dataset.origOnclick = imgEl.getAttribute('onclick');
-        imgEl.removeAttribute('onclick');
-        imgEl.style.cursor = 'pointer';
-        imgEl.onclick = function(e) {
-          e.stopPropagation();
-          window._bv2_pendingImgId = r.id;
-          const imgActionModal = document.getElementById('board-img-action-modal');
-          if (imgActionModal && typeof showModal === 'function') showModal(imgActionModal);
-          else if (imgActionModal) imgActionModal.style.display = 'flex';
-        };
-      }
+    const hasImg = thread.replies.some(r => r.image);
+    if (hasImg) {
+        const hint = document.createElement('div');
+        hint.id = 'bv2-img-edit-hint';
+        hint.style.cssText = 'font-size:12px; color:var(--text-secondary); margin-bottom:12px; text-align:center;';
+        hint.textContent = '点击图片可进行替换或删除';
+        editBar.parentElement.insertBefore(hint, editBar);
     }
-  });
 
-  if (editBar) editBar.style.display = 'flex';
-  if (penBtn) penBtn.style.display = 'none';
-  if (deleteBtn) deleteBtn.style.display = 'none';
-  const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
-  if (originalActions) originalActions.style.display = 'none';
+    thread.replies.forEach(r => {
+        if (r.text) {
+            const el = document.getElementById(`bv2-text-${r.id}`);
+            if (el) {
+                el.dataset.originalText = el.textContent;
+                el.contentEditable = true;
+                el.classList.add('editing');
+            }
+        }
+    });
+
+    thread.replies.forEach(r => {
+        if (r.image) {
+            const imgWrapper = document.getElementById(`bv2-img-${r.id}`);
+            const imgEl = imgWrapper ? imgWrapper.querySelector('img') : null;
+            if (imgEl) {
+                imgEl.dataset.origOnclick = imgEl.getAttribute('onclick');
+                imgEl.removeAttribute('onclick');
+                imgEl.style.cursor = 'pointer';
+                imgEl.onclick = function(e) {
+                    e.stopPropagation();
+                    window._bv2_pendingImgId = r.id;
+                    document.getElementById('board-img-action-modal').style.display = 'flex';
+                };
+            }
+        }
+    });
+
+    if (editBar) editBar.style.display = 'flex';
+    if (penBtn) penBtn.style.display = 'none';
+    if (deleteBtn) deleteBtn.style.display = 'none';
+    const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
+    if (originalActions) originalActions.style.display = 'none';
 };
 
 window._bv2_saveGlobalEdit = async function() {
-  const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
-  const thread = threads.find(t => t.id === currentThreadId);
-  if (!thread) return;
-  let needSave = false;
+    const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
+    const thread = threads.find(t => t.id === currentThreadId);
+    if (!thread) return;
+    let needSave = false;
 
-  thread.replies.forEach(r => {
-    if (r.text) {
-      const el = document.getElementById(`bv2-text-${r.id}`);
-      if (el && el.classList.contains('editing')) {
-        const newText = el.textContent.trim();
-        if (newText && newText !== r.text) { r.text = newText; needSave = true; }
-        el.contentEditable = false;
-        el.classList.remove('editing');
-        delete el.dataset.originalText;
-      }
-    }
-  });
+    thread.replies.forEach(r => {
+        if (r.text) {
+            const el = document.getElementById(`bv2-text-${r.id}`);
+            if (el && el.classList.contains('editing')) {
+                const newText = el.textContent.trim();
+                if (newText && newText !== r.text) { r.text = newText; needSave = true; }
+                el.contentEditable = false;
+                el.classList.remove('editing');
+                delete el.dataset.originalText;
+            }
+        }
+    });
 
-  const edits = window._bv2_imgEdits || {};
-  const hadImgChange = Object.keys(edits).length > 0;
-  Object.keys(edits).forEach(replyId => {
-    const reply = thread.replies.find(x => x.id === replyId);
-    if (!reply) return;
-    if (edits[replyId].action === 'delete' && reply.image) {
-      reply.image = null;
-      needSave = true;
-    } else if (edits[replyId].action === 'replace' && edits[replyId].data) {
-      reply.image = edits[replyId].data;
-      needSave = true;
-    }
-  });
-  window._bv2_imgEdits = {};
+    const edits = window._bv2_imgEdits || {};
+    const hadImgChange = Object.keys(edits).length > 0;
+    Object.keys(edits).forEach(replyId => {
+        const reply = thread.replies.find(x => x.id === replyId);
+        if (!reply) return;
+        if (edits[replyId].action === 'delete' && reply.image) {
+            reply.image = null;
+            needSave = true;
+        } else if (edits[replyId].action === 'replace' && edits[replyId].data) {
+            reply.image = edits[replyId].data;
+            needSave = true;
+        }
+    });
 
-  if (needSave) {
-    await saveData();
-    if(typeof showNotification === 'function') showNotification('修改已保存', 'success');
-    if (hadImgChange) {
-      openDetail(currentThreadId, currentView);
-      return;
+    window._bv2_imgEdits = {};
+
+    if (needSave) {
+        await saveData();
+        if (typeof showNotification === 'function') showNotification('修改已保存', 'success');
+        if (hadImgChange) {
+            openDetail(currentThreadId, currentView);
+            return;
+        }
     }
-  }
-  restoreDetailViewUI();
+    restoreDetailViewUI();
 };
 
 window._bv2_cancelGlobalEdit = function() {
@@ -783,19 +745,18 @@ window._bv2_cancelGlobalEdit = function() {
 };
 
 function restoreDetailViewUI() {
-  const editBar = document.getElementById('board-edit-actions-bar');
-  const penBtn = document.querySelector('.board-detail-actions .board-detail-action-btn:not(.delete)');
-  const deleteBtn = document.querySelector('.board-detail-actions .board-detail-action-btn.delete');
-  const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
-  if (editBar) editBar.style.display = 'none';
-  if (penBtn) penBtn.style.display = 'flex';
-  if (deleteBtn) deleteBtn.style.display = 'flex';
-  if (originalActions) originalActions.style.display = '';
-  const hint = document.getElementById('bv2-img-edit-hint');
-  if (hint) hint.remove();
+    const editBar = document.getElementById('board-edit-actions-bar');
+    const penBtn = document.querySelector('.board-detail-actions .board-detail-action-btn:not(.delete)');
+    const deleteBtn = document.querySelector('.board-detail-actions .board-detail-action-btn.delete');
+    const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
+    if (editBar) editBar.style.display = 'none';
+    if (penBtn) penBtn.style.display = 'flex';
+    if (deleteBtn) deleteBtn.style.display = 'flex';
+    if (originalActions) originalActions.style.display = '';
+    const hint = document.getElementById('bv2-img-edit-hint');
+    if (hint) hint.remove();
 }
 
-// 对外暴露接口
 window.loadEnvelopeData = loadData;
 window.checkEnvelopeStatus = checkStatus;
 window.setBoardDataV2 = function(newData) {
@@ -807,14 +768,7 @@ window._bv2_openCompose = openCompose;
 window._bv2_submitPost = submitPost;
 window._bv2_handleImgSelect = handleImgSelect;
 window._bv2_deleteThread = deleteThread;
-window._bv2_editText = editText;
-window._bv2_saveEdit = saveEdit;
-window._bv2_cancelEdit = cancelEdit;
-window._bv2_toggleGlobalEdit = _bv2_toggleGlobalEdit;
-window._bv2_saveGlobalEdit = _bv2_saveGlobalEdit;
-window._bv2_cancelGlobalEdit = _bv2_cancelGlobalEdit;
 
-// 启动
 loadData().then(() => { setInterval(checkStatus, 60000); checkStatus(); });
 
 })();
