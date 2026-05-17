@@ -1016,7 +1016,8 @@ if (customIntros && customIntros.length > 0) {
                         if (groupShowNameRow) groupShowNameRow.classList.toggle('active', window.groupChatSettings.showName);
                     }
                 }, 300);
-            }            
+            }      
+            window.syncAllToggles = syncAllToggles;      
         };
 
         const updateAvatar = (element, src) => {

@@ -447,6 +447,7 @@ if (enterToSendToggle) {
     enterToSendToggle.addEventListener('click', () => {
         settings.enterToSend = !settings.enterToSend;
         throttledSaveData();
+        syncAllToggles();   // ← 添加这一行
         // 删除下面这行，由 syncAllToggles 负责
         // enterToSendToggle.classList.toggle('active', settings.enterToSend);
         showNotification(`回车${settings.enterToSend ? '发送' : '换行'}模式`, 'success');
@@ -458,6 +459,7 @@ if (keepKeyboardToggle) {
     keepKeyboardToggle.addEventListener('click', () => {
         settings.keepKeyboardAfterSend = !settings.keepKeyboardAfterSend;
         throttledSaveData();
+        syncAllToggles();   // ← 添加这一行
         // 删除下面这行
         // keepKeyboardToggle.classList.toggle('active', settings.keepKeyboardAfterSend);
         showNotification(`发送后${settings.keepKeyboardAfterSend ? '保留' : '收起'}键盘`, 'success');
@@ -1111,6 +1113,7 @@ if (_chatSettingsEl) _chatSettingsEl.addEventListener('click', () => {
                 phraseCombiningToggle.addEventListener('click', () => {
                     settings.phraseCombiningEnabled = !settings.phraseCombiningEnabled;
                     throttledSaveData();
+                    syncAllToggles();   // ← 添加这一行
                     // 删除下面这行
                     // phraseCombiningToggle.classList.toggle('active', settings.phraseCombiningEnabled);
                     showNotification(`字卡组合已${settings.phraseCombiningEnabled ? '开启' : '关闭'}`, 'success');
@@ -1340,6 +1343,7 @@ if (boardPartnerWriteToggle) {
     boardPartnerWriteToggle.addEventListener('click', () => {
         settings.boardPartnerWriteEnabled = !settings.boardPartnerWriteEnabled;
         throttledSaveData();
+        syncAllToggles();   // ← 添加这一行
         // boardPartnerWriteToggle.classList.toggle('active', settings.boardPartnerWriteEnabled); // 这行也删除
         showNotification(`主动留言已${settings.boardPartnerWriteEnabled ? '开启' : '关闭'}`, 'success');
         if (typeof window._resetBoardAutoSend === 'function') window._resetBoardAutoSend();
