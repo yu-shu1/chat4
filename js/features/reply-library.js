@@ -823,45 +823,67 @@ function _renderAtmosphereList(list, items) {
     list.appendChild(frag);
 }
 
+// 辅助函数：获取禁用的系统 Emoji 集合
+function _getDisabledSystemEmojisSet() {
+    try {
+        const raw = localStorage.getItem('disabledSystemEmojis');
+        return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch { return new Set(); }
+}
+
+function _saveDisabledSystemEmojisSet(set) {
+    localStorage.setItem('disabledSystemEmojis', JSON.stringify([...set]));
+}
+
 function _renderEmojiTab(list, itemsToRender) {
-    // 确保不使用网格模式，采用卡片列表样式
+    // 确保使用卡片列表样式（复用主字卡的样式）
     list.classList.remove('grid-mode', 'emoji-flex-layout');
-    list.classList.add('list-mode');  // 复用主字卡的列表样式
-
-    if (itemsToRender.length === 0 && customEmojis.length === 0) {
-        list.innerHTML = renderEmptyState('暂无 Emoji');
-        return;
-    }
-
+    list.classList.add('list-mode');
     list.innerHTML = '';
 
-    // 系统预设 Emoji 区块
-    if (itemsToRender.length > 0) {
-        itemsToRender.forEach(emoji => {
-            const card = document.createElement('div');
-            card.className = 'rl-card emoji-card';  // 复用主字卡的卡片样式
-            card.innerHTML = `
-                <div style="flex:1; min-width:0; display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 28px;">${emoji}</span>
-                    <span style="font-size: 13px; color: var(--text-secondary);">${emoji}</span>
-                </div>
-                <div class="rl-card-actions">
-                    <!-- 系统预设无删除按钮 -->
-                </div>
-            `;
-            card.addEventListener('click', (e) => {
-                if (e.target.closest('.rl-card-actions')) return;
-                const input = document.getElementById('message-input');
-                input.value += emoji;
-                const modal = document.getElementById('custom-replies-modal');
-                if (modal && typeof hideModal === 'function') hideModal(modal);
-                input.focus();
-            });
-            list.appendChild(card);
-        });
-    }
+    // 获取禁用的系统 Emoji
+    const disabledSet = _getDisabledSystemEmojisSet();
 
-    // 自定义 Emoji 区块
+    // 过滤系统预设 Emoji（排除已禁用的）
+    const systemEmojis = itemsToRender.filter(e => !disabledSet.has(e));
+
+    // 渲染系统预设 Emoji（每个一行，样式同主字卡）
+    systemEmojis.forEach(emoji => {
+        const card = document.createElement('div');
+        card.className = 'rl-card emoji-card';
+        card.innerHTML = `
+            <div style="flex:1; min-width:0; display: flex; align-items: center;">
+                <span style="font-size: 32px;">${emoji}</span>
+            </div>
+            <div class="rl-card-actions">
+                <button class="rl-act-btn danger" data-action="delete" title="删除">
+                    ${ICONS.trash}
+                </button>
+            </div>
+        `;
+        // 删除事件（系统预设 Emoji）
+        const deleteBtn = card.querySelector('[data-action="delete"]');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`确定要删除 Emoji「${emoji}」吗？\n删除后不会影响其他人，你可以在将来重新添加。`)) {
+                disabledSet.add(emoji);
+                _saveDisabledSystemEmojisSet(disabledSet);
+                renderReplyLibrary();  // 重新渲染
+            }
+        });
+        // 点击卡片主体插入 Emoji
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('.rl-card-actions')) return;
+            const input = document.getElementById('message-input');
+            input.value += emoji;
+            const modal = document.getElementById('custom-replies-modal');
+            if (modal && typeof hideModal === 'function') hideModal(modal);
+            input.focus();
+        });
+        list.appendChild(card);
+    });
+
+    // 自定义 Emoji 区块（如果有）
     if (customEmojis.length > 0) {
         // 分隔线（与主字卡风格一致）
         const separator = document.createElement('div');
@@ -873,9 +895,8 @@ function _renderEmojiTab(list, itemsToRender) {
             const card = document.createElement('div');
             card.className = 'rl-card emoji-card custom-emoji-card';
             card.innerHTML = `
-                <div style="flex:1; min-width:0; display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 28px;">${emoji}</span>
-                    <span style="font-size: 13px; color: var(--text-primary);">${emoji}</span>
+                <div style="flex:1; min-width:0; display: flex; align-items: center;">
+                    <span style="font-size: 32px;">${emoji}</span>
                 </div>
                 <div class="rl-card-actions">
                     <button class="rl-act-btn danger" data-action="delete" title="删除">
@@ -883,13 +904,17 @@ function _renderEmojiTab(list, itemsToRender) {
                     </button>
                 </div>
             `;
+            // 删除事件（自定义 Emoji）
             const deleteBtn = card.querySelector('[data-action="delete"]');
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                customEmojis.splice(idx, 1);
-                throttledSaveData();
-                renderReplyLibrary();
+                if (confirm(`确定要删除自定义 Emoji「${emoji}」吗？`)) {
+                    customEmojis.splice(idx, 1);
+                    throttledSaveData();
+                    renderReplyLibrary();
+                }
             });
+            // 点击卡片主体插入 Emoji
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.rl-card-actions')) return;
                 const input = document.getElementById('message-input');
@@ -900,6 +925,11 @@ function _renderEmojiTab(list, itemsToRender) {
             });
             list.appendChild(card);
         });
+    }
+
+    // 如果没有任何 Emoji 可显示（全部被禁用且无自定义），显示空状态
+    if (systemEmojis.length === 0 && customEmojis.length === 0) {
+        list.innerHTML = renderEmptyState('暂无 Emoji，可点击右上角添加自定义表情');
     }
 }
 
