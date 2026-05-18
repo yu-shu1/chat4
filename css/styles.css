@@ -11643,3 +11643,20 @@
     display: none !important;
 }
 
+.emoji-custom-separator {
+    display: flex;
+    align-items: center;
+    margin: 12px 0 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+.emoji-custom-separator::before,
+.emoji-custom-separator::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+}
+.emoji-custom-separator span {
+    padding: 0 12px;
+}
