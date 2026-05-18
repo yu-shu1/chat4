@@ -824,9 +824,9 @@ function _renderAtmosphereList(list, items) {
 }
 
 function _renderEmojiTab(list, itemsToRender) {
-    // 确保不使用网格模式
-    list.classList.remove('grid-mode');
-    list.classList.add('emoji-flex-layout');
+    // 确保不使用网格模式，采用卡片列表样式
+    list.classList.remove('grid-mode', 'emoji-flex-layout');
+    list.classList.add('list-mode');  // 复用主字卡的列表样式
 
     if (itemsToRender.length === 0 && customEmojis.length === 0) {
         list.innerHTML = renderEmptyState('暂无 Emoji');
@@ -835,62 +835,71 @@ function _renderEmojiTab(list, itemsToRender) {
 
     list.innerHTML = '';
 
-    // 系统预设 emoji 区块
-    const systemContainer = document.createElement('div');
-    systemContainer.className = 'emoji-system-section';
-    itemsToRender.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'emoji-item';
-        div.textContent = item;
-        div.setAttribute('data-emoji', item);
-        div.addEventListener('click', () => {
-            const input = document.getElementById('message-input');
-            input.value += item;
-            const modal = document.getElementById('custom-replies-modal');
-            if (modal && typeof hideModal === 'function') hideModal(modal);
-            input.focus();
+    // 系统预设 Emoji 区块
+    if (itemsToRender.length > 0) {
+        itemsToRender.forEach(emoji => {
+            const card = document.createElement('div');
+            card.className = 'rl-card emoji-card';  // 复用主字卡的卡片样式
+            card.innerHTML = `
+                <div style="flex:1; min-width:0; display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 28px;">${emoji}</span>
+                    <span style="font-size: 13px; color: var(--text-secondary);">${emoji}</span>
+                </div>
+                <div class="rl-card-actions">
+                    <!-- 系统预设无删除按钮 -->
+                </div>
+            `;
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.rl-card-actions')) return;
+                const input = document.getElementById('message-input');
+                input.value += emoji;
+                const modal = document.getElementById('custom-replies-modal');
+                if (modal && typeof hideModal === 'function') hideModal(modal);
+                input.focus();
+            });
+            list.appendChild(card);
         });
-        systemContainer.appendChild(div);
-    });
-    list.appendChild(systemContainer);
+    }
 
-    // 自定义 emoji 区块
+    // 自定义 Emoji 区块
     if (customEmojis.length > 0) {
+        // 分隔线（与主字卡风格一致）
         const separator = document.createElement('div');
         separator.className = 'emoji-custom-separator';
-        separator.textContent = '— 自定义 —';
+        separator.innerHTML = '<span>— 自定义 —</span>';
         list.appendChild(separator);
 
-        const customContainer = document.createElement('div');
-        customContainer.className = 'emoji-custom-section';
-        customEmojis.forEach((item, idx) => {
-            const div = document.createElement('div');
-            div.className = 'emoji-item custom-emoji';
-            div.textContent = item;
-            div.setAttribute('data-emoji', item);
-
-            const delSpan = document.createElement('span');
-            delSpan.className = 'emoji-custom-del';
-            delSpan.innerHTML = '×';
-            delSpan.addEventListener('click', (e) => {
+        customEmojis.forEach((emoji, idx) => {
+            const card = document.createElement('div');
+            card.className = 'rl-card emoji-card custom-emoji-card';
+            card.innerHTML = `
+                <div style="flex:1; min-width:0; display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 28px;">${emoji}</span>
+                    <span style="font-size: 13px; color: var(--text-primary);">${emoji}</span>
+                </div>
+                <div class="rl-card-actions">
+                    <button class="rl-act-btn danger" data-action="delete" title="删除">
+                        ${ICONS.trash}
+                    </button>
+                </div>
+            `;
+            const deleteBtn = card.querySelector('[data-action="delete"]');
+            deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 customEmojis.splice(idx, 1);
                 throttledSaveData();
                 renderReplyLibrary();
             });
-            div.appendChild(delSpan);
-
-            div.addEventListener('click', (e) => {
-                if (e.target === delSpan) return;
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.rl-card-actions')) return;
                 const input = document.getElementById('message-input');
-                input.value += item;
+                input.value += emoji;
                 const modal = document.getElementById('custom-replies-modal');
                 if (modal && typeof hideModal === 'function') hideModal(modal);
                 input.focus();
             });
-            customContainer.appendChild(div);
+            list.appendChild(card);
         });
-        list.appendChild(customContainer);
     }
 }
 
