@@ -824,35 +824,73 @@ function _renderAtmosphereList(list, items) {
 }
 
 function _renderEmojiTab(list, itemsToRender) {
+    // 确保不使用网格模式
+    list.classList.remove('grid-mode');
+    list.classList.add('emoji-flex-layout');
+
     if (itemsToRender.length === 0 && customEmojis.length === 0) {
-        list.innerHTML = renderEmptyState('暂无 Emoji'); return;
+        list.innerHTML = renderEmptyState('暂无 Emoji');
+        return;
     }
+
+    list.innerHTML = '';
+
+    // 系统预设 emoji 区块
+    const systemContainer = document.createElement('div');
+    systemContainer.className = 'emoji-system-section';
     itemsToRender.forEach(item => {
         const div = document.createElement('div');
         div.className = 'emoji-item';
         div.textContent = item;
-        list.appendChild(div);
+        div.setAttribute('data-emoji', item);
+        div.addEventListener('click', () => {
+            const input = document.getElementById('message-input');
+            input.value += item;
+            const modal = document.getElementById('custom-replies-modal');
+            if (modal && typeof hideModal === 'function') hideModal(modal);
+            input.focus();
+        });
+        systemContainer.appendChild(div);
     });
+    list.appendChild(systemContainer);
+
+    // 自定义 emoji 区块
     if (customEmojis.length > 0) {
-        const sep = document.createElement('div');
-        sep.style.cssText = 'grid-column:1/-1;font-size:11px;color:var(--text-secondary);padding:4px 2px 2px;border-top:1px dashed var(--border-color);margin-top:4px;';
-        sep.textContent = '— 自定义 —';
-        list.appendChild(sep);
+        const separator = document.createElement('div');
+        separator.className = 'emoji-custom-separator';
+        separator.textContent = '— 自定义 —';
+        list.appendChild(separator);
+
+        const customContainer = document.createElement('div');
+        customContainer.className = 'emoji-custom-section';
         customEmojis.forEach((item, idx) => {
             const div = document.createElement('div');
-            div.className = 'emoji-item';
-            div.style.position = 'relative';
-            div.innerHTML = `<span style="pointer-events:none;">${item}</span><span class="emoji-custom-del" style="position:absolute;top:-4px;right:-4px;font-size:10px;background:var(--text-secondary);color:#fff;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity 0.2s;">×</span>`;
-            div.addEventListener('mouseenter', () => div.querySelector('.emoji-custom-del').style.opacity = '1');
-            div.addEventListener('mouseleave', () => div.querySelector('.emoji-custom-del').style.opacity = '0');
-            div.querySelector('.emoji-custom-del').addEventListener('click', e => {
+            div.className = 'emoji-item custom-emoji';
+            div.textContent = item;
+            div.setAttribute('data-emoji', item);
+
+            const delSpan = document.createElement('span');
+            delSpan.className = 'emoji-custom-del';
+            delSpan.innerHTML = '×';
+            delSpan.addEventListener('click', (e) => {
                 e.stopPropagation();
                 customEmojis.splice(idx, 1);
                 throttledSaveData();
                 renderReplyLibrary();
             });
-            list.appendChild(div);
+            div.appendChild(delSpan);
+
+            div.addEventListener('click', (e) => {
+                if (e.target === delSpan) return;
+                const input = document.getElementById('message-input');
+                input.value += item;
+                const modal = document.getElementById('custom-replies-modal');
+                if (modal && typeof hideModal === 'function') hideModal(modal);
+                input.focus();
+            });
+            customContainer.appendChild(div);
         });
+        list.appendChild(customContainer);
     }
 }
 
