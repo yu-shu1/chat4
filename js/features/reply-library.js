@@ -564,28 +564,205 @@ function _renderModernToolbar() {
             }
         });
     }
+    // 替换原有的批量添加按钮监听
+    // 在 _renderModernToolbar 函数内，找到 tb-batch-add-emoji 的监听部分，替换为：
     if (currentSubTab === 'emojis') {
         const batchAddBtn = toolbar.querySelector('#tb-batch-add-emoji');
         if (batchAddBtn) {
             batchAddBtn.addEventListener('click', () => {
-                const lines = prompt('请输入 Emoji（每行一个）：', '').split('\n').map(l => l.trim()).filter(l => l);
-                if (!lines.length) return;
-                let added = 0, skipped = 0;
-                lines.forEach(emoji => {
-                    if (emoji && !customEmojis.includes(emoji) && !CONSTANTS.REPLY_EMOJIS.includes(emoji)) {
-                        customEmojis.push(emoji);
-                        added++;
-                    } else {
-                        skipped++;
-                    }
-                });
-                if (added > 0) throttledSaveData();
-                renderReplyLibrary();
-                showNotification(`批量添加完成：添加 ${added} 个，跳过 ${skipped} 个（已存在或系统预设）`, 'success');
+                _showBatchAddEmojiDialog();
             });
         }
     }
 }
+
+// 在 reply-library.js 中添加或替换以下代码
+
+// 用于 Emoji 批量添加的弹窗函数
+function _showBatchAddEmojiDialog() {
+    const groups = window.customEmojiGroups || [];
+    const allEmojis = [...CONSTANTS.REPLY_EMOJIS, ...customEmojis];
+    const overlay = _makeOverlay();
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        background:var(--secondary-bg);border-radius:22px;padding:24px;
+        width:92%;max-width:420px;
+        max-height:88vh;
+        display:flex;flex-direction:column;
+        box-shadow:0 24px 80px rgba(0,0,0,.45);
+        animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
+    `;
+
+    const hasGroups = groups && groups.length > 0;
+    const groupPillsHTML = hasGroups ? `
+        <button class="ba-grp-pill" data-gidx="-1" style="
+            padding:5px 13px;border-radius:20px;font-size:12px;font-family:var(--font-family);cursor:pointer;
+            border:1.5px solid var(--accent-color);background:var(--accent-color);color:#fff;font-weight:700;
+            flex-shrink:0;transition:all .15s;
+        ">不分组</button>
+        ${groups.map((g, i) => `
+        <button class="ba-grp-pill" data-gidx="${i}" style="
+            padding:5px 13px;border-radius:20px;font-size:12px;font-family:var(--font-family);cursor:pointer;
+            border:1.5px solid ${g.color}44;background:${g.color}18;color:${g.color};font-weight:600;
+            flex-shrink:0;transition:all .15s;
+        ">
+            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${g.color};margin-right:4px;vertical-align:middle;"></span>${g.name}
+        </button>`).join('')}
+    ` : '';
+
+    panel.innerHTML = `
+        <style>@keyframes popIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}</style>
+        <div style="flex-shrink:0;font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">批量添加 Emoji</div>
+        <div style="flex-shrink:0;font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">每行一个 Emoji，自动去重（系统 Emoji 无法添加）</div>
+
+        <div style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;">
+            <textarea id="batch-add-input" rows="10" placeholder="😊&#10;🥰&#10;✨" style="
+                width:100%;box-sizing:border-box;padding:12px 14px;
+                border:1.5px solid var(--border-color);border-radius:13px;
+                background:var(--primary-bg);color:var(--text-primary);
+                font-size:13px;font-family:var(--font-family);outline:none;resize:vertical;
+                line-height:1.6;transition:border 0.18s;
+            "></textarea>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;margin-bottom:12px;">
+                <span id="batch-add-count">0 条</span>
+            </div>
+
+            ${hasGroups ? `
+            <div id="ba-group-section" style="margin-bottom:4px;">
+                <button id="ba-group-toggle" style="
+                    display:flex;align-items:center;gap:7px;width:100%;
+                    padding:9px 12px;border-radius:11px;cursor:pointer;
+                    border:1.5px solid var(--border-color);background:var(--primary-bg);
+                    color:var(--text-secondary);font-size:12px;font-family:var(--font-family);
+                    font-weight:600;transition:all .15s;text-align:left;
+                ">
+                    <i class="fas fa-folder" style="font-size:12px;color:var(--accent-color);"></i>
+                    <span id="ba-toggle-label">添加到分组</span>
+                    <span id="ba-toggle-arrow" style="margin-left:auto;font-size:10px;transition:transform .2s;">▼</span>
+                </button>
+                <div id="ba-group-drawer" style="display:none;overflow-x:auto;overflow-y:hidden;padding:10px 2px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+                    <div id="ba-group-list" style="display:flex;gap:7px;width:max-content;">
+                        ${groupPillsHTML}
+                    </div>
+                </div>
+            </div>` : ''}
+        </div>
+
+        <div style="flex-shrink:0;padding-top:14px;display:flex;gap:10px;">
+            <button id="ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
+            <button id="ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
+        </div>
+    `;
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const ta = panel.querySelector('#batch-add-input');
+    const countEl = panel.querySelector('#batch-add-count');
+    ta.addEventListener('input', () => {
+        const lines = ta.value.split('\n').filter(l => l.trim());
+        countEl.textContent = `${lines.length} 条`;
+    });
+    ta.addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
+    ta.addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
+
+    const groupToggle = panel.querySelector('#ba-group-toggle');
+    const groupDrawer = panel.querySelector('#ba-group-drawer');
+    const toggleArrow = panel.querySelector('#ba-toggle-arrow');
+    const toggleLabel = panel.querySelector('#ba-toggle-label');
+    let _drawerOpen = false;
+    if (groupToggle && groupDrawer) {
+        groupToggle.addEventListener('click', () => {
+            _drawerOpen = !_drawerOpen;
+            if (_drawerOpen) {
+                groupDrawer.style.display = 'block';
+                groupDrawer.style.animation = 'baGroupSlide 0.18s ease forwards';
+                toggleArrow.style.transform = 'rotate(180deg)';
+                groupToggle.style.borderColor = 'var(--accent-color)';
+                groupToggle.style.color = 'var(--text-primary)';
+            } else {
+                groupDrawer.style.display = 'none';
+                toggleArrow.style.transform = '';
+                groupToggle.style.borderColor = 'var(--border-color)';
+                groupToggle.style.color = 'var(--text-secondary)';
+            }
+        });
+    }
+
+    let _selectedGroupIdx = -1;
+    const pillContainer = panel.querySelector('#ba-group-list');
+    if (pillContainer) {
+        pillContainer.addEventListener('click', e => {
+            const pill = e.target.closest('.ba-grp-pill');
+            if (!pill) return;
+            _selectedGroupIdx = parseInt(pill.dataset.gidx);
+            if (toggleLabel) {
+                if (_selectedGroupIdx === -1) {
+                    toggleLabel.textContent = '添加到分组';
+                } else {
+                    const g = groups[_selectedGroupIdx];
+                    toggleLabel.textContent = g ? `分组：${g.name}` : '添加到分组';
+                }
+            }
+            pillContainer.querySelectorAll('.ba-grp-pill').forEach((p, i) => {
+                const gidx = parseInt(p.dataset.gidx);
+                if (gidx === -1) {
+                    const isActive = _selectedGroupIdx === -1;
+                    p.style.background = isActive ? 'var(--accent-color)' : 'transparent';
+                    p.style.color = isActive ? '#fff' : 'var(--text-secondary)';
+                    p.style.borderColor = isActive ? 'var(--accent-color)' : 'var(--border-color)';
+                } else {
+                    const g = groups[gidx];
+                    if (!g) return;
+                    const isActive = _selectedGroupIdx === gidx;
+                    p.style.background = isActive ? g.color : g.color + '18';
+                    p.style.color = isActive ? '#fff' : g.color;
+                    p.style.borderColor = isActive ? g.color : g.color + '44';
+                }
+            });
+        });
+    }
+
+    panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    panel.querySelector('#ba-confirm').onclick = () => {
+        const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
+        if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
+        let added = 0, skipped = 0;
+        const newEmojis = [];
+        const systemEmojis = CONSTANTS.REPLY_EMOJIS;
+        const existingCustom = new Set(customEmojis);
+        lines.forEach(emoji => {
+            if (systemEmojis.includes(emoji)) {
+                skipped++;
+                return;
+            }
+            if (existingCustom.has(emoji)) {
+                skipped++;
+                return;
+            }
+            customEmojis.push(emoji);
+            existingCustom.add(emoji);
+            newEmojis.push(emoji);
+            added++;
+        });
+        if (_selectedGroupIdx >= 0 && newEmojis.length > 0 && groups) {
+            const targetGroup = groups[_selectedGroupIdx];
+            if (targetGroup) {
+                if (!targetGroup.items) targetGroup.items = [];
+                newEmojis.forEach(emoji => {
+                    if (!targetGroup.items.includes(emoji)) targetGroup.items.push(emoji);
+                });
+            }
+        }
+        throttledSaveData();
+        overlay.remove();
+        renderReplyLibrary();
+        const groupHint = _selectedGroupIdx >= 0 && groups?.[_selectedGroupIdx]
+            ? `，已加入「${groups[_selectedGroupIdx].name}」` : '';
+        showNotification(`✓ 添加 ${added} 个 Emoji${skipped ? `，跳过 ${skipped} 个重复` : ''}${groupHint}`, 'success');
+    };
+}
+
 
 function _renderCardViewWithGroups(list, items) {
     const ctx = _getGroupCtx();
@@ -992,23 +1169,23 @@ function _renderEmojiCardList(container, items, disabledSet) {
         const isDisabled = disabledSet.has(emoji);
         const card = document.createElement('div');
         card.className = `rl-card emoji-card ${isDisabled ? 'disabled-card' : ''}`;
+        // 只保留大号 emoji，移除右侧的文字说明
         card.innerHTML = `
-            <div style="flex:1; min-width:0; display: flex; align-items: center; gap: 12px;">
+            <div style="flex:1; min-width:0; display: flex; align-items: center; justify-content: center;">
                 <span style="font-size: 32px;">${emoji}</span>
-                <span style="font-size: 13px; color: var(--text-secondary);">${emoji}</span>
             </div>
             <div class="rl-card-actions">
                 <button class="rl-act-btn" data-action="tag" title="分组">${ICONS.tag}</button>
                 <button class="rl-act-btn danger" data-action="delete" title="${isSystem ? '隐藏' : '删除'}">${ICONS.trash}</button>
             </div>
         `;
-        // 分组按钮
+        // 分组按钮事件
         const tagBtn = card.querySelector('[data-action="tag"]');
         tagBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             _showSingleItemGroupPicker(emoji, _getGroupCtx('emojis'));
         });
-        // 删除/隐藏按钮
+        // 删除/隐藏按钮事件
         const delBtn = card.querySelector('[data-action="delete"]');
         delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
