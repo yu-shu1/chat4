@@ -1,6 +1,6 @@
 /*核心应用逻辑：数据加载保存、消息渲染、会话管理等*/
 
-        function clearAllAppData() {
+function clearAllAppData() {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease;';
     overlay.innerHTML = `
@@ -405,6 +405,11 @@ const loadData = async () => {
         if (savedCustomThemes) customThemes = savedCustomThemes;
         if (savedThemeSchemes) themeSchemes = savedThemeSchemes;
         try { const ce = await localforage.getItem(getStorageKey('customEmojis')); if (ce && Array.isArray(ce)) customEmojis = ce; } catch(e) {}
+        
+        // 加载 Emoji 分组
+        const savedEmojiGroups = await localforage.getItem(getStorageKey('customEmojiGroups'));
+        if (savedEmojiGroups) window.customEmojiGroups = savedEmojiGroups;
+        
         window._customReplies = customReplies;
         window._CONSTANTS = CONSTANTS;
 
@@ -588,6 +593,7 @@ const saveData = async () => {
         { key: 'customThemes',           val: () => localforage.setItem(`${APP_PREFIX}customThemes`, customThemes) },
         { key: 'themeSchemes',           val: () => localforage.setItem(`${APP_PREFIX}themeSchemes`, themeSchemes) },
         { key: 'chatMessages',           val: () => localforage.setItem(getStorageKey('chatMessages'), messages) },
+        { key: 'customEmojiGroups',      val: () => localforage.setItem(getStorageKey('customEmojiGroups'), window.customEmojiGroups) }
     ];
 
     const partnerAvatarSrc = (() => {
@@ -2738,6 +2744,3 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(historyLoader);
     }
 });
-
-
-
