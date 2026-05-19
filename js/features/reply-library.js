@@ -432,7 +432,6 @@ function _renderModernToolbar() {
             <button class="toolbar-icon-btn ${_batchModeActive ? 'active' : ''}" id="tb-batch-btn" title="${_batchModeActive ? '退出批量' : '批量管理'}">
                 ${ICONS.batch}
             </button>` : ''}
-            // 在 tb-import-btn 之前加入
             ${currentSubTab === 'emojis' ? `
             <button class="toolbar-icon-btn" id="tb-batch-add-emoji" title="批量添加">
                 ${ICONS.plus}
