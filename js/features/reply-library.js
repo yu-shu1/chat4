@@ -508,13 +508,13 @@ function _renderModernToolbar() {
                 ${ICONS.dedup}
             </button>
             <div style="flex:1;"></div>
-            ${canBatch ? `
-            <button class="toolbar-icon-btn ${_batchModeActive ? 'active' : ''}" id="tb-batch-btn" title="${_batchModeActive ? '退出批量' : '批量管理'}">
-                ${ICONS.batch}
-            </button>` : ''}
             ${currentSubTab === 'emojis' ? `
             <button class="toolbar-icon-btn" id="tb-batch-add-emoji-btn" title="批量添加 Emoji">
                 <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" stroke-width="1.3"/><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.3"/></svg>
+            </button>` : ''}
+            ${canBatch ? `
+            <button class="toolbar-icon-btn ${_batchModeActive ? 'active' : ''}" id="tb-batch-btn" title="${_batchModeActive ? '退出批量' : '批量管理'}">
+                ${ICONS.batch}
             </button>` : ''}
             <button class="toolbar-icon-btn" id="tb-import-btn" title="导入">
                 ${ICONS.import}
