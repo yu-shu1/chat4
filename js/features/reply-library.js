@@ -2,16 +2,102 @@ if (typeof customReplyGroups === 'undefined') window.customReplyGroups = [];
 if (typeof replyGroupsEnabled === 'undefined') window.replyGroupsEnabled = false;
 if (typeof customPokeGroups === 'undefined') window.customPokeGroups = [];
 if (typeof customStatusGroups === 'undefined') window.customStatusGroups = [];
-if (typeof window.customEmojiGroups === 'undefined') window.customEmojiGroups = [];
 
-function _getAllEmojis() {
-    return [...CONSTANTS.REPLY_EMOJIS, ...customEmojis];
-}
 
-// 在文件开头附近添加
-function _getEmojiRealIndex(emoji) {
-    const allEmojisList = _getAllEmojis();
-    return allEmojisList.findIndex(e => e === emoji);
+function _showEmojiBatchDialog() {
+    const overlay = _makeOverlay();
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        background: var(--secondary-bg);
+        border-radius: 22px;
+        padding: 24px;
+        width: 92%;
+        max-width: 420px;
+        max-height: 88vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 24px 80px rgba(0,0,0,.45);
+        animation: popIn 0.22s cubic-bezier(.34,1.56,.64,1);
+    `;
+    panel.innerHTML = `
+        <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">
+            <i class="fas fa-layer-group"></i> 批量添加 Emoji
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">
+            每行一个 Emoji，自动去重
+        </div>
+        <div style="flex:1;overflow-y:auto;min-height:0;">
+            <textarea id="batch-emoji-input" rows="8" placeholder="😊&#10;❤️&#10;✨&#10;🎉" style="
+                width:100%;
+                box-sizing:border-box;
+                padding:12px 14px;
+                border:1.5px solid var(--border-color);
+                border-radius:13px;
+                background:var(--primary-bg);
+                color:var(--text-primary);
+                font-size:13px;
+                font-family:var(--font-family);
+                outline:none;
+                resize:vertical;
+                line-height:1.6;
+                transition:border 0.18s;
+            "></textarea>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;margin-bottom:12px;">
+                <span id="batch-emoji-count">0 条</span>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button id="ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
+            <button id="ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
+        </div>
+    `;
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const ta = panel.querySelector('#batch-emoji-input');
+    const countEl = panel.querySelector('#batch-emoji-count');
+    const updateCount = () => {
+        const lines = ta.value.split('\n').filter(l => l.trim().length > 0);
+        countEl.textContent = `${lines.length} 条`;
+    };
+    ta.addEventListener('input', updateCount);
+    updateCount();
+
+    panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    panel.querySelector('#ba-confirm').onclick = () => {
+        const lines = ta.value.split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0);
+        if (!lines.length) {
+            showNotification('请输入至少一个 Emoji', 'warning');
+            return;
+        }
+        // 去重（保留顺序）
+        const unique = [];
+        const seen = new Set();
+        for (const em of lines) {
+            if (!seen.has(em)) {
+                seen.add(em);
+                unique.push(em);
+            }
+        }
+        const added = [];
+        for (const em of unique) {
+            if (!customEmojis.includes(em)) {
+                customEmojis.push(em);
+                added.push(em);
+            }
+        }
+        if (added.length > 0) {
+            throttledSaveData();
+            renderReplyLibrary();
+            showNotification(`成功添加 ${added.length} 个 Emoji`, 'success');
+        } else {
+            showNotification('所有 Emoji 都已存在，未添加新内容', 'info');
+        }
+        overlay.remove();
+    };
 }
 
 // 根据当前 tab 返回对应的分组上下文 {groups, items, itemLabel}
@@ -25,27 +111,15 @@ function _getGroupCtx(tab) {
         if (!window.customStatusGroups) window.customStatusGroups = [];
         return { groups: window.customStatusGroups, items: customStatuses, itemLabel: '状态' };
     }
-    if (tab === 'emojis') {   // 新增
-        if (!window.customEmojiGroups) window.customEmojiGroups = [];
-        return { groups: window.customEmojiGroups, items: _getAllEmojis(), itemLabel: 'Emoji' };
-    }
     // default: custom replies
     if (!window.customReplyGroups) window.customReplyGroups = [];
     return { groups: window.customReplyGroups, items: customReplies, itemLabel: '字卡' };
 }
 
-function _saveDisabledItemsSet(set) {
-    if (currentSubTab === 'emojis') {
-        localStorage.setItem('disabledSystemEmojis', JSON.stringify([...set]));
-    } else {
-        localStorage.setItem('disabledReplyItems', JSON.stringify([...set]));
-    }
-}
-
 // 判断当前 tab 是否支持分组
 function _tabHasGroups(tab) {
     tab = tab || currentSubTab;
-    return tab === 'custom' || tab === 'pokes' || tab === 'statuses' || tab === 'emojis';
+    return tab === 'custom' || tab === 'pokes' || tab === 'statuses';
 }
 
 let _batchSelectedIndices = new Set();
@@ -289,7 +363,7 @@ function _renderModernToolbar() {
     const isMainCustom = currentMajorTab === 'reply' && currentSubTab === 'custom';
     const isStickersTab = currentMajorTab === 'reply' && currentSubTab === 'stickers';
     const hasGroupSupport = _tabHasGroups();
-    const canBatch = isMainCustom || isStickersTab || (currentMajorTab === 'reply' && currentSubTab === 'emojis');
+    const canBatch = isMainCustom || isStickersTab;
 
     if (!toolbar) {
         toolbar = document.createElement('div');
@@ -301,11 +375,7 @@ function _renderModernToolbar() {
 
     const disabledSet = _getDisabledItemsSet();
     const ctx = _getGroupCtx();
-    // 替换原来的 totalItems 定义
-    let totalItems = 0;
-    if (isMainCustom) totalItems = customReplies.length;
-    else if (isStickersTab) totalItems = stickerLibrary.length;
-    else if (currentSubTab === 'emojis') totalItems = _getAllEmojis().length;    
+    const totalItems = isMainCustom ? customReplies.length : (isStickersTab ? stickerLibrary.length : 0);
     const selectedCount = _batchSelectedIndices.size;
 
     const addBtnLabel = (() => {
@@ -442,16 +512,19 @@ function _renderModernToolbar() {
             <button class="toolbar-icon-btn ${_batchModeActive ? 'active' : ''}" id="tb-batch-btn" title="${_batchModeActive ? '退出批量' : '批量管理'}">
                 ${ICONS.batch}
             </button>` : ''}
-            ${currentSubTab === 'emojis' ? `
-            <button class="toolbar-icon-btn" id="tb-batch-add-emoji" title="批量添加">
-                ${ICONS.plus}
-            </button>` : ''}
             <button class="toolbar-icon-btn" id="tb-import-btn" title="导入">
                 ${ICONS.import}
             </button>
             <button class="toolbar-icon-btn" id="tb-export-btn" title="导出">
                 ${ICONS.export}
             </button>
+            if (currentMajorTab === 'reply' && currentSubTab === 'emojis') {
+                toolbar.innerHTML += `
+                    <button class="toolbar-icon-btn" id="tb-emoji-batch" title="批量添加">
+                        ${ICONS.plus}
+                    </button>
+                `;
+            }
         </div>
 
         ${_searchVisible ? `
@@ -516,6 +589,13 @@ function _renderModernToolbar() {
     toolbar.querySelector('#tb-dedup-btn')?.addEventListener('click', _runDedup);
     toolbar.querySelector('#tb-import-btn')?.addEventListener('click', () => document.getElementById('import-replies-input')?.click());
     toolbar.querySelector('#tb-export-btn')?.addEventListener('click', _showExportUI);
+    // 在绑定其他按钮事件的地方（如 tb-import-btn 之后）添加
+    const emojiBatchBtn = toolbar.querySelector('#tb-emoji-batch');
+    if (emojiBatchBtn) {
+        emojiBatchBtn.onclick = () => {
+            _showEmojiBatchDialog();
+        };
+    }
 
     toolbar.querySelectorAll('.gfp-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -529,34 +609,29 @@ function _renderModernToolbar() {
         toolbar.querySelector('#batch-select-all-btn')?.addEventListener('click', () => {
             if (_batchSelectedIndices.size === totalItems) _batchSelectedIndices.clear();
             else {
-                let pool;
-                if (isMainCustom) pool = customReplies;
-                else if (isStickersTab) pool = stickerLibrary;
-                else if (currentSubTab === 'emojis') pool = _getAllEmojis();
-                else return;
+                const pool = isMainCustom ? customReplies : stickerLibrary;
                 pool.forEach((_, i) => _batchSelectedIndices.add(i));
             }
             renderReplyLibrary();
         });
         toolbar.querySelector('#batch-group-btn')?.addEventListener('click', () => {
-            if (!_tabHasGroups()) return;  // 改为检查是否有分组能力
+            if (!isMainCustom) return;
             if (_batchSelectedIndices.size === 0) return;
             _showBatchGroupPicker();
         });
         toolbar.querySelector('#batch-disable-btn')?.addEventListener('click', () => {
             if (_batchSelectedIndices.size === 0) return;
             if (isStickersTab) _batchToggleDisableStickers();
-            else if (currentSubTab === 'emojis') _batchToggleDisableEmojis();
             else _batchToggleDisable();
         });
         toolbar.querySelector('#batch-delete-btn')?.addEventListener('click', () => {
             if (_batchSelectedIndices.size === 0) return;
             if (!confirm(`确定删除选中的 ${_batchSelectedIndices.size} 条？`)) return;
+            const indices = [..._batchSelectedIndices].sort((a, b) => b - a);
             if (isStickersTab) {
-                // 原有的贴纸删除逻辑
-                const indices = [..._batchSelectedIndices].sort((a, b) => b - a);
                 const deleted = indices.map(i => stickerLibrary[i]).filter(Boolean);
                 indices.forEach(i => stickerLibrary.splice(i, 1));
+                // 同步清理已删除条目的“屏蔽集合”
                 const dis = _getDisabledStickerItemsSet();
                 deleted.forEach(d => dis.delete(d));
                 _saveDisabledStickerItemsSet(dis);
@@ -564,11 +639,7 @@ function _renderModernToolbar() {
                 throttledSaveData();
                 renderReplyLibrary();
                 showNotification(`已删除 ${indices.length} 个贴纸`, 'success');
-            } else if (currentSubTab === 'emojis') {
-                _batchDeleteEmojis();
             } else {
-                // 原有的字卡删除逻辑
-                const indices = [..._batchSelectedIndices].sort((a, b) => b - a);
                 const deletedTexts = indices.map(i => customReplies[i]);
                 indices.forEach(i => customReplies.splice(i, 1));
                 if (customReplyGroups) {
@@ -583,205 +654,7 @@ function _renderModernToolbar() {
             }
         });
     }
-    // 替换原有的批量添加按钮监听
-    // 在 _renderModernToolbar 函数内，找到 tb-batch-add-emoji 的监听部分，替换为：
-    if (currentSubTab === 'emojis') {
-        const batchAddBtn = toolbar.querySelector('#tb-batch-add-emoji');
-        if (batchAddBtn) {
-            batchAddBtn.addEventListener('click', () => {
-                _showBatchAddEmojiDialog();
-            });
-        }
-    }
 }
-
-// 在 reply-library.js 中添加或替换以下代码
-
-// 用于 Emoji 批量添加的弹窗函数
-function _showBatchAddEmojiDialog() {
-    const groups = window.customEmojiGroups || [];
-    const allEmojis = [...CONSTANTS.REPLY_EMOJIS, ...customEmojis];
-    const overlay = _makeOverlay();
-    const panel = document.createElement('div');
-    panel.style.cssText = `
-        background:var(--secondary-bg);border-radius:22px;padding:24px;
-        width:92%;max-width:420px;
-        max-height:88vh;
-        display:flex;flex-direction:column;
-        box-shadow:0 24px 80px rgba(0,0,0,.45);
-        animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
-    `;
-
-    const hasGroups = groups && groups.length > 0;
-    const groupPillsHTML = hasGroups ? `
-        <button class="ba-grp-pill" data-gidx="-1" style="
-            padding:5px 13px;border-radius:20px;font-size:12px;font-family:var(--font-family);cursor:pointer;
-            border:1.5px solid var(--accent-color);background:var(--accent-color);color:#fff;font-weight:700;
-            flex-shrink:0;transition:all .15s;
-        ">不分组</button>
-        ${groups.map((g, i) => `
-        <button class="ba-grp-pill" data-gidx="${i}" style="
-            padding:5px 13px;border-radius:20px;font-size:12px;font-family:var(--font-family);cursor:pointer;
-            border:1.5px solid ${g.color}44;background:${g.color}18;color:${g.color};font-weight:600;
-            flex-shrink:0;transition:all .15s;
-        ">
-            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${g.color};margin-right:4px;vertical-align:middle;"></span>${g.name}
-        </button>`).join('')}
-    ` : '';
-
-    panel.innerHTML = `
-        <style>@keyframes popIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}</style>
-        <div style="flex-shrink:0;font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">批量添加 Emoji</div>
-        <div style="flex-shrink:0;font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">每行一个 Emoji，自动去重</div>
-
-        <div style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;">
-            <textarea id="batch-add-input" rows="10" placeholder="😊&#10;🥰&#10;✨" style="
-                width:100%;box-sizing:border-box;padding:12px 14px;
-                border:1.5px solid var(--border-color);border-radius:13px;
-                background:var(--primary-bg);color:var(--text-primary);
-                font-size:13px;font-family:var(--font-family);outline:none;resize:vertical;
-                line-height:1.6;transition:border 0.18s;
-            "></textarea>
-            <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;margin-bottom:12px;">
-                <span id="batch-add-count">0 条</span>
-            </div>
-
-            ${hasGroups ? `
-            <div id="ba-group-section" style="margin-bottom:4px;">
-                <button id="ba-group-toggle" style="
-                    display:flex;align-items:center;gap:7px;width:100%;
-                    padding:9px 12px;border-radius:11px;cursor:pointer;
-                    border:1.5px solid var(--border-color);background:var(--primary-bg);
-                    color:var(--text-secondary);font-size:12px;font-family:var(--font-family);
-                    font-weight:600;transition:all .15s;text-align:left;
-                ">
-                    <i class="fas fa-folder" style="font-size:12px;color:var(--accent-color);"></i>
-                    <span id="ba-toggle-label">添加到分组</span>
-                    <span id="ba-toggle-arrow" style="margin-left:auto;font-size:10px;transition:transform .2s;">▼</span>
-                </button>
-                <div id="ba-group-drawer" style="display:none;overflow-x:auto;overflow-y:hidden;padding:10px 2px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
-                    <div id="ba-group-list" style="display:flex;gap:7px;width:max-content;">
-                        ${groupPillsHTML}
-                    </div>
-                </div>
-            </div>` : ''}
-        </div>
-
-        <div style="flex-shrink:0;padding-top:14px;display:flex;gap:10px;">
-            <button id="ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
-            <button id="ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
-        </div>
-    `;
-    overlay.appendChild(panel);
-    document.body.appendChild(overlay);
-
-    const ta = panel.querySelector('#batch-add-input');
-    const countEl = panel.querySelector('#batch-add-count');
-    ta.addEventListener('input', () => {
-        const lines = ta.value.split('\n').filter(l => l.trim());
-        countEl.textContent = `${lines.length} 条`;
-    });
-    ta.addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
-    ta.addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
-
-    const groupToggle = panel.querySelector('#ba-group-toggle');
-    const groupDrawer = panel.querySelector('#ba-group-drawer');
-    const toggleArrow = panel.querySelector('#ba-toggle-arrow');
-    const toggleLabel = panel.querySelector('#ba-toggle-label');
-    let _drawerOpen = false;
-    if (groupToggle && groupDrawer) {
-        groupToggle.addEventListener('click', () => {
-            _drawerOpen = !_drawerOpen;
-            if (_drawerOpen) {
-                groupDrawer.style.display = 'block';
-                groupDrawer.style.animation = 'baGroupSlide 0.18s ease forwards';
-                toggleArrow.style.transform = 'rotate(180deg)';
-                groupToggle.style.borderColor = 'var(--accent-color)';
-                groupToggle.style.color = 'var(--text-primary)';
-            } else {
-                groupDrawer.style.display = 'none';
-                toggleArrow.style.transform = '';
-                groupToggle.style.borderColor = 'var(--border-color)';
-                groupToggle.style.color = 'var(--text-secondary)';
-            }
-        });
-    }
-
-    let _selectedGroupIdx = -1;
-    const pillContainer = panel.querySelector('#ba-group-list');
-    if (pillContainer) {
-        pillContainer.addEventListener('click', e => {
-            const pill = e.target.closest('.ba-grp-pill');
-            if (!pill) return;
-            _selectedGroupIdx = parseInt(pill.dataset.gidx);
-            if (toggleLabel) {
-                if (_selectedGroupIdx === -1) {
-                    toggleLabel.textContent = '添加到分组';
-                } else {
-                    const g = groups[_selectedGroupIdx];
-                    toggleLabel.textContent = g ? `分组：${g.name}` : '添加到分组';
-                }
-            }
-            pillContainer.querySelectorAll('.ba-grp-pill').forEach((p, i) => {
-                const gidx = parseInt(p.dataset.gidx);
-                if (gidx === -1) {
-                    const isActive = _selectedGroupIdx === -1;
-                    p.style.background = isActive ? 'var(--accent-color)' : 'transparent';
-                    p.style.color = isActive ? '#fff' : 'var(--text-secondary)';
-                    p.style.borderColor = isActive ? 'var(--accent-color)' : 'var(--border-color)';
-                } else {
-                    const g = groups[gidx];
-                    if (!g) return;
-                    const isActive = _selectedGroupIdx === gidx;
-                    p.style.background = isActive ? g.color : g.color + '18';
-                    p.style.color = isActive ? '#fff' : g.color;
-                    p.style.borderColor = isActive ? g.color : g.color + '44';
-                }
-            });
-        });
-    }
-
-    panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    panel.querySelector('#ba-confirm').onclick = () => {
-        const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
-        if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
-        let added = 0, skipped = 0;
-        const newEmojis = [];
-        const systemEmojis = CONSTANTS.REPLY_EMOJIS;
-        const existingCustom = new Set(customEmojis);
-        lines.forEach(emoji => {
-            if (systemEmojis.includes(emoji)) {
-                skipped++;
-                return;
-            }
-            if (existingCustom.has(emoji)) {
-                skipped++;
-                return;
-            }
-            customEmojis.push(emoji);
-            existingCustom.add(emoji);
-            newEmojis.push(emoji);
-            added++;
-        });
-        if (_selectedGroupIdx >= 0 && newEmojis.length > 0 && groups) {
-            const targetGroup = groups[_selectedGroupIdx];
-            if (targetGroup) {
-                if (!targetGroup.items) targetGroup.items = [];
-                newEmojis.forEach(emoji => {
-                    if (!targetGroup.items.includes(emoji)) targetGroup.items.push(emoji);
-                });
-            }
-        }
-        throttledSaveData();
-        overlay.remove();
-        renderReplyLibrary();
-        const groupHint = _selectedGroupIdx >= 0 && groups?.[_selectedGroupIdx]
-            ? `，已加入「${groups[_selectedGroupIdx].name}」` : '';
-        showNotification(`✓ 添加 ${added} 个 Emoji${skipped ? `，跳过 ${skipped} 个重复` : ''}${groupHint}`, 'success');
-    };
-}
-
 
 function _renderCardViewWithGroups(list, items) {
     const ctx = _getGroupCtx();
@@ -1074,246 +947,101 @@ function _saveDisabledSystemEmojisSet(set) {
 }
 
 function _renderEmojiTab(list, itemsToRender) {
-    // 确保不使用网格模式，采用卡片列表样式
+    // 确保使用卡片列表样式（复用主字卡的样式）
     list.classList.remove('grid-mode', 'emoji-flex-layout');
     list.classList.add('list-mode');
     list.innerHTML = '';
 
-    // 获取分组上下文
-    const ctx = _getGroupCtx('emojis');
-    const groups = ctx.groups;
-    const allEmojis = ctx.items;
-    const disabledSet = _getDisabledItemsSet();
+    // 获取禁用的系统 Emoji
+    const disabledSet = _getDisabledSystemEmojisSet();
 
-    // 过滤已禁用的系统预设（但自定义不在此列，自定义应直接删除）
-    const enabledEmojis = allEmojis.filter(e => !disabledSet.has(e));
+    // 过滤系统预设 Emoji（排除已禁用的）
+    const systemEmojis = itemsToRender.filter(e => !disabledSet.has(e));
 
-    if (enabledEmojis.length === 0) {
-        list.innerHTML = renderEmptyState('暂无 Emoji，可点击右上角添加自定义表情');
-        return;
-    }
-
-    // 分组过滤
-    let filtered = enabledEmojis;
-    if (_activeGroupFilter === 'ungrouped') {
-        const inGroup = new Set();
-        groups.forEach(g => (g.items || []).forEach(item => inGroup.add(item)));
-        filtered = enabledEmojis.filter(e => !inGroup.has(e));
-    } else if (_activeGroupFilter && _activeGroupFilter !== 'all') {
-        const group = groups.find(g => g.id === _activeGroupFilter);
-        if (group) {
-            filtered = enabledEmojis.filter(e => (group.items || []).includes(e));
-        }
-    }
-
-    // 分组显示
-    if (groups.length > 0 && _activeGroupFilter === null) {
-        // 显示所有分组 + 未分组
-        const inGroup = new Set();
-        groups.forEach(g => {
-            const groupItems = (g.items || []).filter(item => enabledEmojis.includes(item));
-            groupItems.forEach(item => inGroup.add(item));
-            _renderEmojiGroupBlock(list, g, groupItems, disabledSet);
-        });
-        const ungrouped = enabledEmojis.filter(e => !inGroup.has(e));
-        if (ungrouped.length > 0) {
-            _renderEmojiGroupBlock(list, { id: '__ungrouped', name: '未分组', color: '#868E96', disabled: false }, ungrouped, disabledSet, true);
-        }
-    } else {
-        // 无分组或指定分组过滤
-        _renderEmojiCardList(list, filtered, disabledSet);
-    }
-}
-
-function _renderEmojiGroupBlock(list, group, groupItems, disabledSet, isUngrouped = false) {
-    const section = document.createElement('div');
-    section.className = 'rl-group-block';
-    const isCollapsed = group._collapsed || false;
-    const isDisabled = group.disabled;
-    const colorDot = group.color || '#868E96';
-
-    section.innerHTML = `
-        <div class="rl-group-header${isCollapsed ? ' collapsed' : ''}" id="grp-hdr-${group.id}" style="${isDisabled ? 'opacity:0.5;' : ''}">
-            <div class="rl-group-tag" id="grp-tag-${group.id}" title="${isDisabled ? '点击启用此分组' : '点击屏蔽此分组'}">
-                <span style="width:8px;height:8px;border-radius:50%;background:${colorDot};flex-shrink:0;"></span>
-                <span style="font-size:12px;font-weight:700;color:${colorDot};">${group.name}</span>
-                ${isDisabled ? `<span title="已屏蔽" style="color:${colorDot};">${ICONS.eyeOff}</span>` : ''}
-            </div>
-            <span style="font-size:11px;color:var(--text-secondary);">${groupItems.length} 条</span>
-            ${_batchModeActive && groupItems.length > 0 ? (() => {
-                const allSel = groupItems.every(item => _batchSelectedIndices.has(_getEmojiRealIndex(item)));
-                const someSel = !allSel && groupItems.some(item => _batchSelectedIndices.has(_getEmojiRealIndex(item)));
-                return `<button class="grp-select-all-btn" data-gid="${group.id}" style="
-                    margin-left:auto;flex-shrink:0;padding:3px 9px;border-radius:20px;cursor:pointer;
-                    font-size:11px;font-weight:700;font-family:var(--font-family);
-                    border:1.5px solid ${allSel ? 'var(--accent-color)' : someSel ? colorDot : 'var(--border-color)'};
-                    background:${allSel ? 'var(--accent-color)' : someSel ? colorDot + '22' : 'var(--primary-bg)'};
-                    color:${allSel ? '#fff' : someSel ? colorDot : 'var(--text-secondary)'};
-                ">${allSel ? '✓ 全选' : someSel ? `已选${groupItems.filter(x=>_batchSelectedIndices.has(_getEmojiRealIndex(x))).length}` : '全选'}</button>`;
-            })() : `<div style="flex:1;"></div>`}
-            ${!isUngrouped ? `<button class="grp-edit-btn" title="编辑分组" style="width:26px;height:26px;border-radius:8px;border:1px solid var(--border-color);background:var(--primary-bg);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ICONS.edit}</button>` : ''}
-            <div class="grp-chevron" style="color:var(--text-secondary);transition:transform 0.2s;transform:${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'};">
-                ${ICONS.chevronD}
-            </div>
-        </div>
-        <div class="rl-group-body" id="grp-body-${group.id}" style="display:${isCollapsed ? 'none' : 'block'};"></div>
-    `;
-    list.appendChild(section);
-
-    const body = section.querySelector(`#grp-body-${group.id}`);
-    _renderEmojiCardList(body, groupItems, disabledSet);
-
-    // 事件绑定
-    const header = section.querySelector(`#grp-hdr-${group.id}`);
-    header.addEventListener('click', (e) => {
-        if (e.target.closest('.grp-edit-btn') || e.target.closest(`#grp-tag-${group.id}`)) return;
-        group._collapsed = !group._collapsed;
-        body.style.display = group._collapsed ? 'none' : 'block';
-        header.querySelector('.grp-chevron').style.transform = group._collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
-        header.classList.toggle('collapsed', !!group._collapsed);
-    });
-
-    const tag = section.querySelector(`#grp-tag-${group.id}`);
-    if (tag && !isUngrouped) {
-        tag.addEventListener('click', (e) => {
-            e.stopPropagation();
-            group.disabled = !group.disabled;
-            throttledSaveData();
-            renderReplyLibrary();
-            showNotification(group.disabled ? `已屏蔽「${group.name}」` : `已启用「${group.name}」`, 'success');
-        });
-    }
-
-    const editBtn = section.querySelector('.grp-edit-btn');
-    if (editBtn && !isUngrouped) {
-        editBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            _showGroupEditor(group, _getGroupCtx('emojis'));
-        });
-    }
-
-    const selectAllBtn = section.querySelector('.grp-select-all-btn');
-    if (selectAllBtn) {
-        selectAllBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const allSel = groupItems.every(item => _batchSelectedIndices.has(_getEmojiRealIndex(item)));
-            if (allSel) {
-                groupItems.forEach(item => _batchSelectedIndices.delete(_getEmojiRealIndex(item)));
-            } else {
-                groupItems.forEach(item => _batchSelectedIndices.add(_getEmojiRealIndex(item)));
-            }
-            renderReplyLibrary();
-        });
-    }
-}
-
-function _renderEmojiCardList(container, items, disabledSet) {
-    const isBatchMode = _batchModeActive;
-    const allEmojisList = _getAllEmojis();
-    
-    items.forEach((emoji, idx) => {
-        // 计算在完整列表中的原始索引
-        const realIndex = allEmojisList.findIndex(e => e === emoji);
-        if (realIndex === -1) return;
-        
-        const isSystem = CONSTANTS.REPLY_EMOJIS.includes(emoji);
-        const isDisabled = disabledSet.has(emoji);
-        const isSelected = isBatchMode && _batchSelectedIndices.has(realIndex);
-        
+    // 渲染系统预设 Emoji（每个一行，样式同主字卡）
+    systemEmojis.forEach(emoji => {
         const card = document.createElement('div');
-        card.className = `rl-card emoji-card ${isDisabled ? 'disabled-card' : ''} ${isSelected ? 'rl-selected' : ''}`;
-        card.style.cursor = isBatchMode ? 'pointer' : 'default';
-        
-        // 批量模式下显示复选框
-        const checkboxHtml = isBatchMode ? `
-            <div class="rl-batch-check" style="
-                width:20px;height:20px;border-radius:6px;flex-shrink:0;
-                border:1.5px solid ${isSelected ? 'var(--accent-color)' : 'var(--border-color)'};
-                background:${isSelected ? 'var(--accent-color)' : 'transparent'};
-                display:flex;align-items:center;justify-content:center;
-                margin-right:8px;
-            ">
-                ${isSelected ? '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>' : ''}
-            </div>
-        ` : '';
-        
+        card.className = 'rl-card emoji-card';
         card.innerHTML = `
-            ${checkboxHtml}
-            <div style="flex:1; min-width:0; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 32px; ${isDisabled ? 'opacity:0.4;' : ''}">${emoji}</span>
+            <div style="flex:1; min-width:0; display: flex; align-items: center;">
+                <span style="font-size: 32px;">${emoji}</span>
             </div>
-            ${!isBatchMode ? `
             <div class="rl-card-actions">
-                <button class="rl-act-btn ${isDisabled ? 'active' : ''}" data-action="disable" title="${isDisabled ? '启用' : '屏蔽'}">
-                    ${isDisabled ? ICONS.eye : ICONS.eyeOff}
+                <button class="rl-act-btn danger" data-action="delete" title="删除">
+                    ${ICONS.trash}
                 </button>
-                <button class="rl-act-btn" data-action="tag" title="分组">${ICONS.tag}</button>
-                <button class="rl-act-btn" data-action="edit" title="编辑">${ICONS.edit}</button>
-                <button class="rl-act-btn danger" data-action="delete" title="${isSystem ? '隐藏' : '删除'}">${ICONS.trash}</button>
-            </div>` : ''}
+            </div>
         `;
-        
-        // 批量模式：点击卡片切换选择
-        if (isBatchMode) {
-            card.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (_batchSelectedIndices.has(realIndex)) {
-                    _batchSelectedIndices.delete(realIndex);
-                } else {
-                    _batchSelectedIndices.add(realIndex);
-                }
-                renderReplyLibrary();
-            });
-        } else {
-            // 屏蔽/启用按钮
-            const disableBtn = card.querySelector('[data-action="disable"]');
-            if (disableBtn) {
-                disableBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    _toggleEmojiDisable(emoji);
-                });
+        // 删除事件（系统预设 Emoji）
+        const deleteBtn = card.querySelector('[data-action="delete"]');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`确定要删除 Emoji「${emoji}」吗？\n删除后不会影响其他人，你可以在将来重新添加。`)) {
+                disabledSet.add(emoji);
+                _saveDisabledSystemEmojisSet(disabledSet);
+                renderReplyLibrary();  // 重新渲染
             }
-            // 分组按钮
-            const tagBtn = card.querySelector('[data-action="tag"]');
-            if (tagBtn) {
-                tagBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    _showSingleItemGroupPicker(emoji, _getGroupCtx('emojis'));
-                });
-            }
-            // 编辑按钮
-            const editBtn = card.querySelector('[data-action="edit"]');
-            if (editBtn) {
-                editBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    _editEmoji(emoji, realIndex);
-                });
-            }
-            // 删除/隐藏按钮
-            const delBtn = card.querySelector('[data-action="delete"]');
-            if (delBtn) {
-                delBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (isSystem) {
-                        if (confirm(`确定要隐藏 Emoji「${emoji}」吗？\n隐藏后不会影响其他人，你可以在将来重新添加。`)) {
-                            disabledSet.add(emoji);
-                            _saveDisabledSystemEmojisSet(disabledSet);
-                            renderReplyLibrary();
-                        }
-                    } else {
-                        if (confirm(`确定要删除自定义 Emoji「${emoji}」吗？`)) {
-                            const idx = customEmojis.indexOf(emoji);
-                            if (idx !== -1) customEmojis.splice(idx, 1);
-                            throttledSaveData();
-                            renderReplyLibrary();
-                        }
-                    }
-                });
-            }
-        }
-        
-        container.appendChild(card);
+        });
+        // 点击卡片主体插入 Emoji
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('.rl-card-actions')) return;
+            const input = document.getElementById('message-input');
+            input.value += emoji;
+            const modal = document.getElementById('custom-replies-modal');
+            if (modal && typeof hideModal === 'function') hideModal(modal);
+            input.focus();
+        });
+        list.appendChild(card);
     });
+
+    // 自定义 Emoji 区块（如果有）
+    if (customEmojis.length > 0) {
+        // 分隔线（与主字卡风格一致）
+        const separator = document.createElement('div');
+        separator.className = 'emoji-custom-separator';
+        separator.innerHTML = '<span>— 自定义 —</span>';
+        list.appendChild(separator);
+
+        customEmojis.forEach((emoji, idx) => {
+            const card = document.createElement('div');
+            card.className = 'rl-card emoji-card custom-emoji-card';
+            card.innerHTML = `
+                <div style="flex:1; min-width:0; display: flex; align-items: center;">
+                    <span style="font-size: 32px;">${emoji}</span>
+                </div>
+                <div class="rl-card-actions">
+                    <button class="rl-act-btn danger" data-action="delete" title="删除">
+                        ${ICONS.trash}
+                    </button>
+                </div>
+            `;
+            // 删除事件（自定义 Emoji）
+            const deleteBtn = card.querySelector('[data-action="delete"]');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm(`确定要删除自定义 Emoji「${emoji}」吗？`)) {
+                    customEmojis.splice(idx, 1);
+                    throttledSaveData();
+                    renderReplyLibrary();
+                }
+            });
+            // 点击卡片主体插入 Emoji
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.rl-card-actions')) return;
+                const input = document.getElementById('message-input');
+                input.value += emoji;
+                const modal = document.getElementById('custom-replies-modal');
+                if (modal && typeof hideModal === 'function') hideModal(modal);
+                input.focus();
+            });
+            list.appendChild(card);
+        });
+    }
+
+    // 如果没有任何 Emoji 可显示（全部被禁用且无自定义），显示空状态
+    if (systemEmojis.length === 0 && customEmojis.length === 0) {
+        list.innerHTML = renderEmptyState('暂无 Emoji，可点击右上角添加自定义表情');
+    }
 }
 
 function _renderStickerTab(list, itemsToRender) {
@@ -1396,69 +1124,6 @@ function _batchToggleDisable() {
     _saveDisabledItemsSet(set);
     _batchSelectedIndices.clear();
     renderReplyLibrary();
-}
-
-function _batchToggleDisableEmojis() {
-    const set = _getDisabledSystemEmojisSet();
-    const allEmojisList = _getAllEmojis();
-    const selectedItems = [..._batchSelectedIndices].map(i => allEmojisList[i]).filter(Boolean);
-    if (selectedItems.length === 0) return;
-    
-    const allDisabled = selectedItems.every(item => set.has(item));
-    if (allDisabled) {
-        selectedItems.forEach(item => set.delete(item));
-        showNotification(`已启用 ${selectedItems.length} 个 Emoji`, 'success');
-    } else {
-        selectedItems.forEach(item => set.add(item));
-        showNotification(`已屏蔽 ${selectedItems.length} 个 Emoji`, 'info');
-    }
-    _saveDisabledSystemEmojisSet(set);
-    _batchSelectedIndices.clear();
-    renderReplyLibrary();
-}
-
-function _batchDeleteEmojis() {
-    const allEmojisList = _getAllEmojis();
-    const selectedItems = [..._batchSelectedIndices]
-        .map(i => allEmojisList[i])
-        .filter(Boolean);
-    if (selectedItems.length === 0) return;
-    
-    if (!confirm(`确定要处理 ${selectedItems.length} 个 Emoji 吗？\n系统 Emoji 将隐藏，自定义 Emoji 将被删除。`)) return;
-    
-    const disabledSet = _getDisabledSystemEmojisSet();
-    let removedCustomCount = 0;
-    
-    selectedItems.forEach(item => {
-        const isSystem = CONSTANTS.REPLY_EMOJIS.includes(item);
-        if (isSystem) {
-            // 系统 Emoji：添加到屏蔽集合
-            disabledSet.add(item);
-        } else {
-            // 自定义 Emoji：从 customEmojis 中删除
-            const idx = customEmojis.indexOf(item);
-            if (idx !== -1) {
-                customEmojis.splice(idx, 1);
-                removedCustomCount++;
-            }
-        }
-    });
-    
-    _saveDisabledSystemEmojisSet(disabledSet);
-    
-    // 清理分组中已删除的项目
-    if (window.customEmojiGroups) {
-        window.customEmojiGroups.forEach(g => {
-            if (g.items) {
-                g.items = g.items.filter(t => !selectedItems.includes(t));
-            }
-        });
-    }
-    
-    _batchSelectedIndices.clear();
-    throttledSaveData();
-    renderReplyLibrary();
-    showNotification(`已处理 ${selectedItems.length} 个 Emoji（隐藏 ${selectedItems.length - removedCustomCount} 个，删除 ${removedCustomCount} 个）`, 'success');
 }
 
 function _batchToggleDisableStickers() {
@@ -3020,54 +2685,4 @@ function applyAllAvatarFrames() {
     if (settings.avatarCornerRadius) {
         document.documentElement.style.setProperty('--avatar-corner-radius', settings.avatarCornerRadius + 'px');
     }
-}
-
-// 单个 Emoji 屏蔽/启用切换
-function _toggleEmojiDisable(emoji) {
-    const set = _getDisabledSystemEmojisSet();
-    if (set.has(emoji)) {
-        set.delete(emoji);
-        showNotification('已启用 ' + emoji, 'success');
-    } else {
-        set.add(emoji);
-        showNotification('已屏蔽 ' + emoji + '（不会出现在随机回复中）', 'info');
-    }
-    _saveDisabledSystemEmojisSet(set);
-    renderReplyLibrary();
-}
-
-// 单个 Emoji 编辑
-function _editEmoji(emoji, realIndex) {
-    const isSystem = CONSTANTS.REPLY_EMOJIS.includes(emoji);
-    const newEmoji = prompt('编辑 Emoji（支持组合表情）:', emoji);
-    if (!newEmoji || newEmoji.trim() === emoji) return;
-    const trimmed = newEmoji.trim();
-    const allEmojis = _getAllEmojis();
-    if (allEmojis.includes(trimmed)) {
-        showNotification('该 Emoji 已存在，无法重复添加', 'warning');
-        return;
-    }
-    
-    if (isSystem) {
-        // 系统 Emoji：隐藏原emoji，添加新emoji到自定义
-        const disabledSet = _getDisabledSystemEmojisSet();
-        if (!disabledSet.has(emoji)) disabledSet.add(emoji);
-        customEmojis.push(trimmed);
-        _saveDisabledSystemEmojisSet(disabledSet);
-    } else {
-        // 自定义 Emoji：直接替换
-        customEmojis[realIndex - CONSTANTS.REPLY_EMOJIS.length] = trimmed;
-    }
-    
-    // 更新分组引用
-    const groups = window.customEmojiGroups || [];
-    groups.forEach(g => {
-        if (g.items && g.items.includes(emoji)) {
-            const idx = g.items.indexOf(emoji);
-            g.items[idx] = trimmed;
-        }
-    });
-    throttledSaveData();
-    renderReplyLibrary();
-    showNotification('✓ Emoji 已更新', 'success');
 }
