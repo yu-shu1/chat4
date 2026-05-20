@@ -2160,9 +2160,14 @@ function _makeOverlay() {
     return overlay;
 }
 
+// 1. 修改 _showBatchAddDialog 函数，增加对 'emojis' tab 的支持（自动隐藏分组部分并按 Emoji 方式处理数据）
 function _showBatchAddDialog() {
+    const isEmojiTab = (currentSubTab === 'emojis');
     const ctx = _getGroupCtx();
     const groups = ctx.groups;
+    const hasGroups = (!isEmojiTab && groups && groups.length > 0); // Emoji tab 强制无分组
+
+    // 创建遮罩和面板（原样式保持不变，仅根据 isEmojiTab 决定是否显示分组区域）
     const overlay = _makeOverlay();
     const panel = document.createElement('div');
     panel.style.cssText = `
@@ -2174,22 +2179,39 @@ function _showBatchAddDialog() {
         animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
     `;
 
-    const hasGroups = groups && groups.length > 0;
-    const groupPillsHTML = hasGroups ? `
-        <button class="ba-grp-pill" data-gidx="-1" style="
-            padding:5px 13px;border-radius:20px;font-size:12px;font-family:var(--font-family);cursor:pointer;
-            border:1.5px solid var(--accent-color);background:var(--accent-color);color:#fff;font-weight:700;
-            flex-shrink:0;transition:all .15s;
-        ">不分组</button>
-        ${groups.map((g, i) => `
-        <button class="ba-grp-pill" data-gidx="${i}" style="
-            padding:5px 13px;border-radius:20px;font-size:12px;font-family:var(--font-family);cursor:pointer;
-            border:1.5px solid ${g.color}44;background:${g.color}18;color:${g.color};font-weight:600;
-            flex-shrink:0;transition:all .15s;
-        ">
-            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${g.color};margin-right:4px;vertical-align:middle;"></span>${g.name}
-        </button>`).join('')}
-    ` : '';
+    // 分组区域 HTML（仅当 hasGroups 为真时生成）
+    let groupHTML = '';
+    if (hasGroups) {
+        const groupPillsHTML = groups.map((g, i) => `
+            <button class="ba-grp-pill" data-gidx="${i}" style="
+                padding:5px 13px;border-radius:20px;font-size:12px;font-family:var(--font-family);cursor:pointer;
+                border:1.5px solid ${g.color}44;background:${g.color}18;color:${g.color};font-weight:600;
+                flex-shrink:0;transition:all .15s;
+            ">
+                <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${g.color};margin-right:4px;vertical-align:middle;"></span>${g.name}
+            </button>
+        `).join('');
+        groupHTML = `
+            <div id="ba-group-section" style="margin-bottom:4px;">
+                <button id="ba-group-toggle" style="display:flex;align-items:center;gap:7px;width:100%;padding:9px 12px;border-radius:11px;cursor:pointer;border:1.5px solid var(--border-color);background:var(--primary-bg);color:var(--text-secondary);font-size:12px;font-family:var(--font-family);font-weight:600;transition:all .15s;text-align:left;">
+                    <i class="fas fa-folder" style="font-size:12px;color:var(--accent-color);"></i>
+                    <span id="ba-toggle-label">添加到分组</span>
+                    <span id="ba-toggle-arrow" style="margin-left:auto;font-size:10px;transition:transform .2s;">▼</span>
+                </button>
+                <div id="ba-group-drawer" style="display:none;overflow-x:auto;overflow-y:hidden;padding:10px 2px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+                    <div id="ba-group-list" style="display:flex;gap:7px;width:max-content;">
+                        <button class="ba-grp-pill" data-gidx="-1" style="padding:5px 13px;border-radius:20px;font-size:12px;font-family:var(--font-family);cursor:pointer;border:1.5px solid var(--accent-color);background:var(--accent-color);color:#fff;font-weight:700;flex-shrink:0;">不分组</button>
+                        ${groupPillsHTML}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // 主要对话框内容（区分 Emoji 和普通字卡的占位提示文字）
+    const placeholderText = isEmojiTab
+        ? "😊\n❤️\n✨\n🎉\n每行一个 Emoji，自动去重"
+        : "在此粘贴内容，每行一条…";
 
     panel.innerHTML = `
         <style>
@@ -2200,7 +2222,7 @@ function _showBatchAddDialog() {
         <div style="flex-shrink:0;font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">每行一条，自动去重</div>
 
         <div style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;">
-            <textarea id="batch-add-input" rows="10" placeholder="在此粘贴内容，每行一条…" style="
+            <textarea id="batch-add-input" rows="10" placeholder="${placeholderText}" style="
                 width:100%;box-sizing:border-box;padding:12px 14px;
                 border:1.5px solid var(--border-color);border-radius:13px;
                 background:var(--primary-bg);color:var(--text-primary);
@@ -2211,25 +2233,7 @@ function _showBatchAddDialog() {
                 <span id="batch-add-count">0 条</span>
             </div>
 
-            ${hasGroups ? `
-            <div id="ba-group-section" style="margin-bottom:4px;">
-                <button id="ba-group-toggle" style="
-                    display:flex;align-items:center;gap:7px;width:100%;
-                    padding:9px 12px;border-radius:11px;cursor:pointer;
-                    border:1.5px solid var(--border-color);background:var(--primary-bg);
-                    color:var(--text-secondary);font-size:12px;font-family:var(--font-family);
-                    font-weight:600;transition:all .15s;text-align:left;
-                ">
-                    <i class="fas fa-folder" style="font-size:12px;color:var(--accent-color);"></i>
-                    <span id="ba-toggle-label">添加到分组</span>
-                    <span id="ba-toggle-arrow" style="margin-left:auto;font-size:10px;transition:transform .2s;">▼</span>
-                </button>
-                <div id="ba-group-drawer" style="display:none;overflow-x:auto;overflow-y:hidden;padding:10px 2px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
-                    <div id="ba-group-list" style="display:flex;gap:7px;width:max-content;">
-                        ${groupPillsHTML}
-                    </div>
-                </div>
-            </div>` : ''}
+            ${hasGroups ? groupHTML : ''}
         </div>
 
         <div style="flex-shrink:0;padding-top:14px;display:flex;gap:10px;">
@@ -2237,6 +2241,7 @@ function _showBatchAddDialog() {
             <button id="ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
         </div>
     `;
+
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
 
@@ -2249,45 +2254,22 @@ function _showBatchAddDialog() {
     ta.addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
     ta.addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
 
-    const groupToggle = panel.querySelector('#ba-group-toggle');
-    const groupDrawer = panel.querySelector('#ba-group-drawer');
-    const toggleArrow = panel.querySelector('#ba-toggle-arrow');
-    const toggleLabel = panel.querySelector('#ba-toggle-label');
-    let _drawerOpen = false;
-    if (groupToggle && groupDrawer) {
-        groupToggle.addEventListener('click', () => {
-            _drawerOpen = !_drawerOpen;
-            if (_drawerOpen) {
-                groupDrawer.style.display = 'block';
-                groupDrawer.style.animation = 'baGroupSlide 0.18s ease forwards';
-                toggleArrow.style.transform = 'rotate(180deg)';
-                groupToggle.style.borderColor = 'var(--accent-color)';
-                groupToggle.style.color = 'var(--text-primary)';
-            } else {
-                groupDrawer.style.display = 'none';
-                toggleArrow.style.transform = '';
-                groupToggle.style.borderColor = 'var(--border-color)';
-                groupToggle.style.color = 'var(--text-secondary)';
-            }
-        });
-    }
-
-    let _selectedGroupIdx = -1; 
+    let _selectedGroupIdx = -1;
     const pillContainer = panel.querySelector('#ba-group-list');
     if (pillContainer) {
         pillContainer.addEventListener('click', e => {
             const pill = e.target.closest('.ba-grp-pill');
             if (!pill) return;
             _selectedGroupIdx = parseInt(pill.dataset.gidx);
+            const toggleLabel = panel.querySelector('#ba-toggle-label');
             if (toggleLabel) {
-                if (_selectedGroupIdx === -1) {
-                    toggleLabel.textContent = '添加到分组';
-                } else {
+                if (_selectedGroupIdx === -1) toggleLabel.textContent = '添加到分组';
+                else {
                     const g = groups[_selectedGroupIdx];
                     toggleLabel.textContent = g ? `分组：${g.name}` : '添加到分组';
                 }
             }
-            pillContainer.querySelectorAll('.ba-grp-pill').forEach((p, i) => {
+            pillContainer.querySelectorAll('.ba-grp-pill').forEach((p, idx) => {
                 const gidx = parseInt(p.dataset.gidx);
                 if (gidx === -1) {
                     const isActive = _selectedGroupIdx === -1;
@@ -2306,43 +2288,80 @@ function _showBatchAddDialog() {
         });
     }
 
+    const groupToggle = panel.querySelector('#ba-group-toggle');
+    const groupDrawer = panel.querySelector('#ba-group-drawer');
+    const toggleArrow = panel.querySelector('#ba-toggle-arrow');
+    let _drawerOpen = false;
+    if (groupToggle && groupDrawer) {
+        groupToggle.addEventListener('click', () => {
+            _drawerOpen = !_drawerOpen;
+            groupDrawer.style.display = _drawerOpen ? 'block' : 'none';
+            if (toggleArrow) toggleArrow.style.transform = _drawerOpen ? 'rotate(180deg)' : '';
+            if (_drawerOpen) groupDrawer.style.animation = 'baGroupSlide 0.18s ease forwards';
+        });
+    }
+
     panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
     panel.querySelector('#ba-confirm').onclick = () => {
         const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
         if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
+
         let added = 0, skipped = 0;
         const newItems = [];
-        lines.forEach(val => {
-            const norm = normalizeStringStrict(val);
-            const isDup = currentSubTab === 'custom'
-                ? (customReplies.some(r => normalizeStringStrict(r) === norm) || CONSTANTS.REPLY_MESSAGES.some(r => normalizeStringStrict(r) === norm))
-                : currentSubTab === 'pokes'
-                ? customPokes.some(r => normalizeStringStrict(r) === norm)
-                : currentSubTab === 'statuses'
-                ? customStatuses.some(r => normalizeStringStrict(r) === norm)
-                : false;
-            if (isDup) { skipped++; return; }
-            if (currentSubTab === 'custom') { customReplies.push(val); newItems.push(val); }
-            else if (currentSubTab === 'pokes') { customPokes.push(val); newItems.push(val); }
-            else if (currentSubTab === 'statuses') { customStatuses.push(val); newItems.push(val); }
-            else if (currentSubTab === 'mottos') customMottos.push(val);
-            added++;
-        });
-        if (_selectedGroupIdx >= 0 && newItems.length > 0 && groups) {
-            const targetGroup = groups[_selectedGroupIdx];
-            if (targetGroup) {
-                if (!targetGroup.items) targetGroup.items = [];
-                newItems.forEach(item => {
-                    if (!targetGroup.items.includes(item)) targetGroup.items.push(item);
-                });
-            }
+
+        if (isEmojiTab) {
+            // Emoji 批量添加逻辑：去重，添加到 customEmojis
+            const existingSet = new Set(customEmojis.map(e => e.trim()));
+            lines.forEach(emojiStr => {
+                if (existingSet.has(emojiStr)) {
+                    skipped++;
+                } else {
+                    customEmojis.push(emojiStr);
+                    added++;
+                    existingSet.add(emojiStr);
+                    newItems.push(emojiStr);
+                }
+            });
+        } else {
+            // 原有字卡、拍一拍、状态等逻辑（保持不变）
+            lines.forEach(val => {
+                const norm = normalizeStringStrict(val);
+                let isDup = false;
+                if (currentSubTab === 'custom') {
+                    if (customReplies.some(r => normalizeStringStrict(r) === norm) || CONSTANTS.REPLY_MESSAGES.some(r => normalizeStringStrict(r) === norm))
+                        isDup = true;
+                } else if (currentSubTab === 'pokes') {
+                    if (customPokes.some(r => normalizeStringStrict(r) === norm)) isDup = true;
+                } else if (currentSubTab === 'statuses') {
+                    if (customStatuses.some(r => normalizeStringStrict(r) === norm)) isDup = true;
+                }
+                if (isDup) { skipped++; return; }
+                if (currentSubTab === 'custom') { customReplies.push(val); newItems.push(val); }
+                else if (currentSubTab === 'pokes') { customPokes.push(val); newItems.push(val); }
+                else if (currentSubTab === 'statuses') { customStatuses.push(val); newItems.push(val); }
+                else if (currentSubTab === 'mottos') customMottos.push(val);
+                added++;
+            });
         }
+
+        // 分组处理（仅当不是 Emoji 且选择了有效分组时）
+        if (!isEmojiTab && _selectedGroupIdx >= 0 && newItems.length > 0 && groups && groups[_selectedGroupIdx]) {
+            const targetGroup = groups[_selectedGroupIdx];
+            if (!targetGroup.items) targetGroup.items = [];
+            newItems.forEach(item => {
+                if (!targetGroup.items.includes(item)) targetGroup.items.push(item);
+            });
+        }
+
         throttledSaveData();
         overlay.remove();
         renderReplyLibrary();
-        const groupHint = _selectedGroupIdx >= 0 && groups?.[_selectedGroupIdx]
-            ? `，已加入「${groups[_selectedGroupIdx].name}」` : '';
+
+        const groupHint = (!isEmojiTab && _selectedGroupIdx >= 0 && groups?.[_selectedGroupIdx])
+            ? `，已加入「${groups[_selectedGroupIdx].name}」`
+            : '';
         showNotification(`✓ 添加 ${added} 条${skipped ? `，跳过 ${skipped} 条重复` : ''}${groupHint}`, 'success');
     };
 }
@@ -2460,50 +2479,46 @@ function initReplyLibraryListeners() {
 
     const addBtn = document.getElementById('add-custom-reply');
     if (addBtn) {
+        // 更新：将 emojis 也纳入批量添加条件中
         addBtn.addEventListener('click', () => {
             if (currentSubTab === 'stickers') {
-                document.getElementById('sticker-file-input')?.click(); return;
-            }
-            if (currentSubTab === 'emojis') {
-                const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
-                if (input?.trim()) {
-                    customEmojis.push(input.trim());
-                    throttledSaveData(); renderReplyLibrary();
-                    showNotification('✓ Emoji 已添加', 'success');
-                }
+                document.getElementById('sticker-file-input')?.click();
                 return;
             }
-            if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses') {
-                _showBatchAddDialog(); return;
+            // 统一使用批量添加对话框（含 emojis、custom、pokes、statuses）
+            if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses' || currentSubTab === 'emojis') {
+                _showBatchAddDialog();
+                return;
             }
+            // 其他单行添加模式保持不变（mottos、intros）
             let input;
             if (currentSubTab === 'intros') {
                 const l1 = prompt('请输入主标题 (如: 𝑳𝒐𝒗𝒆):');
                 if (!l1) return;
                 const l2 = prompt('请输入副标题 (如: 若要由我来谈论爱的话):');
                 input = `${l1}|${l2}`;
+            } else if (currentSubTab === 'mottos') {
+                input = prompt(`请输入新的格言:`);
             } else {
-                input = prompt(`请输入新的${getCategoryName(currentSubTab)}:`);
+                return;
             }
             if (input?.trim()) {
                 const val = input.trim();
                 const valNorm = normalizeStringStrict(val);
                 let isDup = false;
-                if (currentSubTab === 'pokes' && customPokes.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
-                else if (currentSubTab === 'statuses' && customStatuses.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
-                else if (currentSubTab === 'mottos' && customMottos.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
+                if (currentSubTab === 'mottos' && customMottos.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
                 else if (currentSubTab === 'intros' && customIntros.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
                 if (isDup) { showNotification('该内容已存在', 'warning'); return; }
-                if (currentSubTab === 'pokes') customPokes.unshift(val);
-                else if (currentSubTab === 'statuses') customStatuses.unshift(val);
-                else if (currentSubTab === 'mottos') customMottos.unshift(val);
+                if (currentSubTab === 'mottos') customMottos.unshift(val);
                 else if (currentSubTab === 'intros') customIntros.unshift(val);
                 throttledSaveData(); renderReplyLibrary();
                 showNotification('✓ 添加成功', 'success');
             }
         });
     }
+
 }
+
 
 function getCategoryName(tabId) {
     return { custom: '回复', pokes: '拍一拍', statuses: '状态', mottos: '格言', intros: '开场语' }[tabId] || '内容';
