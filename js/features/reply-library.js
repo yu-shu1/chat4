@@ -100,6 +100,75 @@ function _showEmojiBatchDialog() {
     };
 }
 
+function _showAddSingleEmojiDialog() {
+    // 创建遮罩层
+    const overlay = _makeOverlay();
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        background: var(--secondary-bg);
+        border-radius: 22px;
+        padding: 24px;
+        width: 92%;
+        max-width: 380px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        box-shadow: 0 24px 80px rgba(0,0,0,.45);
+        animation: popIn 0.22s cubic-bezier(.34,1.56,.64,1);
+    `;
+    panel.innerHTML = `
+        <div style="font-size:16px;font-weight:700;color:var(--text-primary);">
+            <i class="fas fa-plus-circle"></i> 添加 Emoji
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);">
+            支持任意字符（Emoji、符号、文字等），系统会自动去重。
+        </div>
+        <textarea id="single-emoji-input" rows="2" placeholder="例如：😊 或 ❤️✨" style="
+            width:100%; box-sizing:border-box;
+            padding:12px 14px;
+            border:1.5px solid var(--border-color);
+            border-radius:13px;
+            background:var(--primary-bg);
+            color:var(--text-primary);
+            font-size:14px;
+            font-family:var(--font-family);
+            outline:none;
+            resize:vertical;
+            transition:border 0.18s;
+        "></textarea>
+        <div style="display:flex;gap:10px;">
+            <button id="se-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
+            <button id="se-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
+        </div>
+    `;
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const textarea = panel.querySelector('#single-emoji-input');
+    textarea.focus();
+
+    const close = () => overlay.remove();
+    panel.querySelector('#se-cancel').onclick = close;
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+    panel.querySelector('#se-confirm').onclick = () => {
+        const val = textarea.value.trim();
+        if (!val) {
+            showNotification('请输入内容', 'warning');
+            return;
+        }
+        if (customEmojis.includes(val)) {
+            showNotification('该 Emoji 已存在', 'warning');
+            return;
+        }
+        customEmojis.push(val);
+        throttledSaveData();
+        renderReplyLibrary();
+        showNotification('✓ Emoji 已添加', 'success');
+        close();
+    };
+}
+
 // 根据当前 tab 返回对应的分组上下文 {groups, items, itemLabel}
 function _getGroupCtx(tab) {
     tab = tab || currentSubTab;
@@ -510,7 +579,7 @@ function _renderModernToolbar() {
             <div style="flex:1;"></div>
             ${currentSubTab === 'emojis' ? `
             <button class="toolbar-icon-btn" id="tb-batch-add-emoji-btn" title="批量添加 Emoji">
-                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" stroke-width="1.3"/><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.3"/></svg>
+                ${ICONS.plus}
             </button>` : ''}
             ${canBatch ? `
             <button class="toolbar-icon-btn ${_batchModeActive ? 'active' : ''}" id="tb-batch-btn" title="${_batchModeActive ? '退出批量' : '批量管理'}">
@@ -587,7 +656,16 @@ function _renderModernToolbar() {
     toolbar.querySelector('#tb-import-btn')?.addEventListener('click', () => document.getElementById('import-replies-input')?.click());
     toolbar.querySelector('#tb-export-btn')?.addEventListener('click', _showExportUI);
     
-
+    // 绑定批量添加 Emoji 按钮（仅当当前为 emojis 标签页时有效）
+    const batchEmojiBtn = toolbar.querySelector('#tb-batch-add-emoji-btn');
+    if (batchEmojiBtn) {
+        batchEmojiBtn.addEventListener('click', () => {
+            if (currentSubTab === 'emojis') {
+                _showBatchAddDialog();
+            }
+        });
+    }
+    
     toolbar.querySelectorAll('.gfp-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const f = btn.dataset.filter;
@@ -2489,19 +2567,9 @@ function initReplyLibraryListeners() {
                 return;
             }
             // Emoji 标签页：保留单个添加（prompt）
+            // Emoji 标签页：使用弹窗添加
             if (currentSubTab === 'emojis') {
-                const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
-                if (input?.trim()) {
-                    const val = input.trim();
-                    if (customEmojis.includes(val)) {
-                        showNotification('该 Emoji 已存在', 'warning');
-                    } else {
-                        customEmojis.push(val);
-                        throttledSaveData();
-                        renderReplyLibrary();
-                        showNotification('✓ Emoji 已添加', 'success');
-                    }
-                }
+                _showAddSingleEmojiDialog();
                 return;
             }
             // 其他支持批量添加的标签页：调用批量对话框
@@ -2511,6 +2579,31 @@ function initReplyLibraryListeners() {
             }
             // 其他单行模式（mottos / intros）保持原样
             // ... 原有代码 ...
+            let input;
+            if (currentSubTab === 'intros') {
+                const l1 = prompt('请输入主标题 (如: 𝑳𝒐𝒗𝒆):');
+                if (!l1) return;
+                const l2 = prompt('请输入副标题 (如: 若要由我来谈论爱的话):');
+                input = `${l1}|${l2}`;
+            } else {
+                input = prompt(`请输入新的${getCategoryName(currentSubTab)}:`);
+            }
+            if (input?.trim()) {
+                const val = input.trim();
+                const valNorm = normalizeStringStrict(val);
+                let isDup = false;
+                if (currentSubTab === 'pokes' && customPokes.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
+                else if (currentSubTab === 'statuses' && customStatuses.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
+                else if (currentSubTab === 'mottos' && customMottos.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
+                else if (currentSubTab === 'intros' && customIntros.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
+                if (isDup) { showNotification('该内容已存在', 'warning'); return; }
+                if (currentSubTab === 'pokes') customPokes.unshift(val);
+                else if (currentSubTab === 'statuses') customStatuses.unshift(val);
+                else if (currentSubTab === 'mottos') customMottos.unshift(val);
+                else if (currentSubTab === 'intros') customIntros.unshift(val);
+                throttledSaveData(); renderReplyLibrary();
+                showNotification('✓ 添加成功', 'success');
+            }
         });
     }
     
@@ -2527,9 +2620,15 @@ function initReplyLibraryListeners() {
     }
 }
 
-
 function getCategoryName(tabId) {
-    return { custom: '回复', pokes: '拍一拍', statuses: '状态', mottos: '格言', intros: '开场语' }[tabId] || '内容';
+    return {
+        custom: '回复',
+        pokes: '拍一拍',
+        statuses: '状态',
+        mottos: '格言',
+        intros: '开场语',
+        emojis: 'Emoji'            // 新增这一行
+    }[tabId] || '内容';
 }
 
 function updateTabUI() {
