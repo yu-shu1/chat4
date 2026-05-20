@@ -518,13 +518,6 @@ function _renderModernToolbar() {
             <button class="toolbar-icon-btn" id="tb-export-btn" title="导出">
                 ${ICONS.export}
             </button>
-            if (currentMajorTab === 'reply' && currentSubTab === 'emojis') {
-                toolbar.innerHTML += `
-                    <button class="toolbar-icon-btn" id="tb-emoji-batch" title="批量添加">
-                        ${ICONS.plus}
-                    </button>
-                `;
-            }
         </div>
 
         ${_searchVisible ? `
@@ -589,13 +582,7 @@ function _renderModernToolbar() {
     toolbar.querySelector('#tb-dedup-btn')?.addEventListener('click', _runDedup);
     toolbar.querySelector('#tb-import-btn')?.addEventListener('click', () => document.getElementById('import-replies-input')?.click());
     toolbar.querySelector('#tb-export-btn')?.addEventListener('click', _showExportUI);
-    // 在绑定其他按钮事件的地方（如 tb-import-btn 之后）添加
-    const emojiBatchBtn = toolbar.querySelector('#tb-emoji-batch');
-    if (emojiBatchBtn) {
-        emojiBatchBtn.onclick = () => {
-            _showEmojiBatchDialog();
-        };
-    }
+    
 
     toolbar.querySelectorAll('.gfp-btn').forEach(btn => {
         btn.addEventListener('click', () => {
