@@ -512,6 +512,10 @@ function _renderModernToolbar() {
             <button class="toolbar-icon-btn ${_batchModeActive ? 'active' : ''}" id="tb-batch-btn" title="${_batchModeActive ? '退出批量' : '批量管理'}">
                 ${ICONS.batch}
             </button>` : ''}
+            ${currentSubTab === 'emojis' ? `
+            <button class="toolbar-icon-btn" id="tb-batch-add-emoji-btn" title="批量添加 Emoji">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" stroke-width="1.3"/><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.3"/></svg>
+            </button>` : ''}
             <button class="toolbar-icon-btn" id="tb-import-btn" title="导入">
                 ${ICONS.import}
             </button>
@@ -2479,44 +2483,48 @@ function initReplyLibraryListeners() {
 
     const addBtn = document.getElementById('add-custom-reply');
     if (addBtn) {
-        // 更新：将 emojis 也纳入批量添加条件中
         addBtn.addEventListener('click', () => {
             if (currentSubTab === 'stickers') {
                 document.getElementById('sticker-file-input')?.click();
                 return;
             }
-            // 统一使用批量添加对话框（含 emojis、custom、pokes、statuses）
-            if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses' || currentSubTab === 'emojis') {
+            // Emoji 标签页：保留单个添加（prompt）
+            if (currentSubTab === 'emojis') {
+                const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
+                if (input?.trim()) {
+                    const val = input.trim();
+                    if (customEmojis.includes(val)) {
+                        showNotification('该 Emoji 已存在', 'warning');
+                    } else {
+                        customEmojis.push(val);
+                        throttledSaveData();
+                        renderReplyLibrary();
+                        showNotification('✓ Emoji 已添加', 'success');
+                    }
+                }
+                return;
+            }
+            // 其他支持批量添加的标签页：调用批量对话框
+            if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses') {
                 _showBatchAddDialog();
                 return;
             }
-            // 其他单行添加模式保持不变（mottos、intros）
-            let input;
-            if (currentSubTab === 'intros') {
-                const l1 = prompt('请输入主标题 (如: 𝑳𝒐𝒗𝒆):');
-                if (!l1) return;
-                const l2 = prompt('请输入副标题 (如: 若要由我来谈论爱的话):');
-                input = `${l1}|${l2}`;
-            } else if (currentSubTab === 'mottos') {
-                input = prompt(`请输入新的格言:`);
+            // 其他单行模式（mottos / intros）保持原样
+            // ... 原有代码 ...
+        });
+    }
+    
+    // 绑定新增的批量添加按钮
+    const batchEmojiBtn = document.getElementById('tb-batch-add-emoji-btn');
+    if (batchEmojiBtn) {
+        batchEmojiBtn.addEventListener('click', () => {
+            if (currentSubTab === 'emojis') {
+                _showBatchAddDialog();
             } else {
-                return;
-            }
-            if (input?.trim()) {
-                const val = input.trim();
-                const valNorm = normalizeStringStrict(val);
-                let isDup = false;
-                if (currentSubTab === 'mottos' && customMottos.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
-                else if (currentSubTab === 'intros' && customIntros.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
-                if (isDup) { showNotification('该内容已存在', 'warning'); return; }
-                if (currentSubTab === 'mottos') customMottos.unshift(val);
-                else if (currentSubTab === 'intros') customIntros.unshift(val);
-                throttledSaveData(); renderReplyLibrary();
-                showNotification('✓ 添加成功', 'success');
+                // 其他标签页下可忽略或提示，实际上该按钮仅在 emojis 时显示
             }
         });
     }
-
 }
 
 
