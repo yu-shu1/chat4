@@ -1494,14 +1494,6 @@ function _showGroupEditor(group, ctx) {
 
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
     // 已使用 onmousedown 替代 onclick，并主动让输入框失焦
-    panel.querySelector('#ge-save').onmousedown = (e) => {
-        e.preventDefault();
-        const nameInput = panel.querySelector('#ge-name');
-        if (nameInput) nameInput.blur();
-        setTimeout(() => {
-            // 保存逻辑...
-        }, 10);
-    };
     
     // 在 _showGroupEditor 函数中，替换保存按钮的绑定方式
     // 保存按钮：使用 onmousedown 并立即执行保存，无需延迟
