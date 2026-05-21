@@ -35,6 +35,7 @@
         let currentSubTab = 'custom';  
         let currentReplyTab = 'custom';
         let customEmojis = [];
+        let customEmojiGroups = [];
         let anniversaries = [];
         let stickerLibrary = []; 
         let myStickerLibrary = []; 

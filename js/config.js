@@ -342,3 +342,4 @@
         };
 
 window.APP_PREFIX = APP_PREFIX;
+window.customEmojiGroups = window.customEmojiGroups || [];
