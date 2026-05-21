@@ -1493,21 +1493,41 @@ function _showGroupEditor(group, ctx) {
     panel.querySelector('#ge-hexinput').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
 
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-
-    panel.querySelector('#ge-save').onclick = () => {
-        const name = panel.querySelector('#ge-name').value.trim();
-        if (!name) { showNotification('请输入分组名称', 'warning'); return; }
-        if (isNew) {
-            groups.push({ id: Date.now(), name, color: selectedColor, disabled: false, items: [] });
-        } else {
-            group.name = name;
-            group.color = selectedColor;
-        }
-        throttledSaveData();
-        overlay.remove();
-        renderReplyLibrary();
-        showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
+    // 已使用 onmousedown 替代 onclick，并主动让输入框失焦
+    panel.querySelector('#ge-save').onmousedown = (e) => {
+        e.preventDefault();
+        const nameInput = panel.querySelector('#ge-name');
+        if (nameInput) nameInput.blur();
+        setTimeout(() => {
+            // 保存逻辑...
+        }, 10);
+    };
+    
+    // 在 _showGroupEditor 函数中，替换保存按钮的绑定方式
+    panel.querySelector('#ge-save').onmousedown = (e) => {
+        e.preventDefault();  // 阻止可能导致的焦点转移干扰
+        // 强制输入框失去焦点，防止 blur 干扰
+        const nameInput = panel.querySelector('#ge-name');
+        if (nameInput) nameInput.blur();
+        
+        // 延迟极短时间等待 blur 完成再执行保存
+        setTimeout(() => {
+            const name = nameInput.value.trim();
+            if (!name) {
+                showNotification('请输入分组名称', 'warning');
+                return;
+            }
+            if (isNew) {
+                groups.push({ id: Date.now(), name, color: selectedColor, disabled: false, items: [] });
+            } else {
+                group.name = name;
+                group.color = selectedColor;
+            }
+            throttledSaveData();
+            overlay.remove();
+            renderReplyLibrary();
+            showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
+        }, 10);
     };
 }
 
