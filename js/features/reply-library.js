@@ -3,6 +3,10 @@ if (typeof replyGroupsEnabled === 'undefined') window.replyGroupsEnabled = false
 if (typeof customPokeGroups === 'undefined') window.customPokeGroups = [];
 if (typeof customStatusGroups === 'undefined') window.customStatusGroups = [];
 
+// 确保 customEmojis 与 window.customEmojis 同步
+if (typeof window.customEmojis === 'undefined') window.customEmojis = [];
+if (typeof customEmojis === 'undefined') var customEmojis = window.customEmojis;
+else customEmojis = window.customEmojis;
 
 function _showEmojiBatchDialog() {
     const overlay = _makeOverlay();
@@ -1607,9 +1611,15 @@ function _showGroupEditor(group, ctx) {
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
+    // 修复：保存时强制让输入框失焦，避免焦点干扰，并确保数据同步后刷新
     panel.querySelector('#ge-save').onclick = () => {
         const name = panel.querySelector('#ge-name').value.trim();
         if (!name) { showNotification('请输入分组名称', 'warning'); return; }
+        
+        // 强制让输入框失去焦点，避免后续事件冲突
+        const nameInput = panel.querySelector('#ge-name');
+        if (nameInput) nameInput.blur();
+        
         if (isNew) {
             groups.push({ id: Date.now(), name, color: selectedColor, disabled: false, items: [] });
         } else {
@@ -1617,9 +1627,17 @@ function _showGroupEditor(group, ctx) {
             group.color = selectedColor;
         }
         throttledSaveData();
-        overlay.remove();
-        renderReplyLibrary();
-        showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
+        
+        // 同步全局变量（防止引用不一致）
+        window.customEmojis = customEmojis;
+        window.customEmojiGroups = groups;
+        
+        // 延迟关闭弹窗并刷新，确保 blur 事件完成
+        setTimeout(() => {
+            overlay.remove();
+            renderReplyLibrary();
+            showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
+        }, 50);
     };
 }
 
