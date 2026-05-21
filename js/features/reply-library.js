@@ -101,64 +101,104 @@ function _showEmojiBatchDialog() {
 }
 
 function _showAddSingleEmojiDialog() {
-    // 创建遮罩层
+    // 创建遮罩层（增强背景模糊）
     const overlay = _makeOverlay();
+    overlay.style.backdropFilter = 'blur(12px)';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.65)';
+    
     const panel = document.createElement('div');
     panel.style.cssText = `
         background: var(--secondary-bg);
-        border-radius: 22px;
+        border-radius: 28px;
         padding: 24px;
         width: 92%;
-        max-width: 380px;
+        max-width: 400px;
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        box-shadow: 0 24px 80px rgba(0,0,0,.45);
-        animation: popIn 0.22s cubic-bezier(.34,1.56,.64,1);
+        gap: 20px;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(var(--accent-color-rgb),0.15);
+        animation: slideUpFadeIn 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
     `;
+    
+    // 添加动画关键帧（如果尚未存在）
+    if (!document.querySelector('#single-dialog-keyframes')) {
+        const style = document.createElement('style');
+        style.id = 'single-dialog-keyframes';
+        style.textContent = `
+            @keyframes slideUpFadeIn {
+                from { opacity: 0; transform: translateY(30px) scale(0.96); }
+                to   { opacity: 1; transform: translateY(0) scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
     panel.innerHTML = `
-        <div style="font-size:16px;font-weight:700;color:var(--text-primary);">
-            <i class="fas fa-plus-circle"></i> 添加 Emoji
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:10px;">
+            <i class="fas fa-plus-circle" style="color:var(--accent-color);"></i> 添加 Emoji
         </div>
-        <div style="font-size:12px;color:var(--text-secondary);">
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;">
             支持任意字符（Emoji、符号、文字等），系统会自动去重。
         </div>
-        <textarea id="single-emoji-input" rows="2" placeholder="例如：😊 或 ❤️✨" style="
+        <textarea id="single-emoji-input" rows="3" placeholder="例如：😊 或 ❤️✨" style="
             width:100%; box-sizing:border-box;
-            padding:12px 14px;
+            padding:14px 16px;
             border:1.5px solid var(--border-color);
-            border-radius:13px;
+            border-radius:18px;
             background:var(--primary-bg);
             color:var(--text-primary);
-            font-size:14px;
+            font-size:15px;
             font-family:var(--font-family);
             outline:none;
             resize:vertical;
-            transition:border 0.18s;
+            transition:border 0.2s, box-shadow 0.2s;
+            line-height:1.5;
         "></textarea>
-        <div style="display:flex;gap:10px;">
-            <button id="se-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
-            <button id="se-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
+        <div style="display:flex;gap:12px;">
+            <button id="se-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:16px;background:none;color:var(--text-secondary);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font-family);transition:all 0.2s;">
+                取消
+            </button>
+            <button id="se-confirm" style="flex:2;padding:12px;border:none;border-radius:16px;background:var(--accent-color);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-family);transition:all 0.2s;box-shadow:0 2px 10px rgba(var(--accent-color-rgb),0.3);">
+                <i class="fas fa-check" style="margin-right:6px;"></i> 添加
+            </button>
         </div>
     `;
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
-
+    
     const textarea = panel.querySelector('#single-emoji-input');
+    // 自动聚焦
     textarea.focus();
-
+    // 按 Enter 键（不按 Shift）快速添加
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            panel.querySelector('#se-confirm').click();
+        }
+    });
+    // 输入时动态调整高度（可选）
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    });
+    
     const close = () => overlay.remove();
     panel.querySelector('#se-cancel').onclick = close;
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-
+    
     panel.querySelector('#se-confirm').onclick = () => {
         const val = textarea.value.trim();
         if (!val) {
             showNotification('请输入内容', 'warning');
+            // 晃动输入框提示
+            textarea.style.borderColor = '#ff4757';
+            setTimeout(() => textarea.style.borderColor = '', 300);
             return;
         }
         if (customEmojis.includes(val)) {
             showNotification('该 Emoji 已存在', 'warning');
+            textarea.style.borderColor = '#ff4757';
+            setTimeout(() => textarea.style.borderColor = '', 300);
             return;
         }
         customEmojis.push(val);
