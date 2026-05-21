@@ -1495,7 +1495,7 @@ function _showGroupEditor(group, ctx) {
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     
-    panel.querySelector('#ge-save').onclick = (e) => {
+    panel.querySelector('#ge-save').onclick = async (e) => {
         const nameInput = panel.querySelector('#ge-name');
         const name = nameInput.value.trim();
         if (!name) {
@@ -1508,11 +1508,14 @@ function _showGroupEditor(group, ctx) {
             group.name = name;
             group.color = selectedColor;
         }
-        throttledSaveData();
+        // 等待数据完全保存到本地存储
+        await saveData();
+        // 关闭分组编辑弹窗
         overlay.remove();
+        // 刷新字卡列表（会重新从存储加载数据，此时新分组已存在）
         renderReplyLibrary();
         showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
-    };
+    };    
 }
 
 function _showSingleItemGroupPicker(itemText, ctx) {
