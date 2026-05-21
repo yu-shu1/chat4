@@ -179,3 +179,6 @@
                 closeBtn: document.getElementById('close-data')
             }
         };
+
+window.customEmojis = customEmojis;
+window.customEmojiGroups = customEmojiGroups;

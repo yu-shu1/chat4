@@ -286,7 +286,6 @@ function loadMoreHistory() {
 const loadData = async () => {
     try {
         settings = getDefaultSettings();
-
         
         const results = await Promise.allSettled([
             localforage.getItem(getStorageKey('chatSettings')),
@@ -309,8 +308,9 @@ const loadData = async () => {
             localforage.getItem(getStorageKey('myStickerLibrary')),
             localforage.getItem(getStorageKey('customReplyGroups')),
             localforage.getItem(getStorageKey('customPokeGroups')),
-            localforage.getItem(getStorageKey('customStatusGroups'))
-        ]);
+            localforage.getItem(getStorageKey('customStatusGroups')),
+            localforage.getItem(getStorageKey('customEmojiGroups'))   // 加载 Emoji 分组
+        ]);        
         const getVal = (index) => results[index].status === 'fulfilled' ? results[index].value : null;
 
         const savedSettings = getVal(0);
@@ -336,7 +336,11 @@ const loadData = async () => {
         const savedStatusGroups = getVal(20);
         const savedEmojiGroups = getVal(21);
         
-        if (savedEmojiGroups) window.customEmojiGroups = savedEmojiGroups;
+        if (savedEmojiGroups) {
+            window.customEmojiGroups = savedEmojiGroups;
+            // 同步到 state.js 中的全局变量（如果存在）
+            if (typeof customEmojiGroups !== 'undefined') customEmojiGroups = savedEmojiGroups;
+        }
 
         if (savedPartnerPersonas) partnerPersonas = savedPartnerPersonas;
 
@@ -407,7 +411,21 @@ const loadData = async () => {
         if (savedMyStickers) myStickerLibrary = savedMyStickers;
         if (savedCustomThemes) customThemes = savedCustomThemes;
         if (savedThemeSchemes) themeSchemes = savedThemeSchemes;
-        try { const ce = await localforage.getItem(getStorageKey('customEmojis')); if (ce && Array.isArray(ce)) customEmojis = ce; } catch(e) {}
+        
+        // 加载自定义 Emoji 并同步到 window
+        try {
+            const ce = await localforage.getItem(getStorageKey('customEmojis'));
+            if (ce && Array.isArray(ce)) {
+                customEmojis = ce;
+                window.customEmojis = ce;
+            } else {
+                window.customEmojis = customEmojis || [];
+            }
+        } catch(e) { window.customEmojis = customEmojis || []; }
+        
+        // 确保 window.customEmojiGroups 有默认值
+        if (!window.customEmojiGroups) window.customEmojiGroups = [];
+        
         window._customReplies = customReplies;
         window._CONSTANTS = CONSTANTS;
 
@@ -458,7 +476,7 @@ const LIBRARY_CONFIG = {
         title: "回复库管理",
         tabs: [
             { id: 'custom', name: '主字卡', mode: 'list' },
-            { id: 'emojis', name: 'Emoji', mode: 'grid' },
+            { id: 'emojis', name: 'Emoji', mode: 'list' },
             { id: 'stickers', name: '表情库', mode: 'grid' }
         ]
     },
@@ -580,7 +598,7 @@ const saveData = async () => {
         { key: 'customReplyGroups',      val: () => localforage.setItem(getStorageKey('customReplyGroups'), window.customReplyGroups || []) },
         { key: 'customPokeGroups',        val: () => localforage.setItem(getStorageKey('customPokeGroups'), window.customPokeGroups || []) },
         { key: 'customStatusGroups',      val: () => localforage.setItem(getStorageKey('customStatusGroups'), window.customStatusGroups || []) },
-        { key: 'customEmojis',           val: () => localforage.setItem(getStorageKey('customEmojis'), customEmojis) },
+        { key: 'customEmojis',           val: () => localforage.setItem(getStorageKey('customEmojis'), window.customEmojis || customEmojis || []) },
         { key: 'anniversaries',          val: () => localforage.setItem(getStorageKey('anniversaries'), anniversaries) },
         { key: 'customPokes',            val: () => localforage.setItem(getStorageKey('customPokes'), customPokes) },
         { key: 'customStatuses',         val: () => localforage.setItem(getStorageKey('customStatuses'), customStatuses) },
@@ -1883,8 +1901,8 @@ if (!isBatchMode && type === 'normal') {
             
                     // 表情混入处理（同原有逻辑）
                     let separateEmoji = null;
-                    if (customEmojis && customEmojis.length > 0 && Math.random() < 0.2) {
-                        const emoji = customEmojis[Math.floor(Math.random() * customEmojis.length)];
+                    if (window.customEmojis && window.customEmojis.length > 0 && Math.random() < 0.2) {
+                        const emoji = window.customEmojis[Math.floor(Math.random() * window.customEmojis.length)];
                         if (settings.emojiMixEnabled !== false) {
                             finalText = Math.random() < 0.5 ? emoji + ' ' + finalText : finalText + ' ' + emoji;
                         } else {
@@ -1999,8 +2017,8 @@ if (!isBatchMode && type === 'normal') {
             
                                 let finalText = replyText;
                                 let separateEmoji = null;
-                                if (customEmojis && customEmojis.length > 0 && Math.random() < 0.2) {
-                                    const emoji = customEmojis[Math.floor(Math.random() * customEmojis.length)];
+                                if (window.customEmojis && window.customEmojis.length > 0 && Math.random() < 0.2) {
+                                    const emoji = window.customEmojis[Math.floor(Math.random() * window.customEmojis.length)];
                                     if (settings.emojiMixEnabled !== false) {
                                         finalText = Math.random() < 0.5 ? emoji + ' ' + replyText : replyText + ' ' + emoji;
                                     } else {
@@ -2124,8 +2142,8 @@ if (!isBatchMode && type === 'normal') {
         
                         let finalText = replyText;
                         let separateEmoji = null;
-                        if (customEmojis && customEmojis.length > 0 && Math.random() < 0.2) {
-                            const emoji = customEmojis[Math.floor(Math.random() * customEmojis.length)];
+                        if (window.customEmojis && window.customEmojis.length > 0 && Math.random() < 0.2) {
+                            const emoji = window.customEmojis[Math.floor(Math.random() * window.customEmojis.length)];
                             if (settings.emojiMixEnabled !== false) {
                                 finalText = Math.random() < 0.5 ? emoji + ' ' + replyText : replyText + ' ' + emoji;
                             } else {
@@ -2372,7 +2390,7 @@ if (!isBatchMode && type === 'normal') {
                     }
                     if (inclReplies)  {
                         exportObj.customReplies = customReplies;
-                        if (customEmojis && customEmojis.length > 0) exportObj.customEmojis = customEmojis;
+                        if (window.customEmojis && window.customEmojis.length > 0) exportObj.customEmojis = window.customEmojis;
                         exportObj.exportModules.push('customReplies');
                     }
                     if (inclAnn)      { exportObj.anniversaries = anniversaries; exportObj.exportModules.push('anniversaries'); }
@@ -2585,7 +2603,10 @@ if (!isBatchMode && type === 'normal') {
                             if (importedData.customWeatherMap) { try { Object.keys(importedData.customWeatherMap).forEach(wk => localStorage.setItem(wk, importedData.customWeatherMap[wk])); } catch(e2) {} }
                         }
                         if (doReplies  && importedData.customReplies)  customReplies  = importedData.customReplies;
-                        if (doReplies  && importedData.customEmojis && Array.isArray(importedData.customEmojis)) customEmojis = importedData.customEmojis;
+                        if (doReplies  && importedData.customEmojis && Array.isArray(importedData.customEmojis)) {
+                            window.customEmojis = importedData.customEmojis;
+                            if (typeof customEmojis !== 'undefined') customEmojis = importedData.customEmojis;
+                        }
                         if (doAnn      && importedData.anniversaries)   anniversaries  = importedData.anniversaries;
                         if (doThemes   && importedData.customThemes)    customThemes   = importedData.customThemes;
                         if (doThemes   && importedData.stickerLibrary)  stickerLibrary = importedData.stickerLibrary;
@@ -2742,6 +2763,3 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(historyLoader);
     }
 });
-
-
-
