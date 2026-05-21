@@ -1504,30 +1504,25 @@ function _showGroupEditor(group, ctx) {
     };
     
     // 在 _showGroupEditor 函数中，替换保存按钮的绑定方式
+    // 保存按钮：使用 onmousedown 并立即执行保存，无需延迟
     panel.querySelector('#ge-save').onmousedown = (e) => {
-        e.preventDefault();  // 阻止可能导致的焦点转移干扰
-        // 强制输入框失去焦点，防止 blur 干扰
+        e.preventDefault();
         const nameInput = panel.querySelector('#ge-name');
-        if (nameInput) nameInput.blur();
-        
-        // 延迟极短时间等待 blur 完成再执行保存
-        setTimeout(() => {
-            const name = nameInput.value.trim();
-            if (!name) {
-                showNotification('请输入分组名称', 'warning');
-                return;
-            }
-            if (isNew) {
-                groups.push({ id: Date.now(), name, color: selectedColor, disabled: false, items: [] });
-            } else {
-                group.name = name;
-                group.color = selectedColor;
-            }
-            throttledSaveData();
-            overlay.remove();
-            renderReplyLibrary();
-            showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
-        }, 10);
+        const name = nameInput.value.trim();
+        if (!name) {
+            showNotification('请输入分组名称', 'warning');
+            return;
+        }
+        if (isNew) {
+            groups.push({ id: Date.now(), name, color: selectedColor, disabled: false, items: [] });
+        } else {
+            group.name = name;
+            group.color = selectedColor;
+        }
+        throttledSaveData();
+        overlay.remove();          // 关闭弹窗
+        renderReplyLibrary();     // 刷新列表
+        showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
     };
 }
 
