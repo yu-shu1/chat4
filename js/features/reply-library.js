@@ -1493,12 +1493,9 @@ function _showGroupEditor(group, ctx) {
     panel.querySelector('#ge-hexinput').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
 
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
-    // 已使用 onmousedown 替代 onclick，并主动让输入框失焦
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     
-    // 在 _showGroupEditor 函数中，替换保存按钮的绑定方式
-    // 保存按钮：使用 onmousedown 并立即执行保存，无需延迟
-    panel.querySelector('#ge-save').onmousedown = (e) => {
-        e.preventDefault();
+    panel.querySelector('#ge-save').onclick = (e) => {
         const nameInput = panel.querySelector('#ge-name');
         const name = nameInput.value.trim();
         if (!name) {
@@ -1512,8 +1509,8 @@ function _showGroupEditor(group, ctx) {
             group.color = selectedColor;
         }
         throttledSaveData();
-        overlay.remove();          // 关闭弹窗
-        renderReplyLibrary();     // 刷新列表
+        overlay.remove();
+        renderReplyLibrary();
         showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
     };
 }
