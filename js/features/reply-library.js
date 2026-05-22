@@ -1281,65 +1281,83 @@ function _runDedup() {
 // ==============================================
 function _showGroupEditor(group, ctx) {
     ctx = ctx || _getGroupCtx();
+    const groups = ctx.groups;
     const isNew = !group;
-    let selectedColor = group?.color || GROUP_COLORS[Math.floor(Math.random() * GROUP_COLORS.length)];
-    
     const overlay = _makeOverlay();
+    const initColor = group?.color || GROUP_COLORS[Math.floor(Math.random() * GROUP_COLORS.length)];
+    let selectedColor = initColor;
+    
     const panel = document.createElement('div');
     panel.style.cssText = `
         background:var(--secondary-bg);border-radius:22px;padding:24px;
-        width:92%;max-width:360px;
+        width:92%;max-width:380px;
         box-shadow:0 24px 80px rgba(0,0,0,.45);
         animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
     `;
     
     panel.innerHTML = `
-        <style>
-            @keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }
-            .color-picker-dot {
-                width:28px;height:28px;border-radius:50%;cursor:pointer;
-                border:2px solid transparent;transition:all 0.15s;
-            }
-            .color-picker-dot.active {
-                border-color:var(--text-primary);transform:scale(1.1);
-            }
-        </style>
-        <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:14px;">
+        <style>@keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }</style>
+        <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:18px;">
             ${isNew ? '新建分组' : '编辑分组'}
         </div>
         
-        <div style="margin-bottom:14px;">
-            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">分组名称</div>
-            <input type="text" id="ge-name" value="${group?.name || ''}" placeholder="输入分组名称" style="
-                width:100%;box-sizing:border-box;padding:12px 14px;
-                border:1.5px solid var(--border-color);border-radius:13px;
+        <div style="margin-bottom:16px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:7px;letter-spacing:.5px;">LABEL</label>
+            <input id="ge-name" value="${group?.name || ''}" placeholder="分组名称…" style="
+                width:100%;box-sizing:border-box;padding:11px 14px;
+                border:1.5px solid var(--border-color);border-radius:12px;
                 background:var(--primary-bg);color:var(--text-primary);
-                font-size:14px;font-family:var(--font-family);outline:none;
-                transition:border 0.18s;
+                font-size:14px;font-family:var(--font-family);outline:none;transition:border 0.18s;
             ">
         </div>
         
-        <div style="margin-bottom:20px;">
-            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">分组颜色</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <div style="margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:8px;letter-spacing:.5px;">COLOR PRESET</label>
+            <div id="ge-presets" style="display:flex;gap:7px;flex-wrap:wrap;">
                 ${GROUP_COLORS.map(c => `
-                    <div class="color-picker-dot" data-color="${c}" style="background:${c};${c === selectedColor ? 'border-color:var(--text-primary);' : ''}"></div>
+                    <div data-preset="${c}" style="
+                        width:26px;height:26px;border-radius:50%;background:${c};cursor:pointer;
+                        border:2.5px solid ${c === selectedColor ? '#fff' : 'transparent'};
+                        box-shadow:${c === selectedColor ? `0 0 0 2.5px ${c}` : 'none'};
+                        transition:all 0.15s;flex-shrink:0;
+                    "></div>
                 `).join('')}
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <input type="text" id="ge-hexinput" value="${selectedColor}" placeholder="#FFFFFF" style="
-                    flex:1;padding:8px 12px;
-                    border:1.5px solid var(--border-color);border-radius:10px;
-                    background:var(--primary-bg);color:var(--text-primary);
-                    font-size:12px;font-family:var(--font-family);outline:none;
+        </div>
+        
+        <div style="margin-bottom:20px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:8px;letter-spacing:.5px;">CUSTOM COLOR</label>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <input type="color" id="ge-colorpicker" value="${selectedColor}" style="
+                    width:40px;height:40px;border:none;border-radius:10px;cursor:pointer;
+                    padding:2px;background:var(--primary-bg);flex-shrink:0;
                 ">
-                <div style="width:32px;height:32px;border-radius:8px;background:${selectedColor};border:1px solid var(--border-color);" id="ge-color-preview"></div>
+                <input type="text" id="ge-hexinput" value="${selectedColor}" maxlength="7" placeholder="#RRGGBB" style="
+                    flex:1;padding:10px 12px;border:1.5px solid var(--border-color);
+                    border-radius:10px;background:var(--primary-bg);color:var(--text-primary);
+                    font-size:13px;font-family:monospace;outline:none;transition:border 0.18s;
+                ">
+                <div id="ge-color-preview" style="
+                    display:flex;align-items:center;gap:6px;padding:7px 12px;
+                    border-radius:20px;border:1.5px solid ${selectedColor}40;
+                    background:${selectedColor}18;
+                ">
+                    <span style="width:8px;height:8px;border-radius:50%;background:${selectedColor};"></span>
+                    <span id="ge-preview-name" style="font-size:12px;font-weight:700;color:${selectedColor};">${group?.name || '预览'}</span>
+                </div>
             </div>
         </div>
         
         <div style="display:flex;gap:10px;">
-            <button id="ge-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
-            <button id="ge-save" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">保存</button>
+            <button id="ge-cancel" style="
+                flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;
+                background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);
+            ">取消</button>
+            <button id="ge-save" style="
+                flex:2;padding:12px;border:none;border-radius:13px;
+                background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;
+                cursor:pointer;font-family:var(--font-family);transition:opacity 0.15s;
+            ">保存</button>
         </div>
     `;
     
@@ -1350,110 +1368,79 @@ function _showGroupEditor(group, ctx) {
     const nameInput = panel.querySelector('#ge-name');
     nameInput.focus();
     
-    // 颜色选择器逻辑
-    const colorDots = panel.querySelectorAll('.color-picker-dot');
-    const hexInput = panel.querySelector('#ge-hexinput');
-    const colorPreview = panel.querySelector('#ge-color-preview');
-    
-    colorDots.forEach(dot => {
-        dot.addEventListener('click', () => {
-            colorDots.forEach(d => d.classList.remove('active'));
-            dot.classList.add('active');
-            selectedColor = dot.dataset.color;
-            hexInput.value = selectedColor;
-            colorPreview.style.background = selectedColor;
+    // 颜色更新函数
+    const updateColor = (color) => {
+        selectedColor = color;
+        panel.querySelector('#ge-colorpicker').value = color;
+        panel.querySelector('#ge-hexinput').value = color;
+        const preview = panel.querySelector('#ge-color-preview');
+        const previewName = panel.querySelector('#ge-preview-name');
+        preview.style.borderColor = color + '40';
+        preview.style.background = color + '18';
+        previewName.style.color = color;
+        previewName.textContent = nameInput.value || '预览';
+        panel.querySelectorAll('[data-preset]').forEach(dot => {
+            const isSelected = dot.dataset.preset === color;
+            dot.style.border = `2.5px solid ${isSelected ? '#fff' : 'transparent'}`;
+            dot.style.boxShadow = isSelected ? `0 0 0 2.5px ${dot.dataset.preset}` : 'none';
         });
+    };
+    
+    // 名称输入实时更新预览
+    panel.querySelector('#ge-name').addEventListener('input', e => {
+        panel.querySelector('#ge-preview-name').textContent = e.target.value || '预览';
     });
     
-    hexInput.addEventListener('input', () => {
-        const val = hexInput.value.trim();
-        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-            selectedColor = val;
-            colorPreview.style.background = val;
-            colorDots.forEach(d => {
-                d.classList.toggle('active', d.dataset.color.toLowerCase() === val.toLowerCase());
-            });
-        }
+    // 输入框焦点样式
+    panel.querySelector('#ge-name').addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
+    panel.querySelector('#ge-name').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
+    panel.querySelector('#ge-hexinput').addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
+    panel.querySelector('#ge-hexinput').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
+    
+    // 预设颜色点击
+    panel.querySelectorAll('[data-preset]').forEach(dot => {
+        dot.onclick = () => updateColor(dot.dataset.preset);
+    });
+    
+    // 颜色选择器变化
+    panel.querySelector('#ge-colorpicker').addEventListener('input', e => updateColor(e.target.value));
+    
+    // 十六进制颜色输入
+    panel.querySelector('#ge-hexinput').addEventListener('input', e => {
+        const v = e.target.value.trim();
+        if (/^#[0-9A-Fa-f]{6}$/.test(v)) updateColor(v);
     });
     
     // 取消按钮
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     
-    // ==============================================
-    // 保存按钮（终极修复版）
-    // 解决：聚焦输入框不能保存、中文输入法问题、保存延迟
-    // ==============================================
-    panel.querySelector('#ge-save').onclick = async () => {
-        // 🔴 核心修复1：强制所有输入框失焦，彻底解决输入法/聚焦取值问题
-        nameInput.blur();
-        hexInput.blur();
-        
-        // 现在100%能拿到输入框里的最新内容
-        const name = nameInput.value.trim();
-        let inputColor = hexInput.value.trim();
-        
-        // 🔴 核心修复2：颜色值强校验+兜底
-        const validColorRegex = /^#[0-9A-Fa-f]{6}$/;
-        const finalColor = validColorRegex.test(inputColor) ? inputColor : selectedColor;
-        
-        // 名称校验
-        if (!name) {
-            showNotification('请输入分组名称', 'warning');
-            nameInput.style.borderColor = '#ff4757';
-            setTimeout(() => nameInput.style.borderColor = '', 300);
-            return;
+    // 保存按钮（仅点击触发）
+    panel.querySelector('#ge-save').onclick = () => {
+        const name = panel.querySelector('#ge-name').value.trim();
+        if (!name) { 
+            showNotification('请输入分组名称', 'warning'); 
+            return; 
         }
         
-        // 更新内存中的分组数据
         if (isNew) {
-            ctx.groups.push({ 
+            groups.push({ 
                 id: Date.now(), 
                 name, 
-                color: finalColor, 
+                color: selectedColor, 
                 disabled: false, 
                 items: [] 
             });
         } else {
             group.name = name;
-            group.color = finalColor;
+            group.color = selectedColor;
         }
         
-        // 🔴 核心修复3：先关弹窗，再后台保存，彻底消除延迟感
+        throttledSaveData();
         overlay.remove();
-        
-        // 后台异步执行保存逻辑（不阻塞界面）
-        try {
-            // 等待SESSION_ID就绪（最多1秒）
-            let sessionReady = !!window.SESSION_ID;
-            if (!sessionReady) {
-                for (let i = 0; i < 10; i++) {
-                    await new Promise(r => setTimeout(r, 100));
-                    if (window.SESSION_ID) {
-                        sessionReady = true;
-                        break;
-                    }
-                }
-            }
-            
-            // SESSION_ID未就绪时降级保存到本地
-            if (!sessionReady) {
-                const tempKey = `${APP_PREFIX}_temp_customReplyGroups`;
-                await localforage.setItem(tempKey, ctx.groups);
-                console.warn('[分组保存] SESSION_ID未就绪，已临时保存到本地');
-            }
-            
-            // 执行最终保存并刷新界面
-            await throttledSaveData();
-            renderReplyLibrary();
-            showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
-            
-        } catch (error) {
-            console.error('[分组保存失败]', error);
-            showNotification('保存失败，请刷新页面后重试', 'error');
-        }
+        renderReplyLibrary();
+        showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
     };
-    
 }
 
 // ==============================================
