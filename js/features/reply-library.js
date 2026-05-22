@@ -1493,14 +1493,26 @@ function _showGroupEditor(group, ctx) {
     panel.querySelector('#ge-hexinput').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
 
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        
+        panel.querySelector('#ge-save').onclick = async () => {
+        // 👇 强制实时获取：名称
+        const nameInput = panel.querySelector('#ge-name');
+        const name = nameInput.value.trim();
     
-    panel.querySelector('#ge-save').onclick = async () => {
-        const name = panel.querySelector('#ge-name').value.trim();
+        // 👇 强制实时获取：颜色（不管是否聚焦、是否在编辑）
+        const hexInput = panel.querySelector('#ge-hexinput');
+        selectedColor = hexInput.value.trim() || selectedColor;
+    
+        // 校验名称
         if (!name) {
             showNotification('请输入分组名称', 'warning');
+            nameInput.style.borderColor = '#ff4757';
+            setTimeout(() => nameInput.style.borderColor = '', 300);
             return;
         }
+    
+        // 保存分组
         if (isNew) {
             groups.push({ id: Date.now(), name, color: selectedColor, disabled: false, items: [] });
         } else {
@@ -1508,7 +1520,7 @@ function _showGroupEditor(group, ctx) {
             group.color = selectedColor;
         }
     
-        // 等待 SESSION_ID 初始化（最多 1 秒）
+        // 等待 SESSION_ID 兼容逻辑（不动）
         let waitCount = 0;
         while (!window.SESSION_ID && waitCount < 10) {
             await new Promise(r => setTimeout(r, 100));
@@ -1516,21 +1528,18 @@ function _showGroupEditor(group, ctx) {
         }
     
         if (!window.SESSION_ID) {
-            // 降级：直接写入 localStorage（防止数据丢失）
             try {
                 const tempKey = `${APP_PREFIX}_temp_customReplyGroups`;
                 await localforage.setItem(tempKey, groups);
-                console.warn('[分组保存] SESSION_ID 未就绪，已临时保存到', tempKey);
             } catch (e) {
-                console.error('[分组保存] 降级保存失败', e);
                 showNotification('保存失败，请刷新页面后重试', 'error');
                 return;
             }
         }
     
-        await saveData();                 // 等待完整保存完成
-        overlay.remove();                // 关闭编辑弹窗
-        renderReplyLibrary();            // 刷新字卡列表（会从存储重新加载，新分组出现）
+        await saveData();
+        overlay.remove();
+        renderReplyLibrary();
         showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
     };
 }
