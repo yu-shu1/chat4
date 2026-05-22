@@ -1420,6 +1420,8 @@ function _showGroupEditor(group, ctx) {
     // 没有任何额外添加的代码，完全和您原文件一致
     // ==============================================
     panel.querySelector('#ge-save').onclick = () => {
+    document.activeElement.blur(); // 强制让当前聚焦的输入框失焦
+    event.preventDefault();       // 防止被浏览器默认行为拦截
         const name = panel.querySelector('#ge-name').value.trim();
         if (!name) { 
             showNotification('请输入分组名称', 'warning'); 
