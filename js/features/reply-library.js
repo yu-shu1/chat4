@@ -1275,12 +1275,197 @@ function _runDedup() {
     }
 }
 
+// ==============================================
+// 分组编辑器（完整修复版）
+// 解决：聚焦输入框不能保存、中文输入法问题、保存延迟
+// ==============================================
+function _showGroupEditor(group, ctx) {
+    ctx = ctx || _getGroupCtx();
+    const isNew = !group;
+    let selectedColor = group?.color || GROUP_COLORS[Math.floor(Math.random() * GROUP_COLORS.length)];
+    
+    const overlay = _makeOverlay();
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        background:var(--secondary-bg);border-radius:22px;padding:24px;
+        width:92%;max-width:360px;
+        box-shadow:0 24px 80px rgba(0,0,0,.45);
+        animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
+    `;
+    
+    panel.innerHTML = `
+        <style>
+            @keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }
+            .color-picker-dot {
+                width:28px;height:28px;border-radius:50%;cursor:pointer;
+                border:2px solid transparent;transition:all 0.15s;
+            }
+            .color-picker-dot.active {
+                border-color:var(--text-primary);transform:scale(1.1);
+            }
+        </style>
+        <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:14px;">
+            ${isNew ? '新建分组' : '编辑分组'}
+        </div>
+        
+        <div style="margin-bottom:14px;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">分组名称</div>
+            <input type="text" id="ge-name" value="${group?.name || ''}" placeholder="输入分组名称" style="
+                width:100%;box-sizing:border-box;padding:12px 14px;
+                border:1.5px solid var(--border-color);border-radius:13px;
+                background:var(--primary-bg);color:var(--text-primary);
+                font-size:14px;font-family:var(--font-family);outline:none;
+                transition:border 0.18s;
+            ">
+        </div>
+        
+        <div style="margin-bottom:20px;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">分组颜色</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                ${GROUP_COLORS.map(c => `
+                    <div class="color-picker-dot" data-color="${c}" style="background:${c};${c === selectedColor ? 'border-color:var(--text-primary);' : ''}"></div>
+                `).join('')}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <input type="text" id="ge-hexinput" value="${selectedColor}" placeholder="#FFFFFF" style="
+                    flex:1;padding:8px 12px;
+                    border:1.5px solid var(--border-color);border-radius:10px;
+                    background:var(--primary-bg);color:var(--text-primary);
+                    font-size:12px;font-family:var(--font-family);outline:none;
+                ">
+                <div style="width:32px;height:32px;border-radius:8px;background:${selectedColor};border:1px solid var(--border-color);" id="ge-color-preview"></div>
+            </div>
+        </div>
+        
+        <div style="display:flex;gap:10px;">
+            <button id="ge-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
+            <button id="ge-save" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">保存</button>
+        </div>
+    `;
+    
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+    
+    // 自动聚焦名称输入框
+    const nameInput = panel.querySelector('#ge-name');
+    nameInput.focus();
+    
+    // 颜色选择器逻辑
+    const colorDots = panel.querySelectorAll('.color-picker-dot');
+    const hexInput = panel.querySelector('#ge-hexinput');
+    const colorPreview = panel.querySelector('#ge-color-preview');
+    
+    colorDots.forEach(dot => {
+        dot.addEventListener('click', () => {
+            colorDots.forEach(d => d.classList.remove('active'));
+            dot.classList.add('active');
+            selectedColor = dot.dataset.color;
+            hexInput.value = selectedColor;
+            colorPreview.style.background = selectedColor;
+        });
+    });
+    
+    hexInput.addEventListener('input', () => {
+        const val = hexInput.value.trim();
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+            selectedColor = val;
+            colorPreview.style.background = val;
+            colorDots.forEach(d => {
+                d.classList.toggle('active', d.dataset.color.toLowerCase() === val.toLowerCase());
+            });
+        }
+    });
+    
+    // 取消按钮
+    panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    
+    // ==============================================
+    // 保存按钮（终极修复版）
+    // 解决：聚焦输入框不能保存、中文输入法问题、保存延迟
+    // ==============================================
+    panel.querySelector('#ge-save').onclick = async () => {
+        // 🔴 核心修复1：强制所有输入框失焦，彻底解决输入法/聚焦取值问题
+        nameInput.blur();
+        hexInput.blur();
+        
+        // 现在100%能拿到输入框里的最新内容
+        const name = nameInput.value.trim();
+        let inputColor = hexInput.value.trim();
+        
+        // 🔴 核心修复2：颜色值强校验+兜底
+        const validColorRegex = /^#[0-9A-Fa-f]{6}$/;
+        const finalColor = validColorRegex.test(inputColor) ? inputColor : selectedColor;
+        
+        // 名称校验
+        if (!name) {
+            showNotification('请输入分组名称', 'warning');
+            nameInput.style.borderColor = '#ff4757';
+            setTimeout(() => nameInput.style.borderColor = '', 300);
+            return;
+        }
+        
+        // 更新内存中的分组数据
+        if (isNew) {
+            ctx.groups.push({ 
+                id: Date.now(), 
+                name, 
+                color: finalColor, 
+                disabled: false, 
+                items: [] 
+            });
+        } else {
+            group.name = name;
+            group.color = finalColor;
+        }
+        
+        // 🔴 核心修复3：先关弹窗，再后台保存，彻底消除延迟感
+        overlay.remove();
+        
+        // 后台异步执行保存逻辑（不阻塞界面）
+        try {
+            // 等待SESSION_ID就绪（最多1秒）
+            let sessionReady = !!window.SESSION_ID;
+            if (!sessionReady) {
+                for (let i = 0; i < 10; i++) {
+                    await new Promise(r => setTimeout(r, 100));
+                    if (window.SESSION_ID) {
+                        sessionReady = true;
+                        break;
+                    }
+                }
+            }
+            
+            // SESSION_ID未就绪时降级保存到本地
+            if (!sessionReady) {
+                const tempKey = `${APP_PREFIX}_temp_customReplyGroups`;
+                await localforage.setItem(tempKey, ctx.groups);
+                console.warn('[分组保存] SESSION_ID未就绪，已临时保存到本地');
+            }
+            
+            // 执行最终保存并刷新界面
+            await throttledSaveData();
+            renderReplyLibrary();
+            showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
+            
+        } catch (error) {
+            console.error('[分组保存失败]', error);
+            showNotification('保存失败，请刷新页面后重试', 'error');
+        }
+    };
+    
+}
+
+// ==============================================
+// 分组管理（最终修复版）
+// 解决：新建分组按钮不响应、事件丢失问题
+// ==============================================
 function _showGroupManager() {
     const ctx = _getGroupCtx();
     const groups = ctx.groups;
     const sourceItems = ctx.items;
     const overlay = _makeOverlay();
-
+    
     const render = () => {
         const noGroups = !groups || groups.length === 0;
         panel.querySelector('#gm-list').innerHTML = noGroups
@@ -1315,27 +1500,8 @@ function _showGroupManager() {
                     " title="删除">${ICONS.trash}</button>
                 </div>
             `).join('');
-
-        panel.querySelectorAll('[data-action]').forEach(btn => {
-            btn.onclick = () => {
-                const i = parseInt(btn.dataset.i);
-                const action = btn.dataset.action;
-                if (action === 'toggle') {
-                    groups[i].disabled = !groups[i].disabled;
-                    throttledSaveData(); render(); renderReplyLibrary();
-                } else if (action === 'edit') {
-                    overlay.remove();
-                    _showGroupEditor(groups[i], ctx);
-                } else if (action === 'del') {
-                    if (confirm(`删除分组「${groups[i].name}」？（内容不会被删除）`)) {
-                        groups.splice(i, 1);
-                        throttledSaveData(); render(); renderReplyLibrary();
-                    }
-                }
-            };
-        });
     };
-
+    
     const panel = document.createElement('div');
     panel.style.cssText = `
         background:var(--secondary-bg);border-radius:22px;padding:24px;
@@ -1344,6 +1510,7 @@ function _showGroupManager() {
         box-shadow:0 24px 80px rgba(0,0,0,.45);
         animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
     `;
+    
     panel.innerHTML = `
         <style>
             @keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }
@@ -1364,101 +1531,69 @@ function _showGroupManager() {
             ${ICONS.plus} 新建分组
         </button>
     `;
+    
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
-    render();
-
-    panel.querySelector('#gm-close').onclick = () => overlay.remove();
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    panel.querySelector('#gm-add').onclick = () => { overlay.remove(); _showGroupEditor(null, ctx); };
-}
-
-panel.querySelector('#ge-save').onclick = async () => {
-    // ==============================================
-    // 🔴 核心修复1：强制所有输入框失焦，彻底解决输入法/聚焦取值问题
-    // 解决：中文输入法选字中、输入框聚焦时，点击保存取不到最新值的千古难题
-    // ==============================================
-    const nameInput = panel.querySelector('#ge-name');
-    const hexInput = panel.querySelector('#ge-hexinput');
-    nameInput.blur();
-    hexInput.blur();
-
-    // 现在100%能拿到输入框里的最新内容（包括输入法刚输入还没确认的）
-    const name = nameInput.value.trim();
-    let inputColor = hexInput.value.trim();
-
-    // ==============================================
-    // 🔴 核心修复2：颜色值强校验+兜底
-    // 解决：颜色输入框输入一半、格式错误时保存失效的问题
-    // ==============================================
-    const validColorRegex = /^#[0-9A-Fa-f]{6}$/;
-    const finalColor = validColorRegex.test(inputColor) ? inputColor : selectedColor;
-
-    // ==============================================
-    // 名称校验（优化：失焦后红色边框才会正常显示，不会被focus样式覆盖）
-    // ==============================================
-    if (!name) {
-        showNotification('请输入分组名称', 'warning');
-        nameInput.style.borderColor = '#ff4757';
-        setTimeout(() => nameInput.style.borderColor = '', 300);
-        return;
-    }
-
-    // ==============================================
-    // 先更新内存中的分组数据
-    // ==============================================
-    if (isNew) {
-        groups.push({ 
-            id: Date.now(), 
-            name, 
-            color: finalColor, 
-            disabled: false, 
-            items: [] 
-        });
-    } else {
-        group.name = name;
-        group.color = finalColor;
-    }
-
-    // ==============================================
-    // 🔴 核心修复3：先关弹窗，再后台保存，彻底消除延迟感
-    // 用户点击保存后弹窗立即消失，完全感觉不到等待
-    // ==============================================
-    overlay.remove();
-
-    // ==============================================
-    // 后台异步执行保存逻辑（不阻塞界面）
-    // ==============================================
-    try {
-        // 优化SESSION_ID等待：异步非阻塞，最多等1秒
-        let sessionReady = !!window.SESSION_ID;
-        if (!sessionReady) {
-            for (let i = 0; i < 10; i++) {
-                await new Promise(r => setTimeout(r, 100));
-                if (window.SESSION_ID) {
-                    sessionReady = true;
-                    break;
+    
+    // 🔴 统一使用事件委托，彻底解决按钮不响应问题
+    panel.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+        
+        // 关闭按钮
+        if (target.id === 'gm-close') {
+            overlay.remove();
+            return;
+        }
+        
+        // 新建分组按钮
+        if (target.id === 'gm-add') {
+            e.stopPropagation();
+            overlay.remove();
+            try {
+                _showGroupEditor(null, ctx);
+            } catch (err) {
+                console.error('打开新建分组编辑器失败:', err);
+                showNotification('打开编辑器失败，请刷新页面后重试', 'error');
+            }
+            return;
+        }
+        
+        // 分组操作按钮（切换/编辑/删除）
+        const action = target.dataset.action;
+        const i = parseInt(target.dataset.i);
+        if (action && !isNaN(i) && groups[i]) {
+            e.stopPropagation();
+            if (action === 'toggle') {
+                groups[i].disabled = !groups[i].disabled;
+                throttledSaveData();
+                render();
+                renderReplyLibrary();
+            } else if (action === 'edit') {
+                overlay.remove();
+                try {
+                    _showGroupEditor(groups[i], ctx);
+                } catch (err) {
+                    console.error('打开编辑分组编辑器失败:', err);
+                    showNotification('打开编辑器失败，请刷新页面后重试', 'error');
+                }
+            } else if (action === 'del') {
+                if (confirm(`删除分组「${groups[i].name}」？（内容不会被删除）`)) {
+                    groups.splice(i, 1);
+                    throttledSaveData();
+                    render();
+                    renderReplyLibrary();
                 }
             }
         }
-
-        // SESSION_ID未就绪时降级保存到本地，防止数据丢失
-        if (!sessionReady) {
-            const tempKey = `${APP_PREFIX}_temp_customReplyGroups`;
-            await localforage.setItem(tempKey, groups);
-            console.warn('[分组保存] SESSION_ID未就绪，已临时保存到本地');
-        }
-
-        // 执行最终保存并刷新界面
-        await saveData();
-        renderReplyLibrary();
-        showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
-
-    } catch (error) {
-        console.error('[分组保存失败]', error);
-        showNotification('保存失败，请刷新页面后重试', 'error');
-    }
-};
+    });
+    
+    // 遮罩层点击关闭
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    
+    // 初始渲染
+    render();
+}
 
 function _showSingleItemGroupPicker(itemText, ctx) {
     ctx = ctx || _getGroupCtx();
