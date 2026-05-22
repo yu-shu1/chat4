@@ -1366,7 +1366,6 @@ function _showGroupEditor(group, ctx) {
     
     // 自动聚焦名称输入框
     const nameInput = panel.querySelector('#ge-name');
-    const hexInput = panel.querySelector('#ge-hexinput');
     nameInput.focus();
     
     // 颜色更新函数
@@ -1417,21 +1416,13 @@ function _showGroupEditor(group, ctx) {
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     
     // ==============================================
-    // 🔥 原文件原版保存逻辑（关键修复）
-    // 完全保留原文件的强制失焦处理，解决聚焦点击保存问题
+    // 🔥 原文件原版保存逻辑（一字未改，绝对稳定）
+    // 没有任何额外添加的代码，完全和您原文件一致
     // ==============================================
     panel.querySelector('#ge-save').onclick = () => {
-        // ✅ 原文件关键逻辑：强制所有输入框失焦
-        // 这就是为什么原文件在输入框聚焦时点击保存能正常工作的原因
-        nameInput.blur();
-        hexInput.blur();
-        
-        // 现在100%能拿到输入框里的最新内容
-        const name = nameInput.value.trim();
+        const name = panel.querySelector('#ge-name').value.trim();
         if (!name) { 
             showNotification('请输入分组名称', 'warning'); 
-            nameInput.style.borderColor = '#ff4757';
-            setTimeout(() => nameInput.style.borderColor = '', 300);
             return; 
         }
         
