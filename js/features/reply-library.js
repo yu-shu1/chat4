@@ -2,6 +2,7 @@ if (typeof customReplyGroups === 'undefined') window.customReplyGroups = [];
 if (typeof replyGroupsEnabled === 'undefined') window.replyGroupsEnabled = false;
 if (typeof customPokeGroups === 'undefined') window.customPokeGroups = [];
 if (typeof customStatusGroups === 'undefined') window.customStatusGroups = [];
+
 // 根据当前 tab 返回对应的分组上下文 {groups, items, itemLabel}
 function _getGroupCtx(tab) {
     tab = tab || currentSubTab;
@@ -17,11 +18,13 @@ function _getGroupCtx(tab) {
     if (!window.customReplyGroups) window.customReplyGroups = [];
     return { groups: window.customReplyGroups, items: customReplies, itemLabel: '字卡' };
 }
+
 // 判断当前 tab 是否支持分组
 function _tabHasGroups(tab) {
     tab = tab || currentSubTab;
     return tab === 'custom' || tab === 'pokes' || tab === 'statuses';
 }
+
 let _batchSelectedIndices = new Set();
 let _batchModeActive = false;
 let _batchModeTarget = 'custom'; // 'custom' or 'stickers' (depends on currentSubTab when batch mode enabled)
@@ -29,6 +32,7 @@ let _searchVisible = false;
 let _searchQuery = '';
 let _searchDebounceTimer = null;
 let _activeGroupFilter = null; 
+
 const GROUP_COLORS = [
     '#FF6B6B','#FF8E53','#FFC542','#51CF66',
     '#20C997','#4DABF7','#748FFC','#DA77F2',
@@ -36,37 +40,40 @@ const GROUP_COLORS = [
     '#339AF0','#5C7CFA','#CC5DE8','#F06595',
     '#868E96','#212529'
 ];
+
 const ICONS = {
-    reply:    `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v7a1 1 0 01-1 1H9l-3 2.5V11H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.3" fill="none" /></svg>`,
-    magic:    `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2l.9 2.7L11.6 4l-1.8 2.2L12 8l-2.9-.1L8 10.8l-.9-2.9L4.4 8l1.8-2.2L4.4 4l2.7.7L8 2z" stroke="currentColor" stroke-width="1.2" fill="none" /><line x1="2" y1="14" x2="5" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>`,
-    news:     `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3" /><line x1="5" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" /><line x1="5" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" /></svg>`,
-    folder:   `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 5a1 1 0 011-1h3.5l1.2 1.2H13a1 1 0 011 1V12a1 1 0 01-1 1H3a1 1 0 01-1-1V5z" stroke="currentColor" stroke-width="1.3" fill="none" /></svg>`,
-    search:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.3" /><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>`,
-    batch:    `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.5" y="1.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" /><rect x="8.5" y="1.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" opacity=".6" /><rect x="1.5" y="8.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" opacity=".6" /><rect x="8.5" y="8.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" opacity=".4" /></svg>`,
-    plus:     `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><line x1="7.5" y1="2" x2="7.5" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /><line x1="2" y1="7.5" x2="13" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>`,
-    close:    `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>`,
-    check:    `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>`,
-    trash:    `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><line x1="2" y1="3" x2="11" y2="3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" /><path d="M4.5 3V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5V3" /><path d="M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" stroke-width="1.2" fill="none" /></svg>`,
-    edit:     `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M8.5 2l2.5 2.5L4 11.5H1.5V9L8.5 2z" stroke="currentColor" stroke-width="1.2" fill="none" /></svg>`,
-    eye:      `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z" stroke="currentColor" stroke-width="1.2" /><circle cx="6.5" cy="6.5" r="1.5" fill="currentColor" /></svg>`,
-    eyeOff:   `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><line x1="2" y1="2" x2="11" y2="11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" /><path d="M4.5 3.5C5.1 3.2 5.7 3 6.5 3c3 0 5 3.5 5 3.5s-.5 1-1.5 2M2 5s-.5.8-.5 1.5c0 .6.2 1.1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" /></svg>`,
-    tag:      `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 1.5h5l5 5-5 5-5-5v-5z" stroke="currentColor" stroke-width="1.2" fill="none" /><circle cx="4" cy="4" r="1" fill="currentColor" /></svg>`,
-    filter:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><line x1="2" y1="4" x2="13" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /><line x1="4" y1="7.5" x2="11" y2="7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /><line x1="6" y1="11" x2="9" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>`,
-    dedup:    `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 4h11M4.5 7h6M7 10h1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>`,
-    import:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 9.5V2M4 6.5l3.5 3L11 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" /><line x1="2" y1="12.5" x2="13" y2="12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>`,
-    export:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 5V12M4 7.5l3.5-3L11 7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" /><line x1="2" y1="2.5" x2="13" y2="2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>`,
-    chevronD: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>`,
-    chevronR: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>`,
-    comment:  `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 3.5A1.5 1.5 0 013.5 2h11A1.5 1.5 0 0116 3.5v8A1.5 1.5 0 0114.5 13H10l-3 3v-3H3.5A1.5 1.5 0 012 11.5v-8z" stroke="currentColor" stroke-width="1.3" /></svg>`,
-    hand:     `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v8M6 5v5M3 8v3a6 6 0 0012 0V6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>`,
-    dot:      `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" fill="currentColor" /><circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.3" /></svg>`,
-    quote:    `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 6.5C3 5.4 3.9 4.5 5 4.5h2v5H5A2 2 0 013 7.5V6.5zM10 6.5c0-1.1.9-2 2-2h2v5h-2a2 2 0 01-2-2V6.5z" fill="currentColor" opacity=".7" /></svg>`,
-    play:     `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.3" /><path d="M7 6.5l5 2.5-5 2.5V6.5z" fill="currentColor" /></svg>`,
-    smile:    `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.3" /><circle cx="6.5" cy="7.5" r="1" fill="currentColor" /><circle cx="11.5" cy="7.5" r="1" fill="currentColor" /><path d="M6 11.5s1 2 3 2 3-2 3-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" /></svg>`,
-    sticker:  `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="4" stroke="currentColor" stroke-width="1.3" /><circle cx="6.5" cy="7" r="1.2" fill="currentColor" /><circle cx="11.5" cy="7" r="1.2" fill="currentColor" /><path d="M6 11s1 2.5 3 2.5S12 11 12 11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" /></svg>`,
-    folderBig:`<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5a1 1 0 011-1h4l1.5 1.5H15a1 1 0 011 1V14a1 1 0 01-1 1H3a1 1 0 01-1-1V5z" stroke="currentColor" stroke-width="1.3" /></svg>`,
-    palette:  `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5a6 6 0 100 12 2.5 2.5 0 010-5 2.5 2.5 0 000-7z" stroke="currentColor" stroke-width="1.2" fill="none" /><circle cx="4" cy="6" r="1" fill="currentColor" /><circle cx="7.5" cy="3.5" r="1" fill="currentColor" /><circle cx="11" cy="6" r="1" fill="currentColor" /></svg>`,
+    reply:    `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v7a1 1 0 01-1 1H9l-3 2.5V11H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>`,
+    magic:    `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2l.9 2.7L11.6 4l-1.8 2.2L12 8l-2.9-.1L8 10.8l-.9-2.9L4.4 8l1.8-2.2L4.4 4l2.7.7L8 2z" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="2" y1="14" x2="5" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+    news:     `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="5" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    folder:   `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 5a1 1 0 011-1h3.5l1.2 1.2H13a1 1 0 011 1V12a1 1 0 01-1 1H3a1 1 0 01-1-1V5z" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>`,
+    search:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.3"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+    batch:    `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.5" y="1.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8.5" y="1.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" opacity=".6"/><rect x="1.5" y="8.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" opacity=".6"/><rect x="8.5" y="8.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" opacity=".4"/></svg>`,
+    plus:     `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><line x1="7.5" y1="2" x2="7.5" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="7.5" x2="13" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+    close:    `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+    check:    `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    trash:    `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><line x1="2" y1="3" x2="11" y2="3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M4.5 3V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5V3"/><path d="M3.5 3.5l.5 7h5l.5-7" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
+    edit:     `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M8.5 2l2.5 2.5L4 11.5H1.5V9L8.5 2z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>`,
+    eye:      `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z" stroke="currentColor" stroke-width="1.2"/><circle cx="6.5" cy="6.5" r="1.5" fill="currentColor"/></svg>`,
+    eyeOff:   `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><line x1="2" y1="2" x2="11" y2="11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M4.5 3.5C5.1 3.2 5.7 3 6.5 3c3 0 5 3.5 5 3.5s-.5 1-1.5 2M2 5s-.5.8-.5 1.5c0 .6.2 1.1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    tag:      `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 1.5h5l5 5-5 5-5-5v-5z" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="4" cy="4" r="1" fill="currentColor"/></svg>`,
+    filter:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><line x1="2" y1="4" x2="13" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="4" y1="7.5" x2="11" y2="7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="6" y1="11" x2="9" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+    dedup:    `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 4h11M4.5 7h6M7 10h1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+    import:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 9.5V2M4 6.5l3.5 3L11 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><line x1="2" y1="12.5" x2="13" y2="12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+    export:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 5V12M4 7.5l3.5-3L11 7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><line x1="2" y1="2.5" x2="13" y2="2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+    chevronD: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+    chevronR: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+    comment:  `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 3.5A1.5 1.5 0 013.5 2h11A1.5 1.5 0 0116 3.5v8A1.5 1.5 0 0114.5 13H10l-3 3v-3H3.5A1.5 1.5 0 012 11.5v-8z" stroke="currentColor" stroke-width="1.3"/></svg>`,
+    hand:     `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v8M6 5v5M3 8v3a6 6 0 0012 0V6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+    dot:      `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" fill="currentColor"/><circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.3"/></svg>`,
+    quote:    `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 6.5C3 5.4 3.9 4.5 5 4.5h2v5H5A2 2 0 013 7.5V6.5zM10 6.5c0-1.1.9-2 2-2h2v5h-2a2 2 0 01-2-2V6.5z" fill="currentColor" opacity=".7"/></svg>`,
+    play:     `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.3"/><path d="M7 6.5l5 2.5-5 2.5V6.5z" fill="currentColor"/></svg>`,
+    smile:    `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.3"/><circle cx="6.5" cy="7.5" r="1" fill="currentColor"/><circle cx="11.5" cy="7.5" r="1" fill="currentColor"/><path d="M6 11.5s1 2 3 2 3-2 3-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    sticker:  `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="4" stroke="currentColor" stroke-width="1.3"/><circle cx="6.5" cy="7" r="1.2" fill="currentColor"/><circle cx="11.5" cy="7" r="1.2" fill="currentColor"/><path d="M6 11s1 2.5 3 2.5S12 11 12 11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    folderBig:`<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5a1 1 0 011-1h4l1.5 1.5H15a1 1 0 011 1V14a1 1 0 01-1 1H3a1 1 0 01-1-1V5z" stroke="currentColor" stroke-width="1.3"/></svg>`,
+    palette:  `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5a6 6 0 100 12 2.5 2.5 0 010-5 2.5 2.5 0 000-7z" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="7.5" cy="3.5" r="1" fill="currentColor"/><circle cx="11" cy="6" r="1" fill="currentColor"/></svg>`,
 };
+
+
 // ─── 共享样式：只注入一次，避免每张卡片各塞一个 <style> ───────────────────
 (function _injectReplyLibStyles() {
     if (document.getElementById('rl-shared-styles')) return;
@@ -118,15 +125,19 @@ const ICONS = {
     `;
     (document.head || document.documentElement).appendChild(s);
 })();
+
 function _renderListContentOnly() {
     const list = document.getElementById('custom-replies-list');
     if (!list) return;
+
     const toolbar = document.getElementById('batch-ops-toolbar');
     Array.from(list.children).forEach(child => {
         if (child !== toolbar) child.remove();
     });
+
     let itemsToRender = [];
     let renderType = 'text';
+
     if (currentMajorTab === 'reply') {
         if (currentSubTab === 'custom') {
             itemsToRender = customReplies;
@@ -143,22 +154,27 @@ function _renderListContentOnly() {
         else if (currentSubTab === 'mottos') itemsToRender = customMottos;
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }
+
     if (renderType === 'emoji') { _renderEmojiTab(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
+
     const q = _searchQuery.toLowerCase().trim();
     const filtered = q ? itemsToRender.filter(item => item.toLowerCase().includes(q)) : itemsToRender;
+
     if (filtered.length === 0) {
         const empty = document.createElement('div');
         empty.innerHTML = renderEmptyState(q ? `未找到 "${q}"` : '列表空空如也');
         list.appendChild(empty.firstElementChild || empty);
         return;
     }
+
     if (currentMajorTab === 'reply' && currentSubTab === 'custom') {
         _renderCardViewWithGroups(list, filtered);
     } else {
         _renderAtmosphereList(list, filtered);
     }
 }
+
 let _rlRafId = null;
 /** 防抖版 renderReplyLibrary：同一帧内多次调用只渲染一次 */
 function renderReplyLibraryRaf() {
@@ -168,13 +184,16 @@ function renderReplyLibraryRaf() {
         renderReplyLibrary();
     });
 }
+
 function renderReplyLibrary() {
     if (currentMajorTab === 'announcement') return;
     const list = document.getElementById('custom-replies-list');
     const titleEl = document.getElementById('cr-modal-title');
     if (!list) return;
+
     const currentConfig = LIBRARY_CONFIG[currentMajorTab];
     if (titleEl) titleEl.textContent = currentConfig.title;
+
     const subTabsContainer = document.getElementById('cr-sub-tabs');
     if (subTabsContainer) {
         subTabsContainer.innerHTML = currentConfig.tabs.map(tab => `
@@ -195,13 +214,18 @@ function renderReplyLibrary() {
             });
         });
     }
+
     list.innerHTML = '';
     list.className = 'content-list-area';
+
     const activeTabConfig = currentConfig.tabs.find(t => t.id === currentSubTab);
     if (activeTabConfig) list.classList.add(activeTabConfig.mode + '-mode');
+
     _renderModernToolbar();
+
     let itemsToRender = [];
     let renderType = 'text';
+
     if (currentMajorTab === 'reply') {
         if (currentSubTab === 'custom') {
             itemsToRender = customReplies;
@@ -218,26 +242,32 @@ function renderReplyLibrary() {
         else if (currentSubTab === 'mottos') itemsToRender = customMottos;
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }
+
     if (renderType === 'emoji') { _renderEmojiTab(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
+
     const q = _searchQuery.toLowerCase().trim();
     let filtered = q ? itemsToRender.filter(item => item.toLowerCase().includes(q)) : itemsToRender;
+
     if (filtered.length === 0) {
         list.innerHTML = renderEmptyState(q ? `未找到"${q}"` : '列表空空如也');
         return;
     }
+
     if (_tabHasGroups()) {
         _renderCardViewWithGroups(list, filtered);
     } else {
         _renderAtmosphereList(list, filtered);
     }
 }
+
 function _renderModernToolbar() {
     let toolbar = document.getElementById('batch-ops-toolbar');
     const isMainCustom = currentMajorTab === 'reply' && currentSubTab === 'custom';
     const isStickersTab = currentMajorTab === 'reply' && currentSubTab === 'stickers';
     const hasGroupSupport = _tabHasGroups();
     const canBatch = isMainCustom || isStickersTab;
+
     if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.id = 'batch-ops-toolbar';
@@ -245,14 +275,17 @@ function _renderModernToolbar() {
         listEl.parentNode.insertBefore(toolbar, listEl);
     }
     toolbar.style.display = '';
+
     const disabledSet = _getDisabledItemsSet();
     const ctx = _getGroupCtx();
     const totalItems = isMainCustom ? customReplies.length : (isStickersTab ? stickerLibrary.length : 0);
     const selectedCount = _batchSelectedIndices.size;
+
     const addBtnLabel = (() => {
         if (!isMainCustom) return '新增';
         return '新增字卡';
     })();
+
     let groupFilterHtml = '';
     if (hasGroupSupport && ctx.groups && ctx.groups.length > 0) {
         const allCount = ctx.items.length;
@@ -283,6 +316,7 @@ function _renderModernToolbar() {
             </div>
         `;
     }
+
     let batchActionsHtml = '';
     if (_batchModeActive) {
         const showGroupBtn = hasGroupSupport;
@@ -319,6 +353,7 @@ function _renderModernToolbar() {
             </div>
         `;
     }
+
     toolbar.innerHTML = `
         <style>
             .gfp-btn {
@@ -363,6 +398,7 @@ function _renderModernToolbar() {
             .search-input-line input:focus { border-color:var(--accent-color); }
             .group-filter-pills::-webkit-scrollbar { display:none; }
         </style>
+
         <div style="display:flex;align-items:center;gap:8px;padding:10px 15px;border-bottom:1px solid var(--border-color);">
             <button class="toolbar-icon-btn ${_searchVisible ? 'active' : ''}" id="tb-search-btn" title="搜索">
                 ${ICONS.search}
@@ -386,6 +422,7 @@ function _renderModernToolbar() {
                 ${ICONS.export}
             </button>
         </div>
+
         ${_searchVisible ? `
         <div class="search-input-line">
             <div style="color:var(--text-secondary);">${ICONS.search}</div>
@@ -394,9 +431,12 @@ function _renderModernToolbar() {
                 ${ICONS.close}
             </button>
         </div>` : ''}
+
         ${groupFilterHtml}
+
         ${batchActionsHtml}
     `;
+
     toolbar.querySelector('#tb-search-btn').onclick = () => {
         _searchVisible = !_searchVisible;
         if (!_searchVisible) _searchQuery = '';
@@ -429,6 +469,7 @@ function _renderModernToolbar() {
         }
         toolbar.querySelector('#tb-search-clear').onclick = () => { _searchVisible = false; _searchQuery = ''; renderReplyLibrary(); };
     }
+
     if (hasGroupSupport) toolbar.querySelector('#tb-groups-btn')?.addEventListener('click', _showGroupManager);
     const tbBatch = toolbar.querySelector('#tb-batch-btn');
     if (tbBatch) {
@@ -440,9 +481,11 @@ function _renderModernToolbar() {
             renderReplyLibrary();
         };
     }
+
     toolbar.querySelector('#tb-dedup-btn')?.addEventListener('click', _runDedup);
     toolbar.querySelector('#tb-import-btn')?.addEventListener('click', () => document.getElementById('import-replies-input')?.click());
     toolbar.querySelector('#tb-export-btn')?.addEventListener('click', _showExportUI);
+
     toolbar.querySelectorAll('.gfp-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const f = btn.dataset.filter;
@@ -450,6 +493,7 @@ function _renderModernToolbar() {
             renderReplyLibrary();
         });
     });
+
     if (_batchModeActive) {
         toolbar.querySelector('#batch-select-all-btn')?.addEventListener('click', () => {
             if (_batchSelectedIndices.size === totalItems) _batchSelectedIndices.clear();
@@ -500,6 +544,7 @@ function _renderModernToolbar() {
         });
     }
 }
+
 function _renderCardViewWithGroups(list, items) {
     const ctx = _getGroupCtx();
     const groups = ctx.groups;
@@ -512,11 +557,13 @@ function _renderCardViewWithGroups(list, items) {
         text,
         idx: replyIndexMap.has(text) ? replyIndexMap.get(text) : -1
     }));
+
     if (_activeGroupFilter === null) {
         if (!groups || groups.length === 0) {
             _renderCardList(list, itemsWithIdx, disabledSet);
             return;
         }
+
         const inGroup = new Set();
         groups.forEach(g => {
             const groupItems = (g.items || [])
@@ -525,6 +572,7 @@ function _renderCardViewWithGroups(list, items) {
             groupItems.forEach(x => inGroup.add(x.idx));
             _renderGroupBlock(list, g, groupItems, disabledSet);
         });
+
         const ungrouped = itemsWithIdx.filter(x => !inGroup.has(x.idx));
         if (ungrouped.length > 0) {
             _renderGroupBlock(list, { id: '__ungrouped', name: '未分组', color: '#868E96', disabled: false }, ungrouped, disabledSet, true);
@@ -552,12 +600,14 @@ function _renderCardViewWithGroups(list, items) {
         }
     }
 }
+
 function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = false) {
     const section = document.createElement('div');
     section.className = 'rl-group-block';
     const isCollapsed = group._collapsed || false;
     const isDisabled = group.disabled;
     const colorDot = group.color || '#868E96';
+
     section.innerHTML = `
         <div class="rl-group-header${isCollapsed ? ' collapsed' : ''}" id="grp-hdr-${group.id}" style="${isDisabled ? 'opacity:0.5;' : ''}">
             <div class="rl-group-tag" id="grp-tag-${group.id}" title="${isDisabled ? '点击启用此分组' : '点击屏蔽此分组'}">
@@ -592,12 +642,14 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
         </div>
     `;
     list.appendChild(section);
+
     const body = section.querySelector(`#grp-body-${group.id}`);
     if (groupItems.length === 0) {
         body.innerHTML = `<div style="padding:18px;text-align:center;font-size:12px;color:var(--text-secondary);opacity:0.6;">此分组暂无内容</div>`;
     } else {
         _renderCardList(body, groupItems, disabledSet);
     }
+
     section.querySelector('.grp-select-all-btn')?.addEventListener('click', e => {
         e.stopPropagation();
         const allSel = groupItems.every(x => _batchSelectedIndices.has(x.idx));
@@ -608,6 +660,7 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
         }
         renderReplyLibrary();
     });
+
     section.querySelector(`#grp-hdr-${group.id}`).addEventListener('click', e => {
         if (e.target.closest('.grp-edit-btn') || e.target.closest(`#grp-tag-${group.id}`) || e.target.closest('.grp-select-all-btn')) return;
         group._collapsed = !group._collapsed;
@@ -615,6 +668,7 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
         section.querySelector('.grp-chevron').style.transform = group._collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
         section.querySelector('.rl-group-header').classList.toggle('collapsed', !!group._collapsed);
     });
+
     const tag = section.querySelector(`#grp-tag-${group.id}`);
     if (tag && !isUngrouped) {
         tag.addEventListener('click', e => {
@@ -625,20 +679,25 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
             showNotification(group.disabled ? `已屏蔽「${group.name}」` : `已启用「${group.name}」`, 'success');
         });
     }
+
     section.querySelector('.grp-edit-btn')?.addEventListener('click', e => {
         e.stopPropagation();
         _showGroupEditor(group, _getGroupCtx());
     });
 }
+
 const _CARD_PAGE_SIZE = 80; // 每次最多渲染 80 张，超过时追加"显示更多"
+
 function _renderCardList(container, itemsWithIdx, disabledSet) {
     const total = itemsWithIdx.length;
     const toRender = itemsWithIdx.slice(0, _CARD_PAGE_SIZE);
     const remaining = total - toRender.length;
+
     const frag = document.createDocumentFragment();
     toRender.forEach(({ text, idx }) => {
         frag.appendChild(_createCard(text, idx, disabledSet));
     });
+
     if (remaining > 0) {
         const btn = document.createElement('button');
         btn.style.cssText = 'width:100%;padding:10px;margin-top:4px;border:1.5px dashed var(--border-color);border-radius:12px;background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;font-family:var(--font-family);';
@@ -653,13 +712,16 @@ function _renderCardList(container, itemsWithIdx, disabledSet) {
         };
         frag.appendChild(btn);
     }
+
     container.appendChild(frag);
 }
+
 function _createCard(item, index, disabledSet) {
     const div = document.createElement('div');
     div.className = 'rl-card';
     const isDisabled = disabledSet && disabledSet.has(item);
     const isSelected = _batchSelectedIndices.has(index);
+
     const groupBadge = (() => {
         const groups = _getGroupCtx().groups;
         if (!groups) return '';
@@ -675,10 +737,12 @@ function _createCard(item, index, disabledSet) {
             ${g.name}
         </span>`;
     })();
+
     const itemParts = item.split('|');
     const displayText = itemParts.length > 1
         ? `<span style="font-size:13px;">${itemParts[0]}</span><span style="font-size:11px;opacity:0.6;display:block;margin-top:1px;">${itemParts[1]}</span>`
         : `<span style="font-size:13px;">${item}</span>`;
+
     if (_batchModeActive) {
         div.style.cssText = 'cursor:pointer;';
         div.className = 'rl-card' + (isSelected ? ' rl-selected' : '');
@@ -687,7 +751,7 @@ function _createCard(item, index, disabledSet) {
                 border:1.5px solid ${isSelected ? 'var(--accent-color)' : 'var(--border-color)'};
                 background:${isSelected ? 'var(--accent-color)' : 'transparent'};
             ">
-                ${isSelected ? `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" stroke-width="1.5" stroke-linecap="round" /></svg>` : ''}
+                ${isSelected ? `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>` : ''}
             </div>
             <div style="flex:1;min-width:0;${isDisabled ? 'opacity:0.4;' : ''}">
                 ${displayText}
@@ -701,6 +765,7 @@ function _createCard(item, index, disabledSet) {
         });
         return div;
     }
+
     div.innerHTML = `
         <div style="flex:1;min-width:0;${isDisabled ? 'opacity:0.4;text-decoration:line-through;' : ''}">
             ${displayText}
@@ -721,12 +786,15 @@ function _createCard(item, index, disabledSet) {
             </button>
         </div>
     `;
+
     div.querySelector('[data-action="delete"]').onclick = (e) => { e.stopPropagation(); deleteItem(index); };
     div.querySelector('[data-action="edit"]').onclick = (e) => { e.stopPropagation(); editItem(index, item); };
     div.querySelector('[data-action="disable"]').onclick = (e) => { e.stopPropagation(); _toggleItemDisable(item); };
     div.querySelector('[data-action="tag"]').onclick = (e) => { e.stopPropagation(); _showSingleItemGroupPicker(item, _getGroupCtx()); };
+
     return div;
 }
+
 function _renderAtmosphereList(list, items) {
     const disabledSet = _getDisabledItemsSet();
     // 预建各数组的索引 Map，避免 O(n²)
@@ -754,6 +822,7 @@ function _renderAtmosphereList(list, items) {
     });
     list.appendChild(frag);
 }
+
 function _renderEmojiTab(list, itemsToRender) {
     if (itemsToRender.length === 0 && customEmojis.length === 0) {
         list.innerHTML = renderEmptyState('暂无 Emoji'); return;
@@ -779,13 +848,14 @@ function _renderEmojiTab(list, itemsToRender) {
             div.querySelector('.emoji-custom-del').addEventListener('click', e => {
                 e.stopPropagation();
                 customEmojis.splice(idx, 1);
-                throttledSaveData(); renderReplyLibrary();
-                showNotification('✓ Emoji 已添加', 'success');
+                throttledSaveData();
+                renderReplyLibrary();
             });
             list.appendChild(div);
         });
     }
 }
+
 function _renderStickerTab(list, itemsToRender) {
     const disabledSet = _getDisabledStickerItemsSet();
     itemsToRender.forEach((item, index) => {
@@ -817,11 +887,10 @@ function _renderStickerTab(list, itemsToRender) {
                 _batchSelectedIndices.clear();
                 throttledSaveData();
                 renderReplyLibrary();
-                showNotification('✓ 贴纸已删除', 'success');
             }
         });
         list.appendChild(div);
-    }
+    });
 }
 function _getDisabledItemsSet() {
     try {
@@ -829,18 +898,22 @@ function _getDisabledItemsSet() {
         return raw ? new Set(JSON.parse(raw)) : new Set();
     } catch { return new Set(); }
 }
+
 function _getDisabledStickerItemsSet() {
     try {
         const raw = localStorage.getItem('disabledStickerItems');
         return raw ? new Set(JSON.parse(raw)) : new Set();
     } catch { return new Set(); }
 }
+
 function _saveDisabledStickerItemsSet(set) {
     localStorage.setItem('disabledStickerItems', JSON.stringify([...set]));
 }
+
 function _saveDisabledItemsSet(set) {
     localStorage.setItem('disabledReplyItems', JSON.stringify([...set]));
 }
+
 function _toggleItemDisable(itemText) {
     const set = _getDisabledItemsSet();
     if (set.has(itemText)) { set.delete(itemText); showNotification('已启用', 'success'); }
@@ -848,6 +921,7 @@ function _toggleItemDisable(itemText) {
     _saveDisabledItemsSet(set);
     renderReplyLibrary();
 }
+
 function _batchToggleDisable() {
     const set = _getDisabledItemsSet();
     const selectedItems = [..._batchSelectedIndices].map(i => customReplies[i]);
@@ -863,6 +937,7 @@ function _batchToggleDisable() {
     _batchSelectedIndices.clear();
     renderReplyLibrary();
 }
+
 function _batchToggleDisableStickers() {
     const set = _getDisabledStickerItemsSet();
     const selectedItems = [..._batchSelectedIndices].map(i => stickerLibrary[i]).filter(Boolean);
@@ -879,6 +954,7 @@ function _batchToggleDisableStickers() {
     _batchSelectedIndices.clear();
     renderReplyLibrary();
 }
+
 function _runDedup() {
     let totalRemoved = 0;
     const crDedup = deduplicateContentArray(customReplies, CONSTANTS.REPLY_MESSAGES);
@@ -901,11 +977,13 @@ function _runDedup() {
         showNotification('✨ 没有重复内容', 'info');
     }
 }
+
 function _showGroupManager() {
     const ctx = _getGroupCtx();
     const groups = ctx.groups;
     const sourceItems = ctx.items;
     const overlay = _makeOverlay();
+
     const render = () => {
         const noGroups = !groups || groups.length === 0;
         panel.querySelector('#gm-list').innerHTML = noGroups
@@ -940,6 +1018,7 @@ function _showGroupManager() {
                     " title="删除">${ICONS.trash}</button>
                 </div>
             `).join('');
+
         panel.querySelectorAll('[data-action]').forEach(btn => {
             btn.onclick = () => {
                 const i = parseInt(btn.dataset.i);
@@ -959,6 +1038,7 @@ function _showGroupManager() {
             };
         });
     };
+
     const panel = document.createElement('div');
     panel.style.cssText = `
         background:var(--secondary-bg);border-radius:22px;padding:24px;
@@ -990,10 +1070,12 @@ function _showGroupManager() {
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
     render();
+
     panel.querySelector('#gm-close').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     panel.querySelector('#gm-add').onclick = () => { overlay.remove(); _showGroupEditor(null, ctx); };
 }
+
 function _showGroupEditor(group, ctx) {
     ctx = ctx || _getGroupCtx();
     const groups = ctx.groups;
@@ -1001,7 +1083,7 @@ function _showGroupEditor(group, ctx) {
     const overlay = _makeOverlay();
     const initColor = group?.color || GROUP_COLORS[Math.floor(Math.random() * GROUP_COLORS.length)];
     let selectedColor = initColor;
-    
+
     const panel = document.createElement('div');
     panel.style.cssText = `
         background:var(--secondary-bg);border-radius:22px;padding:24px;
@@ -1009,13 +1091,12 @@ function _showGroupEditor(group, ctx) {
         box-shadow:0 24px 80px rgba(0,0,0,.45);
         animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
     `;
-    
     panel.innerHTML = `
         <style>@keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }</style>
         <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:18px;">
             ${isNew ? '新建分组' : '编辑分组'}
         </div>
-        
+
         <div style="margin-bottom:16px;">
             <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:7px;letter-spacing:.5px;">LABEL</label>
             <input id="ge-name" value="${group?.name || ''}" placeholder="分组名称…" style="
@@ -1025,7 +1106,7 @@ function _showGroupEditor(group, ctx) {
                 font-size:14px;font-family:var(--font-family);outline:none;transition:border 0.18s;
             ">
         </div>
-        
+
         <div style="margin-bottom:12px;">
             <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:8px;letter-spacing:.5px;">COLOR PRESET</label>
             <div id="ge-presets" style="display:flex;gap:7px;flex-wrap:wrap;">
@@ -1039,7 +1120,7 @@ function _showGroupEditor(group, ctx) {
                 `).join('')}
             </div>
         </div>
-        
+
         <div style="margin-bottom:20px;">
             <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:8px;letter-spacing:.5px;">CUSTOM COLOR</label>
             <div style="display:flex;gap:10px;align-items:center;">
@@ -1062,7 +1143,7 @@ function _showGroupEditor(group, ctx) {
                 </div>
             </div>
         </div>
-        
+
         <div style="display:flex;gap:10px;">
             <button id="ge-cancel" style="
                 flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;
@@ -1075,15 +1156,9 @@ function _showGroupEditor(group, ctx) {
             ">保存</button>
         </div>
     `;
-    
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
-    
-    // 自动聚焦名称输入框
-    const nameInput = panel.querySelector('#ge-name');
-    nameInput.focus();
-    
-    // 颜色更新函数
+
     const updateColor = (color) => {
         selectedColor = color;
         panel.querySelector('#ge-colorpicker').value = color;
@@ -1093,6 +1168,7 @@ function _showGroupEditor(group, ctx) {
         preview.style.borderColor = color + '40';
         preview.style.background = color + '18';
         previewName.style.color = color;
+        const nameInput = panel.querySelector('#ge-name');
         previewName.textContent = nameInput.value || '预览';
         panel.querySelectorAll('[data-preset]').forEach(dot => {
             const isSelected = dot.dataset.preset === color;
@@ -1100,50 +1176,39 @@ function _showGroupEditor(group, ctx) {
             dot.style.boxShadow = isSelected ? `0 0 0 2.5px ${dot.dataset.preset}` : 'none';
         });
     };
-    
-    // 名称输入实时更新预览
+
     panel.querySelector('#ge-name').addEventListener('input', e => {
         panel.querySelector('#ge-preview-name').textContent = e.target.value || '预览';
     });
-    
-    // 输入框焦点样式
     panel.querySelector('#ge-name').addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
     panel.querySelector('#ge-name').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
-    panel.querySelector('#ge-hexinput').addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
-    panel.querySelector('#ge-hexinput').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
-    
-    // 预设颜色点击
+
     panel.querySelectorAll('[data-preset]').forEach(dot => {
         dot.onclick = () => updateColor(dot.dataset.preset);
     });
-    
-    // 颜色选择器变化
+
     panel.querySelector('#ge-colorpicker').addEventListener('input', e => updateColor(e.target.value));
-    
-    // 十六进制颜色输入
     panel.querySelector('#ge-hexinput').addEventListener('input', e => {
         const v = e.target.value.trim();
         if (/^#[0-9A-Fa-f]{6}$/.test(v)) updateColor(v);
     });
-    
-    // 取消按钮
+    panel.querySelector('#ge-hexinput').addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
+    panel.querySelector('#ge-hexinput').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
+
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    
-    // ==============================================
-    // 🔥 全平台修复：根治键盘收起后点击失效/闪回
-    // ==============================================
+
+    // 修复：键盘收起后保存点击闪回
     panel.querySelector('#ge-save').onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        panel.querySelector('#ge-name').blur();
-        panel.querySelector('#ge-hexinput').blur();
+        const nameInput = panel.querySelector('#ge-name');
+        nameInput.blur();
+        const hexInput = panel.querySelector('#ge-hexinput');
+        if (hexInput) hexInput.blur();
 
-        const name = panel.querySelector('#ge-name').value.trim();
-        if (!name) {
-            showNotification('请输入分组名称', 'warning');
-            return;
-        }
+        const name = nameInput.value.trim();
+        if (!name) { showNotification('请输入分组名称', 'warning'); return; }
         if (isNew) {
             groups.push({ id: Date.now(), name, color: selectedColor, disabled: false, items: [] });
         } else {
@@ -1156,6 +1221,7 @@ function _showGroupEditor(group, ctx) {
         showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
     };
 }
+
 function _showSingleItemGroupPicker(itemText, ctx) {
     ctx = ctx || _getGroupCtx();
     const groups = ctx.groups;
@@ -1165,6 +1231,7 @@ function _showSingleItemGroupPicker(itemText, ctx) {
     }
     const overlay = _makeOverlay();
     const currentGroup = groups.find(g => g.items && g.items.includes(itemText));
+
     const panel = document.createElement('div');
     panel.style.cssText = `
         background:var(--secondary-bg);border-radius:22px;padding:22px;
@@ -1196,15 +1263,16 @@ function _showSingleItemGroupPicker(itemText, ctx) {
     `;
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+
     panel.querySelector('#sgp-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    
-    // ==============================================
-    // 🔥 全平台修复：根治键盘收起后点击失效/闪回
-    // ==============================================
+
+    // 修复：键盘收起后保存点击闪回
     panel.querySelector('#sgp-save').onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl.blur) activeEl.blur();
 
         const checked = panel.querySelector('input[name="sgp"]:checked');
         if (!checked) return;
@@ -1220,6 +1288,7 @@ function _showSingleItemGroupPicker(itemText, ctx) {
         showNotification('✓ 分组已更新', 'success');
     };
 }
+
 function _showBatchGroupPicker() {
     const ctx = _getGroupCtx();
     const groups = ctx.groups;
@@ -1230,6 +1299,7 @@ function _showBatchGroupPicker() {
     }
     const selectedItems = [..._batchSelectedIndices].map(i => sourceItems[i]);
     const overlay = _makeOverlay();
+
     const panel = document.createElement('div');
     panel.style.cssText = `
         background:var(--secondary-bg);border-radius:22px;padding:22px;
@@ -1262,15 +1332,16 @@ function _showBatchGroupPicker() {
     `;
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+
     panel.querySelector('#bgp-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    
-    // ==============================================
-    // 🔥 全平台修复：根治键盘收起后点击失效/闪回
-    // ==============================================
+
+    // 修复：键盘收起后保存点击闪回
     panel.querySelector('#bgp-save').onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl.blur) activeEl.blur();
 
         const checked = panel.querySelector('input[name="bgp"]:checked');
         if (!checked) return;
@@ -1289,6 +1360,7 @@ function _showBatchGroupPicker() {
         showNotification(`✓ 已为 ${selectedItems.length} 条内容分组`, 'success');
     };
 }
+
 function deleteItem(index) {
     if (!confirm('确定删除吗？')) return;
     const ctx = _getGroupCtx();
@@ -1304,6 +1376,7 @@ function deleteItem(index) {
     throttledSaveData();
     renderReplyLibrary();
 }
+
 function editItem(index, oldText) {
     let newText;
     if (currentSubTab === 'intros') {
@@ -1333,15 +1406,17 @@ function editItem(index, oldText) {
     throttledSaveData();
     renderReplyLibrary();
 }
+
 function renderEmptyState(text) {
     return `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;color:var(--text-secondary);opacity:0.6;grid-column:1/-1;">
         <div style="width:56px;height:56px;background:var(--secondary-bg);border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:var(--shadow);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.5" /><path d="M16.5 16.5L20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M16.5 16.5L20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         </div>
         <p style="font-size:14px;font-weight:500;text-align:center;line-height:1.6;">${text}</p>
     </div>`;
 }
+
 function _showExportUI() {
     // 读取公告数据（localStorage）
     let _annCustomData = {};
@@ -1351,6 +1426,7 @@ function _showExportUI() {
     const _annTextCount = (_annCustomData.titles || []).length + (_annCustomData.notes || []).length;
     const _annPoolCount = _annStatusPool.length;
     const _annTotalCount = _annTextCount + _annPoolCount;
+
     const modules = [
         { id: '_re_replies',  icon: ICONS.comment,   label: '主字卡',        count: customReplies.length,                     key: 'customReplies' },
         { id: '_re_pokes',    icon: ICONS.hand,      label: '拍一拍',        count: customPokes.length,                       key: 'customPokes' },
@@ -1363,12 +1439,14 @@ function _showExportUI() {
         { id: '_re_pokg',     icon: ICONS.folderBig, label: '拍一拍分组',    count: (window.customPokeGroups||[]).length,     key: 'customPokeGroups',   extra: true },
         { id: '_re_statg',    icon: ICONS.folderBig, label: '对方状态分组',  count: (window.customStatusGroups||[]).length,   key: 'customStatusGroups', extra: true },
     ];
+
     // 检测当前 tab 决定哪个分组有「按分组导出」选项
     const replyGroupsExist  = customReplyGroups        && customReplyGroups.length > 0;
     const pokeGroupsExist   = window.customPokeGroups  && window.customPokeGroups.length > 0;
     const statusGroupsExist = window.customStatusGroups && window.customStatusGroups.length > 0;
     const onAnnTab          = currentMajorTab === 'announcement';
     const anyGroupExists    = replyGroupsExist || pokeGroupsExist || statusGroupsExist || onAnnTab;
+
     // 根据当前 tab 决定「按分组导出」对应哪个类型
     const onPokeTab   = currentMajorTab === 'atmosphere' && currentSubTab === 'pokes';
     const onStatusTab = currentMajorTab === 'atmosphere' && currentSubTab === 'statuses';
@@ -1378,12 +1456,14 @@ function _showExportUI() {
     if (onStatusTab && statusGroupsExist)  groupExportType = 'statuses';
     // 只有在字卡 tab（非拍一拍/状态/公告 tab）时才 fallback 到字卡分组
     if (!groupExportType && !onPokeTab && !onStatusTab && !onAnnTab && replyGroupsExist) groupExportType = 'replies';
+
     const groupDescMap = {
         replies:      '仅导出指定分组的字卡内容',
         pokes:        '仅导出指定分组的拍一拍内容',
         statuses:     '仅导出指定分组的对方状态内容',
         announcement: '选择要导出的公告内容模块',
     };
+
     if (anyGroupExists) {
         const overlay = _makeOverlay();
         const panel = document.createElement('div');
@@ -1432,18 +1512,26 @@ function _showExportUI() {
         `;
         overlay.appendChild(panel);
         document.body.appendChild(overlay);
+
         panel.querySelector('#_exp_cancel_btn').onclick = () => overlay.remove();
         overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-        panel.querySelector('#_exp_all_btn').onclick = () => {
+
+        // 修复：全量导出按钮点击防闪回
+        panel.querySelector('#_exp_all_btn').onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             overlay.remove();
             _showIOSheet('导出字卡', '选择要导出的模块', modules, ICONS.export, (selected) => {
                 if (!selected.length) { showNotification('请至少选择一项', 'error'); return; }
                 _doExport(selected);
             });
         };
+
         const groupBtn = panel.querySelector('#_exp_group_btn');
         if (groupBtn) {
-            groupBtn.onclick = () => {
+            groupBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 overlay.remove();
                 if (groupExportType === 'announcement') {
                     _showAnnouncementExportPicker();
@@ -1454,11 +1542,13 @@ function _showExportUI() {
         }
         return;
     }
+
     _showIOSheet('导出字卡', '选择要导出的模块', modules, ICONS.export, (selected) => {
         if (!selected.length) { showNotification('请至少选择一项', 'error'); return; }
         _doExport(selected);
     });
 }
+
 function _doExport(selectedModules) {
     const libraryData = { exportDate: new Date().toISOString(), modules: [] };
     selectedModules.forEach(m => {
@@ -1483,15 +1573,18 @@ function _doExport(selectedModules) {
     exportDataToMobileOrPC(JSON.stringify(libraryData, null, 2), fileName);
     showNotification('✓ 字卡导出成功', 'success');
 }
+
 function _showGroupExportPicker(type) {
     // type: 'replies' | 'pokes' | 'statuses'
     type = type || 'replies';
+
     const cfgMap = {
         replies:  { groups: window.customReplyGroups  || [], items: customReplies,   groupKey: 'customReplyGroups',  itemKey: 'customReplies',  moduleTag: ['replies','groups'],       filePrefix: 'reply-groups',  label: '字卡',    successUnit: '条字卡' },
         pokes:    { groups: window.customPokeGroups   || [], items: customPokes,      groupKey: 'customPokeGroups',   itemKey: 'customPokes',    moduleTag: ['pokes','pokeGroups'],     filePrefix: 'poke-groups',   label: '拍一拍',  successUnit: '条拍一拍' },
         statuses: { groups: window.customStatusGroups || [], items: customStatuses,   groupKey: 'customStatusGroups', itemKey: 'customStatuses', moduleTag: ['statuses','statusGroups'],filePrefix: 'status-groups', label: '对方状态',successUnit: '条状态' },
     };
     const cfg = cfgMap[type] || cfgMap.replies;
+
     const overlay = _makeOverlay();
     const panel = document.createElement('div');
     panel.style.cssText = `
@@ -1517,6 +1610,7 @@ function _showGroupExportPicker(type) {
     `;
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+
     const listEl = panel.querySelector('#_gep_list');
     cfg.groups.forEach((g, i) => {
         const cnt = (g.items || []).filter(t => cfg.items.includes(t)).length;
@@ -1530,15 +1624,20 @@ function _showGroupExportPicker(type) {
         `;
         listEl.appendChild(row);
     });
+
     panel.querySelector('#_gep_cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    // 修复：分组导出确认按钮防闪回
     panel.querySelector('#_gep_confirm').onclick = (e) => {
-        // 全平台修复
         e.preventDefault();
         e.stopPropagation();
-        
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl.blur) activeEl.blur();
+
         const checked = [...panel.querySelectorAll('input[type=checkbox]:checked')].map(cb => parseInt(cb.value));
         if (!checked.length) { showNotification('请至少选择一个分组', 'warning'); return; }
+
         const selectedGroups = checked.map(i => cfg.groups[i]);
         const allItems = new Set();
         const exportGroups = [];
@@ -1547,6 +1646,7 @@ function _showGroupExportPicker(type) {
             items.forEach(t => allItems.add(t));
             exportGroups.push({ ...g, items });
         });
+
         const libraryData = {
             exportDate: new Date().toISOString(),
             modules: cfg.moduleTag,
@@ -1562,6 +1662,7 @@ function _showGroupExportPicker(type) {
         showNotification(`✓ 已导出 ${checked.length} 个分组，共 ${allItems.size} ${cfg.successUnit}`, 'success');
     };
 }
+
 function _showAnnouncementExportPicker() {
     let annCustomData = {};
     let annStatusPool = [];
@@ -1569,10 +1670,12 @@ function _showAnnouncementExportPicker() {
     try { annStatusPool = JSON.parse(localStorage.getItem('dg_status_pool') || '[]'); } catch(e) {}
     const textCount = (annCustomData.titles || []).length + (annCustomData.notes || []).length;
     const poolCount = annStatusPool.length;
+
     const options = [
         { id: '_aep_text', label: '公告文案', desc: `${textCount} 条内容`, key: 'announcementText', hasData: textCount > 0 },
         { id: '_aep_pool', label: '状态随机库', desc: `${poolCount} 条条目`, key: 'announcementStatusPool', hasData: poolCount > 0 },
     ];
+
     const overlay = _makeOverlay();
     const panel = document.createElement('div');
     panel.style.cssText = `
@@ -1608,15 +1711,20 @@ function _showAnnouncementExportPicker() {
     `;
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+
     panel.querySelector('#_aep_cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    // 修复：公告导出确认按钮防闪回
     panel.querySelector('#_aep_confirm').onclick = (e) => {
-        // 全平台修复
         e.preventDefault();
         e.stopPropagation();
-        
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl.blur) activeEl.blur();
+
         const selected = options.filter(opt => panel.querySelector('#' + opt.id)?.checked);
         if (!selected.length) { showNotification('请至少选择一项', 'warning'); return; }
+
         const libraryData = { exportDate: new Date().toISOString(), modules: [] };
         selected.forEach(opt => {
             if (opt.key === 'announcementText') {
@@ -1633,6 +1741,7 @@ function _showAnnouncementExportPicker() {
         showNotification(`✓ 已导出 ${selected.map(o => o.label).join('、')}`, 'success');
     };
 }
+
 function _parseFlexibleJSON(text) {
     try { return JSON.parse(text); } catch (_) {}
     let repaired = text
@@ -1646,6 +1755,7 @@ function _parseFlexibleJSON(text) {
                    .replace(/,\s*([}\]])/g, '$1');
     return JSON.parse(repaired);
 }
+
 function _normalizeImportData(data) {
     if (!data || typeof data !== 'object') return data;
     const knownKeys = ['customReplies','customPokes','customStatuses','customMottos','customIntros','customEmojis',
@@ -1658,12 +1768,14 @@ function _normalizeImportData(data) {
     }
     return data;
 }
+
 function _showImportUI(data) {
     const knownFields = ['customReplies','customPokes','customStatuses','customMottos','customIntros','customEmojis',
                          'customReplyGroups','customPokeGroups','customStatusGroups',
                          'announcementConfig','announcementText','announcementStatusPool'];
     const hasValid = knownFields.some(f => data[f] !== undefined && data[f] !== null);
     if (!hasValid) { showNotification('无效的字卡备份文件', 'error'); return; }
+
     // 计算公告模块的 displayCount
     const _annCfg = data.announcementConfig;
     const _annText = data.announcementText;
@@ -1673,6 +1785,7 @@ function _showImportUI(data) {
         : undefined;
     const _annTextCount = _annText ? ((_annText.titles||[]).length + (_annText.notes||[]).length) : undefined;
     const _annPoolCount = Array.isArray(_annPool) ? _annPool.length : undefined;
+
     const modules = [
         { id: '_ri_replies',  icon: ICONS.comment,   label: '主字卡',        data: data.customReplies,       key: 'customReplies' },
         { id: '_ri_pokes',    icon: ICONS.hand,      label: '拍一拍',        data: data.customPokes,         key: 'customPokes' },
@@ -1687,6 +1800,7 @@ function _showImportUI(data) {
         { id: '_ri_pokg',     icon: ICONS.folderBig, label: '拍一拍分组',    data: data.customPokeGroups,    key: 'customPokeGroups',   extra: true },
         { id: '_ri_statg',    icon: ICONS.folderBig, label: '对方状态分组',  data: data.customStatusGroups,  key: 'customStatusGroups', extra: true },
     ].filter(m => m.data !== undefined && m.data !== null && (Array.isArray(m.data) ? m.data.length > 0 && m.data[0] !== undefined : true));
+
     _showIOSheet(`导入字卡`, `文件中包含 ${modules.length} 个模块`, modules, ICONS.import, (selected, mode) => {
         if (!selected.length) { showNotification('请至少选择一项', 'error'); return; }
         try {
@@ -1792,10 +1906,13 @@ function _showImportUI(data) {
         }
     }, true);
 }
+
 function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = false) {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease;';
+
     let modeVal = 'merge';
+
     overlay.innerHTML = `
         <style>
             @keyframes fadeIn { from{opacity:0} to{opacity:1} }
@@ -1858,7 +1975,7 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
             ${showMode ? `
             <div style="padding:8px 22px;flex-shrink:0;">
                 <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:13px;background:var(--primary-bg);border:1.5px solid var(--border-color);">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="color:var(--accent-color);flex-shrink:0;"><path d="M7.5 1v9M4 6l3.5 3L11 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /><line x1="2" y1="13" x2="13" y2="13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="color:var(--accent-color);flex-shrink:0;"><path d="M7.5 1v9M4 6l3.5 3L11 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="2" y1="13" x2="13" y2="13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
                     <span style="font-size:13px;color:var(--text-primary);flex:1;">导入方式</span>
                     <div style="display:flex;background:var(--secondary-bg);border-radius:8px;overflow:hidden;border:1px solid var(--border-color);">
                         <label style="display:flex;align-items:center;gap:4px;padding:5px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);">
@@ -1879,6 +1996,7 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
         </div>
     `;
     document.body.appendChild(overlay);
+
     overlay.querySelectorAll('.io-toggle').forEach(sw => {
         sw.onclick = () => {
             const cb = document.getElementById(sw.dataset.id);
@@ -1886,26 +2004,32 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
             sw.classList.toggle('off', !cb.checked);
         };
     });
+
     const close = () => { overlay.style.animation = 'fadeOut 0.15s ease forwards'; setTimeout(() => overlay.remove(), 150); };
     overlay.querySelector('#_io_close').onclick = close;
     overlay.querySelector('#_io_cancel').onclick = close;
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+    // 修复：导入导出确认按钮防闪回
     overlay.querySelector('#_io_confirm').onclick = (e) => {
-        // 全平台修复
         e.preventDefault();
         e.stopPropagation();
-        
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl.blur) activeEl.blur();
+
         const selected = modules.filter(m => document.getElementById(m.id)?.checked);
         const mode = showMode ? (document.getElementById('_io_overwrite')?.checked ? 'overwrite' : 'merge') : 'export';
         close();
         onConfirm(selected, mode);
     };
 }
+
 function _makeOverlay() {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;';
     return overlay;
 }
+
 function _showBatchAddDialog() {
     const ctx = _getGroupCtx();
     const groups = ctx.groups;
@@ -1919,6 +2043,7 @@ function _showBatchAddDialog() {
         box-shadow:0 24px 80px rgba(0,0,0,.45);
         animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
     `;
+
     const hasGroups = groups && groups.length > 0;
     const groupPillsHTML = hasGroups ? `
         <button class="ba-grp-pill" data-gidx="-1" style="
@@ -1935,6 +2060,7 @@ function _showBatchAddDialog() {
             <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${g.color};margin-right:4px;vertical-align:middle;"></span>${g.name}
         </button>`).join('')}
     ` : '';
+
     panel.innerHTML = `
         <style>
             @keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }
@@ -1942,6 +2068,7 @@ function _showBatchAddDialog() {
         </style>
         <div style="flex-shrink:0;font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">批量添加${getCategoryName(currentSubTab)}</div>
         <div style="flex-shrink:0;font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">每行一条，自动去重</div>
+
         <div style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;">
             <textarea id="batch-add-input" rows="10" placeholder="在此粘贴内容，每行一条…" style="
                 width:100%;box-sizing:border-box;padding:12px 14px;
@@ -1953,6 +2080,7 @@ function _showBatchAddDialog() {
             <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;margin-bottom:12px;">
                 <span id="batch-add-count">0 条</span>
             </div>
+
             ${hasGroups ? `
             <div id="ba-group-section" style="margin-bottom:4px;">
                 <button id="ba-group-toggle" style="
@@ -1973,6 +2101,7 @@ function _showBatchAddDialog() {
                 </div>
             </div>` : ''}
         </div>
+
         <div style="flex-shrink:0;padding-top:14px;display:flex;gap:10px;">
             <button id="ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
             <button id="ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
@@ -1980,6 +2109,7 @@ function _showBatchAddDialog() {
     `;
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+
     const ta = panel.querySelector('#batch-add-input');
     const countEl = panel.querySelector('#batch-add-count');
     ta.addEventListener('input', () => {
@@ -1988,6 +2118,7 @@ function _showBatchAddDialog() {
     });
     ta.addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
     ta.addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
+
     const groupToggle = panel.querySelector('#ba-group-toggle');
     const groupDrawer = panel.querySelector('#ba-group-drawer');
     const toggleArrow = panel.querySelector('#ba-toggle-arrow');
@@ -2010,6 +2141,7 @@ function _showBatchAddDialog() {
             }
         });
     }
+
     let _selectedGroupIdx = -1; 
     const pillContainer = panel.querySelector('#ba-group-list');
     if (pillContainer) {
@@ -2043,16 +2175,15 @@ function _showBatchAddDialog() {
             });
         });
     }
+
     panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    
-    // ==============================================
-    // 🔥 全平台修复：根治键盘收起后点击失效/闪回
-    // ==============================================
+
+    // 修复：批量添加确认按钮防闪回
     panel.querySelector('#ba-confirm').onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        panel.querySelector('#batch-add-input').blur();
+        ta.blur();
 
         const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
         if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
@@ -2091,6 +2222,7 @@ function _showBatchAddDialog() {
         showNotification(`✓ 添加 ${added} 条${skipped ? `，跳过 ${skipped} 条重复` : ''}${groupHint}`, 'success');
     };
 }
+
 function initReplyLibraryListeners() {
     const entryBtn = document.getElementById('custom-replies-function');
     if (entryBtn) {
@@ -2121,16 +2253,19 @@ function initReplyLibraryListeners() {
             showModal(DOMElements.customRepliesModal.modal);
         });
     }
+
     document.querySelectorAll('.sidebar-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentMajorTab = btn.dataset.major;
+
             if (currentMajorTab === 'announcement') {
                 // switchToAnnouncementPanel 内部已处理所有清理，这里不重复操作
                 if (typeof window.switchToAnnouncementPanel === 'function') window.switchToAnnouncementPanel();
                 return;
             }
+
             const listArea = document.getElementById('custom-replies-list');
             const annPanel = document.getElementById('announcement-panel');
             const crToolbar = document.getElementById('cr-toolbar');
@@ -2143,6 +2278,7 @@ function initReplyLibraryListeners() {
             if (subTabs) subTabs.style.display = '';
             if (addBtn) addBtn.style.display = '';
             if (titleEl) titleEl.textContent = '内容管理';
+
             _batchModeActive = false;
             _batchSelectedIndices.clear();
             _searchVisible = false;
@@ -2152,9 +2288,11 @@ function initReplyLibraryListeners() {
             renderReplyLibrary();
         });
     });
+
     document.addEventListener('click', e => {
         if (e.target.closest('#manage-groups-btn')) _showGroupManager();
     });
+
     const searchInput = document.getElementById('reply-search-input');
     if (searchInput) searchInput.addEventListener('input', (e) => {
         const val = e.target.value;
@@ -2164,10 +2302,13 @@ function initReplyLibraryListeners() {
             renderReplyLibrary();
         }, 400);
     });
+
     const dedupBtn = document.getElementById('dedup-replies-btn');
     if (dedupBtn) dedupBtn.addEventListener('click', _runDedup);
+
     const exportBtn = document.getElementById('export-replies-btn');
     if (exportBtn) exportBtn.addEventListener('click', _showExportUI);
+
     const importInput = document.getElementById('import-replies-input');
     if (importInput && !importInput._bound) {
         importInput._bound = true;
@@ -2192,6 +2333,7 @@ function initReplyLibraryListeners() {
             reader.readAsText(file, 'UTF-8');
         });
     }
+
     const addBtn = document.getElementById('add-custom-reply');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
@@ -2238,9 +2380,11 @@ function initReplyLibraryListeners() {
         });
     }
 }
+
 function getCategoryName(tabId) {
     return { custom: '回复', pokes: '拍一拍', statuses: '状态', mottos: '格言', intros: '开场语' }[tabId] || '内容';
 }
+
 function updateTabUI() {
     document.querySelectorAll('.reply-tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === currentReplyTab);
@@ -2248,6 +2392,7 @@ function updateTabUI() {
     const si = document.getElementById('reply-search-input');
     if (si) si.value = '';
 }
+
 function initRippleFeedback() {
     const targets = ['.input-btn','.action-btn','.modal-btn','.settings-item','.batch-action-btn','.coin-btn-action','.import-export-btn','.reply-tab-btn','.anniversary-type-btn','.reply-tool-btn','.session-action-btn','.fav-action-btn'];
     document.addEventListener('mousedown', e => {
@@ -2269,6 +2414,7 @@ function initRippleFeedback() {
         setTimeout(() => circle.remove(), 600);
     }
 }
+
 function applyAvatarFrame(avatarContainer, frameSettings) {
     let frameElement = avatarContainer.querySelector('.avatar-frame');
     if (frameSettings?.src) {
@@ -2287,6 +2433,7 @@ function applyAvatarFrame(avatarContainer, frameSettings) {
         avatarContainer.style.removeProperty('overflow');
     }
 }
+
 function setupAvatarFrameSettings() {
     const setupControlsFor = (type) => {
         const preview = document.getElementById(`${type}-frame-preview-2`);
@@ -2349,6 +2496,7 @@ function setupAvatarFrameSettings() {
             };
             reader.readAsDataURL(file);
         });
+
         const urlBtn = document.getElementById(`${type}-frame-url-btn-2`);
         if (urlBtn) {
             urlBtn.addEventListener('click', () => {
@@ -2379,7 +2527,7 @@ function setupAvatarFrameSettings() {
                 settings[settingsKey].offsetX = parseInt(xSlider.value);
                 settings[settingsKey].offsetY = parseInt(ySlider.value);
                 applyAvatarFrame(avatarContainer, settings[settingsKey]);
-                updatePreview();
+                updateControls();
                 if (typeof renderMessages === 'function') renderMessages(true);
             });
             slider.addEventListener('change', throttledSaveData);
@@ -2389,6 +2537,7 @@ function setupAvatarFrameSettings() {
     setupControlsFor('my');
     setupControlsFor('partner');
 }
+
 function applyAllAvatarFrames() {
     applyAvatarFrame(DOMElements.me.avatarContainer, settings.myAvatarFrame);
     applyAvatarFrame(DOMElements.partner.avatarContainer, settings.partnerAvatarFrame);
