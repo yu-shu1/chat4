@@ -101,7 +101,6 @@ function _showEmojiBatchDialog() {
 }
 
 function _showAddSingleEmojiDialog() {
-    // 创建遮罩层（增强背景模糊）
     const overlay = _makeOverlay();
     overlay.style.backdropFilter = 'blur(12px)';
     overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.65)';
@@ -120,7 +119,6 @@ function _showAddSingleEmojiDialog() {
         animation: slideUpFadeIn 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
     `;
     
-    // 添加动画关键帧（如果尚未存在）
     if (!document.querySelector('#single-dialog-keyframes')) {
         const style = document.createElement('style');
         style.id = 'single-dialog-keyframes';
@@ -167,16 +165,14 @@ function _showAddSingleEmojiDialog() {
     document.body.appendChild(overlay);
     
     const textarea = panel.querySelector('#single-emoji-input');
-    // 自动聚焦
     textarea.focus();
-    // 按 Enter 键（不按 Shift）快速添加
+    
     textarea.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             panel.querySelector('#se-confirm').click();
         }
     });
-    // 输入时动态调整高度（可选）
     textarea.addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 200) + 'px';
@@ -186,11 +182,15 @@ function _showAddSingleEmojiDialog() {
     panel.querySelector('#se-cancel').onclick = close;
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
     
-    panel.querySelector('#se-confirm').onclick = () => {
+    // 修复点：增加防抖，避免二次点击/闪回
+    let isAdding = false;
+    panel.querySelector('#se-confirm').onclick = (e) => {
+        if (isAdding) return;
+        e.stopPropagation();
+        
         const val = textarea.value.trim();
         if (!val) {
             showNotification('请输入内容', 'warning');
-            // 晃动输入框提示
             textarea.style.borderColor = '#ff4757';
             setTimeout(() => textarea.style.borderColor = '', 300);
             return;
@@ -201,13 +201,27 @@ function _showAddSingleEmojiDialog() {
             setTimeout(() => textarea.style.borderColor = '', 300);
             return;
         }
-        customEmojis.push(val);
-        throttledSaveData();
-        renderReplyLibrary();
-        showNotification('✓ Emoji 已添加', 'success');
-        close();
+        
+        isAdding = true;
+        const confirmBtn = panel.querySelector('#se-confirm');
+        confirmBtn.style.opacity = '0.6';
+        confirmBtn.disabled = true;
+        
+        try {
+            customEmojis.push(val);
+            throttledSaveData();
+            renderReplyLibraryRaf();  // 使用RAF避免卡顿
+            showNotification('✓ Emoji 已添加', 'success');
+            close();
+        } catch (err) {
+            console.error('添加Emoji失败:', err);
+            showNotification('添加失败，请重试', 'error');
+        } finally {
+            isAdding = false;
+        }
     };
 }
+
 
 // 根据当前 tab 返回对应的分组上下文 {groups, items, itemLabel}
 function _getGroupCtx(tab) {
@@ -906,7 +920,7 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
     });
 }
 
-const _CARD_PAGE_SIZE = 80; // 每次最多渲染 80 张，超过时追加"显示更多"
+const _CARD_PAGE_SIZE = 30; // 每次最多渲染 80 张，超过时追加"显示更多"
 
 function _renderCardList(container, itemsWithIdx, disabledSet) {
     const total = itemsWithIdx.length;
@@ -1364,11 +1378,9 @@ function _showGroupEditor(group, ctx) {
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
     
-    // 自动聚焦名称输入框
     const nameInput = panel.querySelector('#ge-name');
     nameInput.focus();
     
-    // 颜色更新函数
     const updateColor = (color) => {
         selectedColor = color;
         panel.querySelector('#ge-colorpicker').value = color;
@@ -1386,67 +1398,70 @@ function _showGroupEditor(group, ctx) {
         });
     };
     
-    // 名称输入实时更新预览
     panel.querySelector('#ge-name').addEventListener('input', e => {
         panel.querySelector('#ge-preview-name').textContent = e.target.value || '预览';
     });
-    
-    // 输入框焦点样式
     panel.querySelector('#ge-name').addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
     panel.querySelector('#ge-name').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
     panel.querySelector('#ge-hexinput').addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
     panel.querySelector('#ge-hexinput').addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
     
-    // 预设颜色点击
     panel.querySelectorAll('[data-preset]').forEach(dot => {
         dot.onclick = () => updateColor(dot.dataset.preset);
     });
-    
-    // 颜色选择器变化
     panel.querySelector('#ge-colorpicker').addEventListener('input', e => updateColor(e.target.value));
-    
-    // 十六进制颜色输入
     panel.querySelector('#ge-hexinput').addEventListener('input', e => {
         const v = e.target.value.trim();
         if (/^#[0-9A-Fa-f]{6}$/.test(v)) updateColor(v);
     });
     
-    // 取消按钮
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     
-    // ==============================================
-    // 🔥 原文件原版保存逻辑（一字未改，绝对稳定）
-    // 没有任何额外添加的代码，完全和您原文件一致
-    // ==============================================
-    panel.querySelector('#ge-save').onclick = () => {
-    document.activeElement.blur(); // 强制让当前聚焦的输入框失焦
-    event.preventDefault();       // 防止被浏览器默认行为拦截
+    // 修复点：保存按钮增加防抖，移除错误的事件引用
+    let isSaving = false;
+    panel.querySelector('#ge-save').onclick = (e) => {
+        if (isSaving) return;
+        e.stopPropagation();   // 防止冒泡触发遮罩层关闭
+        if (document.activeElement) document.activeElement.blur(); // 安全失焦
+        
         const name = panel.querySelector('#ge-name').value.trim();
         if (!name) { 
             showNotification('请输入分组名称', 'warning'); 
             return; 
         }
         
-        if (isNew) {
-            groups.push({ 
-                id: Date.now(), 
-                name, 
-                color: selectedColor, 
-                disabled: false, 
-                items: [] 
-            });
-        } else {
-            group.name = name;
-            group.color = selectedColor;
-        }
+        isSaving = true;
+        const saveBtn = panel.querySelector('#ge-save');
+        saveBtn.style.opacity = '0.6';
+        saveBtn.disabled = true;
         
-        throttledSaveData();
-        overlay.remove();
-        renderReplyLibrary();
-        showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
+        try {
+            if (isNew) {
+                groups.push({ 
+                    id: Date.now(), 
+                    name, 
+                    color: selectedColor, 
+                    disabled: false, 
+                    items: [] 
+                });
+            } else {
+                group.name = name;
+                group.color = selectedColor;
+            }
+            throttledSaveData();
+            overlay.remove();
+            renderReplyLibraryRaf();  // 使用RAF渲染，避免卡顿
+            showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
+        } catch (err) {
+            console.error('保存分组失败:', err);
+            showNotification('保存失败，请重试', 'error');
+        } finally {
+            isSaving = false;
+        }
     };
 }
+
 
 // ==============================================
 // 分组管理（最终修复版）
@@ -2502,65 +2517,78 @@ function _showBatchAddDialog() {
     panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
+    // 批量添加确认按钮防抖处理
+    let isBatchAdding = false;
     panel.querySelector('#ba-confirm').onclick = () => {
-        const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
-        if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
-
-        let added = 0, skipped = 0;
-        const newItems = [];
-
-        if (isEmojiTab) {
-            // Emoji 批量添加逻辑：去重，添加到 customEmojis
-            const existingSet = new Set(customEmojis.map(e => e.trim()));
-            lines.forEach(emojiStr => {
-                if (existingSet.has(emojiStr)) {
-                    skipped++;
-                } else {
-                    customEmojis.push(emojiStr);
+        if (isBatchAdding) return;
+        isBatchAdding = true;
+        const confirmBtn = panel.querySelector('#ba-confirm');
+        confirmBtn.style.opacity = '0.6';
+        confirmBtn.disabled = true;
+    
+        try {
+            const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
+            if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
+    
+            let added = 0, skipped = 0;
+            const newItems = [];
+    
+            if (isEmojiTab) {
+                const existingSet = new Set(customEmojis.map(e => e.trim()));
+                lines.forEach(emojiStr => {
+                    if (existingSet.has(emojiStr)) skipped++;
+                    else {
+                        customEmojis.push(emojiStr);
+                        added++;
+                        existingSet.add(emojiStr);
+                        newItems.push(emojiStr);
+                    }
+                });
+            } else {
+                lines.forEach(val => {
+                    const norm = normalizeStringStrict(val);
+                    let isDup = false;
+                    if (currentSubTab === 'custom') {
+                        if (customReplies.some(r => normalizeStringStrict(r) === norm) || CONSTANTS.REPLY_MESSAGES.some(r => normalizeStringStrict(r) === norm))
+                            isDup = true;
+                    } else if (currentSubTab === 'pokes') {
+                        if (customPokes.some(r => normalizeStringStrict(r) === norm)) isDup = true;
+                    } else if (currentSubTab === 'statuses') {
+                        if (customStatuses.some(r => normalizeStringStrict(r) === norm)) isDup = true;
+                    }
+                    if (isDup) { skipped++; return; }
+                    if (currentSubTab === 'custom') { customReplies.push(val); newItems.push(val); }
+                    else if (currentSubTab === 'pokes') { customPokes.push(val); newItems.push(val); }
+                    else if (currentSubTab === 'statuses') { customStatuses.push(val); newItems.push(val); }
+                    else if (currentSubTab === 'mottos') customMottos.push(val);
                     added++;
-                    existingSet.add(emojiStr);
-                    newItems.push(emojiStr);
-                }
-            });
-        } else {
-            // 原有字卡、拍一拍、状态等逻辑（保持不变）
-            lines.forEach(val => {
-                const norm = normalizeStringStrict(val);
-                let isDup = false;
-                if (currentSubTab === 'custom') {
-                    if (customReplies.some(r => normalizeStringStrict(r) === norm) || CONSTANTS.REPLY_MESSAGES.some(r => normalizeStringStrict(r) === norm))
-                        isDup = true;
-                } else if (currentSubTab === 'pokes') {
-                    if (customPokes.some(r => normalizeStringStrict(r) === norm)) isDup = true;
-                } else if (currentSubTab === 'statuses') {
-                    if (customStatuses.some(r => normalizeStringStrict(r) === norm)) isDup = true;
-                }
-                if (isDup) { skipped++; return; }
-                if (currentSubTab === 'custom') { customReplies.push(val); newItems.push(val); }
-                else if (currentSubTab === 'pokes') { customPokes.push(val); newItems.push(val); }
-                else if (currentSubTab === 'statuses') { customStatuses.push(val); newItems.push(val); }
-                else if (currentSubTab === 'mottos') customMottos.push(val);
-                added++;
-            });
+                });
+            }
+    
+            if (!isEmojiTab && _selectedGroupIdx >= 0 && newItems.length > 0 && groups && groups[_selectedGroupIdx]) {
+                const targetGroup = groups[_selectedGroupIdx];
+                if (!targetGroup.items) targetGroup.items = [];
+                newItems.forEach(item => {
+                    if (!targetGroup.items.includes(item)) targetGroup.items.push(item);
+                });
+            }
+    
+            throttledSaveData();
+            overlay.remove();
+            renderReplyLibraryRaf();
+    
+            const groupHint = (!isEmojiTab && _selectedGroupIdx >= 0 && groups?.[_selectedGroupIdx])
+                ? `，已加入「${groups[_selectedGroupIdx].name}」`
+                : '';
+            showNotification(`✓ 添加 ${added} 条${skipped ? `，跳过 ${skipped} 条重复` : ''}${groupHint}`, 'success');
+        } catch (err) {
+            console.error('批量添加失败:', err);
+            showNotification('添加失败，请重试', 'error');
+        } finally {
+            isBatchAdding = false;
+            confirmBtn.style.opacity = '';
+            confirmBtn.disabled = false;
         }
-
-        // 分组处理（仅当不是 Emoji 且选择了有效分组时）
-        if (!isEmojiTab && _selectedGroupIdx >= 0 && newItems.length > 0 && groups && groups[_selectedGroupIdx]) {
-            const targetGroup = groups[_selectedGroupIdx];
-            if (!targetGroup.items) targetGroup.items = [];
-            newItems.forEach(item => {
-                if (!targetGroup.items.includes(item)) targetGroup.items.push(item);
-            });
-        }
-
-        throttledSaveData();
-        overlay.remove();
-        renderReplyLibrary();
-
-        const groupHint = (!isEmojiTab && _selectedGroupIdx >= 0 && groups?.[_selectedGroupIdx])
-            ? `，已加入「${groups[_selectedGroupIdx].name}」`
-            : '';
-        showNotification(`✓ 添加 ${added} 条${skipped ? `，跳过 ${skipped} 条重复` : ''}${groupHint}`, 'success');
     };
 }
 
