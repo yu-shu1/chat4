@@ -10,18 +10,20 @@ function _attachSafeSaveHandler(btn, handler) {
         if (e.cancelable) e.preventDefault();
         if (isProcessing) return;
         isProcessing = true;
+        
         // 主动让当前聚焦元素失焦，收起键盘
         if (document.activeElement && document.activeElement !== document.body) {
             document.activeElement.blur();
         }
-        // 等待一帧，确保键盘完全收起、布局稳定后再执行保存
-        requestAnimationFrame(() => {
+        
+        // 极短延迟等待键盘收起动画开始（约 30ms 足够避免布局抖动）
+        setTimeout(() => {
             try {
                 handler(e);
             } finally {
-                setTimeout(() => { isProcessing = false; }, 200);
+                setTimeout(() => { isProcessing = false; }, 50);
             }
-        });
+        }, 30);
     };
     btn.addEventListener('click', wrapped);
     btn.addEventListener('touchstart', wrapped);
@@ -1424,7 +1426,6 @@ function _showGroupEditor(group, ctx) {
     panel.querySelector('#ge-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
-    // 使用安全保存处理
     const saveBtn = panel.querySelector('#ge-save');
     _attachSafeSaveHandler(saveBtn, () => {
         const name = panel.querySelector('#ge-name').value.trim();
@@ -1437,7 +1438,7 @@ function _showGroupEditor(group, ctx) {
         }
         throttledSaveData();
         overlay.remove();
-        renderReplyLibrary();
+        renderReplyLibraryRaf();
         showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
     });
 }
@@ -1639,11 +1640,10 @@ function _showSingleItemGroupPicker(itemText, ctx) {
         }
         throttledSaveData();
         overlay.remove();
-        renderReplyLibrary();
+        renderReplyLibraryRaf();
         showNotification('✓ 分组已更新', 'success');
     });
 }
-
 
 function _showBatchGroupPicker() {
     const ctx = _getGroupCtx();
@@ -1707,7 +1707,7 @@ function _showBatchGroupPicker() {
         throttledSaveData();
         _batchSelectedIndices.clear();
         overlay.remove();
-        renderReplyLibrary();
+        renderReplyLibraryRaf();
         showNotification(`✓ 已为 ${selectedItems.length} 条内容分组`, 'success');
     });
 }
@@ -2345,12 +2345,13 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
     overlay.querySelector('#_io_cancel').onclick = close;
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 
-    overlay.querySelector('#_io_confirm').onclick = () => {
+    const confirmBtn = overlay.querySelector('#_io_confirm');
+    _attachSafeSaveHandler(confirmBtn, () => {
         const selected = modules.filter(m => document.getElementById(m.id)?.checked);
         const mode = showMode ? (document.getElementById('_io_overwrite')?.checked ? 'overwrite' : 'merge') : 'export';
         close();
         onConfirm(selected, mode);
-    };
+    });
 }
 
 function _makeOverlay() {
@@ -2509,7 +2510,6 @@ function _showBatchAddDialog() {
     panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
-    // 使用安全保存处理
     const confirmBtn = panel.querySelector('#ba-confirm');
     _attachSafeSaveHandler(confirmBtn, (e) => {
         const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
@@ -2518,18 +2518,23 @@ function _showBatchAddDialog() {
         const newItems = [];
         lines.forEach(val => {
             const norm = normalizeStringStrict(val);
-            const isDup = currentSubTab === 'custom'
-                ? (customReplies.some(r => normalizeStringStrict(r) === norm) || CONSTANTS.REPLY_MESSAGES.some(r => normalizeStringStrict(r) === norm))
-                : currentSubTab === 'pokes'
-                ? customPokes.some(r => normalizeStringStrict(r) === norm)
-                : currentSubTab === 'statuses'
-                ? customStatuses.some(r => normalizeStringStrict(r) === norm)
-                : false;
+            let isDup = false;
+            if (currentSubTab === 'custom') {
+                isDup = customReplies.some(r => normalizeStringStrict(r) === norm) || CONSTANTS.REPLY_MESSAGES.some(r => normalizeStringStrict(r) === norm);
+            } else if (currentSubTab === 'pokes') {
+                isDup = customPokes.some(r => normalizeStringStrict(r) === norm);
+            } else if (currentSubTab === 'statuses') {
+                isDup = customStatuses.some(r => normalizeStringStrict(r) === norm);
+            } else if (currentSubTab === 'emojis') {
+                isDup = customEmojis.includes(val);   // Emoji 不用标准化，直接比较字符串
+            }
             if (isDup) { skipped++; return; }
+        
             if (currentSubTab === 'custom') { customReplies.push(val); newItems.push(val); }
             else if (currentSubTab === 'pokes') { customPokes.push(val); newItems.push(val); }
             else if (currentSubTab === 'statuses') { customStatuses.push(val); newItems.push(val); }
-            else if (currentSubTab === 'mottos') customMottos.push(val);
+            else if (currentSubTab === 'mottos') { customMottos.push(val); }
+            else if (currentSubTab === 'emojis') { customEmojis.push(val); newItems.push(val); }
             added++;
         });
         if (_selectedGroupIdx >= 0 && newItems.length > 0 && groups) {
@@ -2543,7 +2548,7 @@ function _showBatchAddDialog() {
         }
         throttledSaveData();
         overlay.remove();
-        renderReplyLibrary();
+        renderReplyLibraryRaf();  // 防抖渲染，避免卡顿
         const groupHint = _selectedGroupIdx >= 0 && groups?.[_selectedGroupIdx]
             ? `，已加入「${groups[_selectedGroupIdx].name}」` : '';
         showNotification(`✓ 添加 ${added} 条${skipped ? `，跳过 ${skipped} 条重复` : ''}${groupHint}`, 'success');
@@ -2672,7 +2677,18 @@ function initReplyLibraryListeners() {
             // Emoji 标签页：保留单个添加（prompt）
             // Emoji 标签页：使用弹窗添加
             if (currentSubTab === 'emojis') {
-                _showAddSingleEmojiDialog();
+                const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
+                if (input?.trim()) {
+                    const newEmoji = input.trim();
+                    if (customEmojis.includes(newEmoji)) {
+                        showNotification('该 Emoji 已存在', 'warning');
+                        return;
+                    }
+                    customEmojis.push(newEmoji);
+                    throttledSaveData();
+                    renderReplyLibraryRaf();   // 防抖渲染
+                    showNotification('✓ Emoji 已添加', 'success');
+                }
                 return;
             }
             // 其他支持批量添加的标签页：调用批量对话框
