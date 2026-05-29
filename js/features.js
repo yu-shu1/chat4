@@ -1587,29 +1587,30 @@ window.reopenDailyGreeting = function() {
     } catch(e) {}
 };
 
+// features.js - 替换 tryShowDailyGreeting 函数为强制弹出版本
+// 约在第 613 行附近，找到原有的 tryShowDailyGreeting 并替换为以下代码
+
 window.tryShowDailyGreeting = function() {
     try {
+        // 检查当天是否已经显示过
         if (localStorage.getItem('dailyGreetingShown') === new Date().toDateString()) return;
-
-        var now = new Date();
-        var todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-        var moodDataRaw = window.moodData || {};
-        var todayMood = moodDataRaw[todayStr];
-
-        if (!todayMood || !todayMood.partner) {
-            setTimeout(function() {
-                var refreshedMood = (window.moodData || {})[todayStr];
-                _buildDailyGreeting(); 
-                var modal = document.getElementById('daily-greeting-modal');
-                if (modal) modal.classList.remove('hidden');
-                localStorage.setItem('dailyGreetingShown', new Date().toDateString());
-            }, 45000);
-            return;
-        }
-
-        _buildDailyGreeting();
+        
+        // 无论心情数据是否存在，直接构建并显示公告
+        if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
+        
         var modal = document.getElementById('daily-greeting-modal');
-        if (modal) modal.classList.remove('hidden');
-    } catch(e) { console.warn('Daily greeting show error:', e); }
+        if (modal) {
+            modal.style.opacity = '0';
+            modal.classList.remove('hidden');
+            requestAnimationFrame(function() {
+                modal.style.transition = 'opacity 0.3s ease';
+                modal.style.opacity = '1';
+            });
+        }
+        
+        // 记录当天已显示
+        localStorage.setItem('dailyGreetingShown', new Date().toDateString());
+    } catch(e) {
+        console.warn('Daily greeting show error:', e);
+    }
 };
-

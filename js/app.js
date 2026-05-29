@@ -261,5 +261,5 @@ window.addEventListener('load', function() {
                 localStorage.setItem('dailyGreetingShown', new Date().toDateString());
             }
         } catch(e) { console.warn('Daily greeting timing error:', e); }
-    }, 4500);
+    }, 1000);
 }, { once: true });
