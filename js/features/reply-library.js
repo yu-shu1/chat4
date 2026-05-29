@@ -3,103 +3,6 @@ if (typeof replyGroupsEnabled === 'undefined') window.replyGroupsEnabled = false
 if (typeof customPokeGroups === 'undefined') window.customPokeGroups = [];
 if (typeof customStatusGroups === 'undefined') window.customStatusGroups = [];
 
-
-function _showEmojiBatchDialog() {
-    const overlay = _makeOverlay();
-    const panel = document.createElement('div');
-    panel.style.cssText = `
-        background: var(--secondary-bg);
-        border-radius: 22px;
-        padding: 24px;
-        width: 92%;
-        max-width: 420px;
-        max-height: 88vh;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 24px 80px rgba(0,0,0,.45);
-        animation: popIn 0.22s cubic-bezier(.34,1.56,.64,1);
-    `;
-    panel.innerHTML = `
-        <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">
-            <i class="fas fa-layer-group"></i> 批量添加 Emoji
-        </div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">
-            每行一个 Emoji，自动去重
-        </div>
-        <div style="flex:1;overflow-y:auto;min-height:0;">
-            <textarea id="batch-emoji-input" rows="8" placeholder="😊&#10;❤️&#10;✨&#10;🎉" style="
-                width:100%;
-                box-sizing:border-box;
-                padding:12px 14px;
-                border:1.5px solid var(--border-color);
-                border-radius:13px;
-                background:var(--primary-bg);
-                color:var(--text-primary);
-                font-size:13px;
-                font-family:var(--font-family);
-                outline:none;
-                resize:vertical;
-                line-height:1.6;
-                transition:border 0.18s;
-            "></textarea>
-            <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;margin-bottom:12px;">
-                <span id="batch-emoji-count">0 条</span>
-            </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:8px;">
-            <button id="ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
-            <button id="ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
-        </div>
-    `;
-    overlay.appendChild(panel);
-    document.body.appendChild(overlay);
-
-    const ta = panel.querySelector('#batch-emoji-input');
-    const countEl = panel.querySelector('#batch-emoji-count');
-    const updateCount = () => {
-        const lines = ta.value.split('\n').filter(l => l.trim().length > 0);
-        countEl.textContent = `${lines.length} 条`;
-    };
-    ta.addEventListener('input', updateCount);
-    updateCount();
-
-    panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    panel.querySelector('#ba-confirm').onclick = () => {
-        const lines = ta.value.split('\n')
-            .map(l => l.trim())
-            .filter(l => l.length > 0);
-        if (!lines.length) {
-            showNotification('请输入至少一个 Emoji', 'warning');
-            return;
-        }
-        // 去重（保留顺序）
-        const unique = [];
-        const seen = new Set();
-        for (const em of lines) {
-            if (!seen.has(em)) {
-                seen.add(em);
-                unique.push(em);
-            }
-        }
-        const added = [];
-        for (const em of unique) {
-            if (!customEmojis.includes(em)) {
-                customEmojis.push(em);
-                added.push(em);
-            }
-        }
-        if (added.length > 0) {
-            throttledSaveData();
-            renderReplyLibrary();
-            showNotification(`成功添加 ${added.length} 个 Emoji`, 'success');
-        } else {
-            showNotification('所有 Emoji 都已存在，未添加新内容', 'info');
-        }
-        overlay.remove();
-    };
-}
-
 // 根据当前 tab 返回对应的分组上下文 {groups, items, itemLabel}
 function _getGroupCtx(tab) {
     tab = tab || currentSubTab;
@@ -283,6 +186,12 @@ function renderReplyLibraryRaf() {
 }
 
 function renderReplyLibrary() {
+    // 取消之前积压的动画帧，避免重复渲染
+    if (_rlRafId) {
+        cancelAnimationFrame(_rlRafId);
+        _rlRafId = null;
+    }
+
     if (currentMajorTab === 'announcement') return;
     const list = document.getElementById('custom-replies-list');
     const titleEl = document.getElementById('cr-modal-title');
@@ -582,7 +491,6 @@ function _renderModernToolbar() {
     toolbar.querySelector('#tb-dedup-btn')?.addEventListener('click', _runDedup);
     toolbar.querySelector('#tb-import-btn')?.addEventListener('click', () => document.getElementById('import-replies-input')?.click());
     toolbar.querySelector('#tb-export-btn')?.addEventListener('click', _showExportUI);
-    
 
     toolbar.querySelectorAll('.gfp-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -784,7 +692,8 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
     });
 }
 
-const _CARD_PAGE_SIZE = 80; // 每次最多渲染 80 张，超过时追加"显示更多"
+// 将每页最多显示条数从 80 提升到 150
+const _CARD_PAGE_SIZE = 150;
 
 function _renderCardList(container, itemsWithIdx, disabledSet) {
     const total = itemsWithIdx.length;
@@ -921,113 +830,36 @@ function _renderAtmosphereList(list, items) {
     list.appendChild(frag);
 }
 
-// 辅助函数：获取禁用的系统 Emoji 集合
-function _getDisabledSystemEmojisSet() {
-    try {
-        const raw = localStorage.getItem('disabledSystemEmojis');
-        return raw ? new Set(JSON.parse(raw)) : new Set();
-    } catch { return new Set(); }
-}
-
-function _saveDisabledSystemEmojisSet(set) {
-    localStorage.setItem('disabledSystemEmojis', JSON.stringify([...set]));
-}
-
 function _renderEmojiTab(list, itemsToRender) {
-    // 确保使用卡片列表样式（复用主字卡的样式）
-    list.classList.remove('grid-mode', 'emoji-flex-layout');
-    list.classList.add('list-mode');
-    list.innerHTML = '';
-
-    // 获取禁用的系统 Emoji
-    const disabledSet = _getDisabledSystemEmojisSet();
-
-    // 过滤系统预设 Emoji（排除已禁用的）
-    const systemEmojis = itemsToRender.filter(e => !disabledSet.has(e));
-
-    // 渲染系统预设 Emoji（每个一行，样式同主字卡）
-    systemEmojis.forEach(emoji => {
-        const card = document.createElement('div');
-        card.className = 'rl-card emoji-card';
-        card.innerHTML = `
-            <div style="flex:1; min-width:0; display: flex; align-items: center;">
-                <span style="font-size: 32px;">${emoji}</span>
-            </div>
-            <div class="rl-card-actions">
-                <button class="rl-act-btn danger" data-action="delete" title="删除">
-                    ${ICONS.trash}
-                </button>
-            </div>
-        `;
-        // 删除事件（系统预设 Emoji）
-        const deleteBtn = card.querySelector('[data-action="delete"]');
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (confirm(`确定要删除 Emoji「${emoji}」吗？\n删除后不会影响其他人，你可以在将来重新添加。`)) {
-                disabledSet.add(emoji);
-                _saveDisabledSystemEmojisSet(disabledSet);
-                renderReplyLibrary();  // 重新渲染
-            }
-        });
-        // 点击卡片主体插入 Emoji
-        card.addEventListener('click', (e) => {
-            if (e.target.closest('.rl-card-actions')) return;
-            const input = document.getElementById('message-input');
-            input.value += emoji;
-            const modal = document.getElementById('custom-replies-modal');
-            if (modal && typeof hideModal === 'function') hideModal(modal);
-            input.focus();
-        });
-        list.appendChild(card);
-    });
-
-    // 自定义 Emoji 区块（如果有）
-    if (customEmojis.length > 0) {
-        // 分隔线（与主字卡风格一致）
-        const separator = document.createElement('div');
-        separator.className = 'emoji-custom-separator';
-        separator.innerHTML = '<span>— 自定义 —</span>';
-        list.appendChild(separator);
-
-        customEmojis.forEach((emoji, idx) => {
-            const card = document.createElement('div');
-            card.className = 'rl-card emoji-card custom-emoji-card';
-            card.innerHTML = `
-                <div style="flex:1; min-width:0; display: flex; align-items: center;">
-                    <span style="font-size: 32px;">${emoji}</span>
-                </div>
-                <div class="rl-card-actions">
-                    <button class="rl-act-btn danger" data-action="delete" title="删除">
-                        ${ICONS.trash}
-                    </button>
-                </div>
-            `;
-            // 删除事件（自定义 Emoji）
-            const deleteBtn = card.querySelector('[data-action="delete"]');
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (confirm(`确定要删除自定义 Emoji「${emoji}」吗？`)) {
-                    customEmojis.splice(idx, 1);
-                    throttledSaveData();
-                    renderReplyLibrary();
-                }
-            });
-            // 点击卡片主体插入 Emoji
-            card.addEventListener('click', (e) => {
-                if (e.target.closest('.rl-card-actions')) return;
-                const input = document.getElementById('message-input');
-                input.value += emoji;
-                const modal = document.getElementById('custom-replies-modal');
-                if (modal && typeof hideModal === 'function') hideModal(modal);
-                input.focus();
-            });
-            list.appendChild(card);
-        });
+    if (itemsToRender.length === 0 && customEmojis.length === 0) {
+        list.innerHTML = renderEmptyState('暂无 Emoji'); return;
     }
-
-    // 如果没有任何 Emoji 可显示（全部被禁用且无自定义），显示空状态
-    if (systemEmojis.length === 0 && customEmojis.length === 0) {
-        list.innerHTML = renderEmptyState('暂无 Emoji，可点击右上角添加自定义表情');
+    itemsToRender.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'emoji-item';
+        div.textContent = item;
+        list.appendChild(div);
+    });
+    if (customEmojis.length > 0) {
+        const sep = document.createElement('div');
+        sep.style.cssText = 'grid-column:1/-1;font-size:11px;color:var(--text-secondary);padding:4px 2px 2px;border-top:1px dashed var(--border-color);margin-top:4px;';
+        sep.textContent = '— 自定义 —';
+        list.appendChild(sep);
+        customEmojis.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'emoji-item';
+            div.style.position = 'relative';
+            div.innerHTML = `<span style="pointer-events:none;">${item}</span><span class="emoji-custom-del" style="position:absolute;top:-4px;right:-4px;font-size:10px;background:var(--text-secondary);color:#fff;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity 0.2s;">×</span>`;
+            div.addEventListener('mouseenter', () => div.querySelector('.emoji-custom-del').style.opacity = '1');
+            div.addEventListener('mouseleave', () => div.querySelector('.emoji-custom-del').style.opacity = '0');
+            div.querySelector('.emoji-custom-del').addEventListener('click', e => {
+                e.stopPropagation();
+                customEmojis.splice(idx, 1);
+                throttledSaveData();
+                renderReplyLibrary();
+            });
+            list.appendChild(div);
+        });
     }
 }
 
