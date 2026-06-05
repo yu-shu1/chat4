@@ -240,26 +240,18 @@ if (myStickerQuickUpload) {
 window.addEventListener('load', function() {
     setTimeout(function() {
         try {
-            if (localStorage.getItem('dailyGreetingShown') === new Date().toDateString()) return;
+            // 检查并记录对方心情（原有功能）
             try { if (typeof checkPartnerDailyMood === 'function') checkPartnerDailyMood(); } catch(e2) { console.warn('checkPartnerDailyMood error:', e2); }
+            
+            // 构建公告内容
             if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
-            if (window.localforage && window.APP_PREFIX) {
-                localforage.getItem(window.APP_PREFIX + 'tour_seen').then(function(seen) {
-                    if (seen) {
-                        var modal = document.getElementById('daily-greeting-modal');
-                        if (modal) modal.classList.remove('hidden');
-                        localStorage.setItem('dailyGreetingShown', new Date().toDateString());
-                    }
-                }).catch(function() {
-                    var modal = document.getElementById('daily-greeting-modal');
-                    if (modal) modal.classList.remove('hidden');
-                    localStorage.setItem('dailyGreetingShown', new Date().toDateString());
-                });
-            } else {
-                var modal = document.getElementById('daily-greeting-modal');
-                if (modal) modal.classList.remove('hidden');
-                localStorage.setItem('dailyGreetingShown', new Date().toDateString());
-            }
+            
+            // 弹出公告
+            var modal = document.getElementById('daily-greeting-modal');
+            if (modal) modal.classList.remove('hidden');
+            
+            // 可选：清除旧的“今日已弹”记录，确保每次都弹（原代码可能依赖 dailyGreetingShown，但这里不再需要）
+            // localStorage.removeItem('dailyGreetingShown');
         } catch(e) { console.warn('Daily greeting timing error:', e); }
-    }, 4500);
-}, { once: true });
+    }, 1000);  // 延迟改为 1 秒
+});
