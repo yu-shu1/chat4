@@ -664,31 +664,17 @@ function exitEditMode(replyId) {
     if (section) { const actions = section.querySelector('.board-edit-actions'); if (actions) actions.remove(); }
 }
 
-
 async function deleteThread(id, type) {
     if (!confirm('确定删除这条留言记录吗？')) return;
+    if (type === 'me') boardData.myThreads = boardData.myThreads.filter(t => t.id !== id);
+    else boardData.partnerThreads = boardData.partnerThreads.filter(t => t.id !== id);
+    await saveData();
 
-    // 根据类型删除对应数组中的线程
-    if (type === 'me') {
-        boardData.myThreads = boardData.myThreads.filter(t => t.id !== id);
-    } else {
-        boardData.partnerThreads = boardData.partnerThreads.filter(t => t.id !== id);
-    }
-
-    await saveData();                     // 持久化存储
-
-    hideModal(document.getElementById('board-detail-modal'));   // 关闭详情弹窗
-    switchTab(type);                     // 刷新列表（停留在当前标签页）
-    showModal(document.getElementById('envelope-board-modal')); // 重新打开留言板列表
-
-    if (typeof showNotification === 'function') {
-        showNotification('已删除', 'success');
-    }
+    hideModal(document.getElementById('board-detail-modal'));
+    switchTab(type);
+    showModal(document.getElementById('envelope-board-modal'));
+    if (typeof showNotification === 'function') showNotification('已删除', 'success');
 }
-
-// 导出或挂载到全局（根据实际模块系统调整）
-window._bv2_deleteThread = deleteThread;
-
 
 window._bv2_toggleGlobalEdit = function() {
     const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
