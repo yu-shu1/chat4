@@ -8204,80 +8204,6 @@
     color: #ff4757;
         }
 
-    /* Emoji 弹性流式布局（不使用网格） */
-    .emoji-flex-layout {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding: 12px;
-    }
-    
-    .emoji-system-section,
-    .emoji-custom-section {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: center;
-    }
-    
-    .emoji-item {
-        font-size: 28px;
-        background: var(--secondary-bg);
-        border-radius: 12px;
-        width: auto;
-        min-width: 48px;
-        height: 48px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        border: 1px solid var(--border-color);
-        position: relative;
-        padding: 0 10px;
-        box-sizing: border-box;
-    }
-    
-    .emoji-item:hover {
-        background: var(--accent-color);
-        transform: scale(1.08);
-        border-color: var(--accent-color);
-    }
-    
-    .emoji-custom-separator {
-        font-size: 12px;
-        color: var(--text-secondary);
-        margin: 4px 0;
-        padding-left: 4px;
-        border-left: 2px solid var(--accent-color);
-    }
-    
-    .emoji-custom-del {
-        position: absolute;
-        top: -6px;
-        right: -6px;
-        width: 18px;
-        height: 18px;
-        background: rgba(0,0,0,0.65);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        color: white;
-        cursor: pointer;
-        opacity: 0;
-        transition: opacity 0.2s;
-    }
-    
-    .emoji-item:hover .emoji-custom-del {
-        opacity: 1;
-    }
-    
-    .emoji-custom-del:hover {
-        background: #ff4757;
-    }
-
         #theme-editor-modal .modal-content {
     max-width: 580px;
     max-height: 90vh;
@@ -11643,20 +11569,3 @@
     display: none !important;
 }
 
-.emoji-custom-separator {
-    display: flex;
-    align-items: center;
-    margin: 12px 0 8px;
-    color: var(--text-secondary);
-    font-size: 12px;
-}
-.emoji-custom-separator::before,
-.emoji-custom-separator::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--border-color);
-}
-.emoji-custom-separator span {
-    padding: 0 12px;
-}
