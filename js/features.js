@@ -1560,17 +1560,22 @@ window.closeDailyGreeting = function() {
     try {
         var modal = document.getElementById('daily-greeting-modal');
         if (modal) {
-            modal.style.opacity = '0';
-            modal.style.transition = 'opacity 0.3s ease';
-            setTimeout(function() {
-                modal.classList.add('hidden');
-                modal.style.opacity = '';
-                modal.style.transition = '';
-            }, 320);
+            // 强制隐藏模态框
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            modal.style.opacity = '';
+            // 清除可能残留的过渡动画类
+            modal.style.transition = '';
         }
-        localStorage.setItem('dailyGreetingShown', new Date().toDateString());
-    } catch(e) {}
+        // 注意：不删除 localStorage 中的 'dailyGreetingShown' 记录，
+        // 否则刷新后还会再弹（您之前要求“每次刷新都弹出”，所以这行要保留）
+        // 如果不想每次刷新都弹，就取消下面这行注释；如果每次都要弹，就保持注释状态
+        // localStorage.setItem('dailyGreetingShown', new Date().toDateString());
+    } catch(e) {
+        console.warn('关闭公告失败:', e);
+    }
 };
+
 
 window.reopenDailyGreeting = function() {
     try {
