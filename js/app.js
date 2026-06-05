@@ -240,18 +240,25 @@ if (myStickerQuickUpload) {
 window.addEventListener('load', function() {
     setTimeout(function() {
         try {
-            // 检查并记录对方心情（原有功能）
+            // 清除“今日已弹”记录，确保每次刷新都弹出（必须）
+            localStorage.removeItem('dailyGreetingShown');
+
+            // 检查并记录对方心情（原有功能，不影响弹出）
             try { if (typeof checkPartnerDailyMood === 'function') checkPartnerDailyMood(); } catch(e2) { console.warn('checkPartnerDailyMood error:', e2); }
             
-            // 构建公告内容
+            // 构建公告内容（基于当天数据）
             if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
             
-            // 弹出公告
+            // 强制弹出公告（移除隐藏类、确保显示）
             var modal = document.getElementById('daily-greeting-modal');
-            if (modal) modal.classList.remove('hidden');
-            
-            // 可选：清除旧的“今日已弹”记录，确保每次都弹（原代码可能依赖 dailyGreetingShown，但这里不再需要）
-            // localStorage.removeItem('dailyGreetingShown');
-        } catch(e) { console.warn('Daily greeting timing error:', e); }
-    }, 1000);  // 延迟改为 1 秒
+            if (modal) {
+                modal.classList.remove('hidden');
+                // 如果模态框因其他样式导致不可见，强制设为可见
+                modal.style.display = 'flex';
+                modal.style.opacity = '1';
+            }
+        } catch(e) { 
+            console.warn('Daily greeting timing error:', e); 
+        }
+    }, 1000);
 });
