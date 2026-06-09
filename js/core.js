@@ -968,6 +968,11 @@ if (customIntros && customIntros.length > 0) {
                     const probValue = document.getElementById('emoji-mix-prob-value');
                     if (probValue) probValue.textContent = probSlider.value + '%';
                 }
+                // 控制滑块行的显示/隐藏（与表情混入开关联动）
+                const probRow = document.getElementById('emoji-mix-prob-row');
+                if (probRow) {
+                    probRow.style.display = (settings.emojiMixEnabled !== false) ? 'flex' : 'none';
+                }
             
                 // ---------- 聊天设置模态框内的所有开关（二次确保） ----------
                 const csPanels = document.querySelectorAll('.cs-panel .setting-pill-row');
