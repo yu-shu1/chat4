@@ -188,6 +188,7 @@ function loadMoreHistory() {
                 bottomCollapseMode: false,
                 emojiMixEnabled: true,
                 phraseCombiningEnabled: false,
+                emojiMixProbability: 100,
                 boardPartnerWriteEnabled: false,   // 主动留言开关，默认关闭
                 enterToSend: true,          // 默认回车发送
                 keepKeyboardAfterSend: false // 默认发送后不保留键盘
@@ -959,6 +960,14 @@ if (customIntros && customIntros.length > 0) {
                 const headerClear = localStorage.getItem('headerAlwaysClear') === 'true';
                 const headerToggleRow = document.getElementById('header-opacity-toggle');
                 if (headerToggleRow) headerToggleRow.classList.toggle('active', headerClear);
+                
+                //5. 表情包混入消息开关
+                const probSlider = document.getElementById('emoji-mix-prob-slider');
+                if (probSlider) {
+                    probSlider.value = settings.emojiMixProbability ?? 100;
+                    const probValue = document.getElementById('emoji-mix-prob-value');
+                    if (probValue) probValue.textContent = probSlider.value + '%';
+                }
             
                 // ---------- 聊天设置模态框内的所有开关（二次确保） ----------
                 const csPanels = document.querySelectorAll('.cs-panel .setting-pill-row');
@@ -1882,12 +1891,21 @@ if (!isBatchMode && type === 'normal') {
                     if (customEmojis && customEmojis.length > 0 && Math.random() < 0.2) {
                         const emoji = customEmojis[Math.floor(Math.random() * customEmojis.length)];
                         if (settings.emojiMixEnabled !== false) {
-                            finalText = Math.random() < 0.5 ? emoji + ' ' + finalText : finalText + ' ' + emoji;
+                            // 开关已开启，根据概率决定是否混入
+                            const prob = Math.min(100, Math.max(0, settings.emojiMixProbability ?? 100));
+                            if (Math.random() * 100 < prob) {
+                                // 混入到消息文本中
+                                finalText = Math.random() < 0.5 ? emoji + ' ' + finalText : finalText + ' ' + emoji;
+                            } else {
+                                // 未命中概率，改为独立表情
+                                separateEmoji = emoji;
+                            }
                         } else {
+                            // 开关关闭，始终独立表情
                             separateEmoji = emoji;
                         }
                     }
-            
+                    
                     // 引用回复（概率 0.3）
                     const quoted = (Math.random() < 0.3 && recentUserMsgs.length > 0)
                         ? (() => { const m = recentUserMsgs[Math.floor(Math.random() * recentUserMsgs.length)]; return { id: m.id, text: m.text, sender: m.sender }; })()
@@ -1998,12 +2016,21 @@ if (!isBatchMode && type === 'normal') {
                                 if (customEmojis && customEmojis.length > 0 && Math.random() < 0.2) {
                                     const emoji = customEmojis[Math.floor(Math.random() * customEmojis.length)];
                                     if (settings.emojiMixEnabled !== false) {
-                                        finalText = Math.random() < 0.5 ? emoji + ' ' + replyText : replyText + ' ' + emoji;
+                                        // 开关已开启，根据概率决定是否混入
+                                        const prob = Math.min(100, Math.max(0, settings.emojiMixProbability ?? 100));
+                                        if (Math.random() * 100 < prob) {
+                                            // 混入到消息文本中
+                                            finalText = Math.random() < 0.5 ? emoji + ' ' + finalText : finalText + ' ' + emoji;
+                                        } else {
+                                            // 未命中概率，改为独立表情
+                                            separateEmoji = emoji;
+                                        }
                                     } else {
+                                        // 开关关闭，始终独立表情
                                         separateEmoji = emoji;
                                     }
-                                }
-            
+                                }            
+                                
                                 addMessage({
                                     id: Date.now() + i,
                                     sender: settings.partnerName || '对方',
@@ -2123,8 +2150,17 @@ if (!isBatchMode && type === 'normal') {
                         if (customEmojis && customEmojis.length > 0 && Math.random() < 0.2) {
                             const emoji = customEmojis[Math.floor(Math.random() * customEmojis.length)];
                             if (settings.emojiMixEnabled !== false) {
-                                finalText = Math.random() < 0.5 ? emoji + ' ' + replyText : replyText + ' ' + emoji;
+                                // 开关已开启，根据概率决定是否混入
+                                const prob = Math.min(100, Math.max(0, settings.emojiMixProbability ?? 100));
+                                if (Math.random() * 100 < prob) {
+                                    // 混入到消息文本中
+                                    finalText = Math.random() < 0.5 ? emoji + ' ' + finalText : finalText + ' ' + emoji;
+                                } else {
+                                    // 未命中概率，改为独立表情
+                                    separateEmoji = emoji;
+                                }
                             } else {
+                                // 开关关闭，始终独立表情
                                 separateEmoji = emoji;
                             }
                         }
