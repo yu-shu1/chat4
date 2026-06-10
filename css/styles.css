@@ -11570,23 +11570,11 @@
 }
 
 /* ========== 主屏幕 Launcher ========== */
-.launcher-screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--primary-bg);
-    z-index: 100;
-    overflow-y: auto;
-    backdrop-filter: blur(2px);
-    transition: all 0.3s ease;
-}
-
+/* 主屏幕网格：7行 */
 .launcher-grid {
     display: grid;
-    grid-template-rows: repeat(6, 1fr);
-    gap: 8px;
+    grid-template-rows: repeat(7, 1fr);
+    gap: 12px;
     padding: 20px 16px 40px;
     max-width: 560px;
     margin: 0 auto;
@@ -11594,12 +11582,11 @@
     box-sizing: border-box;
 }
 
-/* 顶部空白区（占4行） */
+/* 顶部空白区（第1-4行） */
 .launcher-blank-area {
     grid-row: span 4;
     background: rgba(var(--accent-color-rgb), 0.02);
     border-radius: 24px;
-    /* 可以放一些装饰文字，也可留空 */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -11609,7 +11596,6 @@
     text-align: center;
     backdrop-filter: blur(4px);
 }
-/* 可选：空白区增加小提示 */
 .launcher-blank-area::before {
     content: "✦ 拾光 ✦";
     font-size: 20px;
@@ -11618,7 +11604,13 @@
     font-weight: 300;
 }
 
-/* 底部两行功能区 */
+/* 底部留空行（第7行） */
+.launcher-blank-bottom {
+    grid-row: span 1;
+    /* 完全透明，仅占位 */
+}
+
+/* 功能按钮网格行（第5、6行） */
 .launcher-func-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -11626,9 +11618,10 @@
     align-items: center;
 }
 
+/* 功能卡片样式，圆角可自定义 */
 .func-item {
     background: var(--secondary-bg);
-    border-radius: 24px;
+    border-radius: var(--launcher-btn-radius, 24px);  /* 默认24px，可通过 JS 调整 */
     padding: 12px 6px;
     text-align: center;
     cursor: pointer;
@@ -11663,7 +11656,3 @@
     transform: scale(0.96);
 }
 
-/* 聊天区域默认隐藏，由 launcher 控制 */
-.chat-container, .input-area-wrapper {
-    transition: opacity 0.2s ease;
-}
