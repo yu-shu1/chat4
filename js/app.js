@@ -61,14 +61,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setInterval(checkStatusChange, 60000);
 
+
         updateLoader('连接成功，欢迎回来。', '100%');
-        // 修改：欢迎动画结束后，先隐藏欢迎屏幕，再显示桌面
-        setTimeout(() => {
-            hideWelcomeScreen();
-            setTimeout(() => {
-                afterWelcome();  // 显示桌面并绑定图标
-            }, 850);
-        }, 3500);
+        setTimeout(hideWelcomeScreen, 3500);
 
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
@@ -162,12 +157,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('[boot] 初始化失败后的恢复也失败:', recoverErr);
         }
         updateLoader('加载遇到问题，已强制进入...', '100%');
-        setTimeout(() => {
-            hideWelcomeScreen();
-            setTimeout(() => afterWelcome(), 850);
-        }, 3500);
+        setTimeout(hideWelcomeScreen, 3500);
     }
     
+    // 确保所有开关在页面完全加载后同步
     setTimeout(() => {
         if (typeof syncAllToggles === 'function') syncAllToggles();
     }, 1500);    
@@ -175,51 +168,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => {
         if (typeof syncAllToggles === 'function') syncAllToggles();
     }, 2500);    
+    
 });
-
 const stickerInput = document.getElementById('sticker-file-input');
-if (stickerInput) {
-    stickerInput.addEventListener('change', async (e) => {
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
+            if (stickerInput) {
+                stickerInput.addEventListener('change', async (e) => {
+                    const files = Array.from(e.target.files);
+                    if (!files.length) return;
 
-        const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
-        if (oversized.length > 0) {
-            showNotification(oversized.length + ' 张图片超过 2MB 限制，已跳过', 'warning');
-        }
+                    const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
+                    if (oversized.length > 0) {
+                        showNotification(oversized.length + ' 张图片超过 2MB 限制，已跳过', 'warning');
+                    }
 
-        const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
-        if (!validFiles.length) return;
+                    const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
+                    if (!validFiles.length) return;
 
-        showNotification('正在批量处理 ' + validFiles.length + ' 张图片...', 'info');
+                    showNotification('正在批量处理 ' + validFiles.length + ' 张图片...', 'info');
 
-        let successCount = 0;
-        let failCount = 0;
+                    let successCount = 0;
+                    let failCount = 0;
 
-        for (const file of validFiles) {
-            try {
-                const base64 = await optimizeImage(file, 300, 0.8);
-                stickerLibrary.push(base64);
-                successCount++;
-            } catch (err) {
-                console.error(err);
-                failCount++;
+                    for (const file of validFiles) {
+                        try {
+                            const base64 = await optimizeImage(file, 300, 0.8);
+                            stickerLibrary.push(base64);
+                            successCount++;
+                        } catch (err) {
+                            console.error(err);
+                            failCount++;
+                        }
+                    }
+
+                    throttledSaveData();
+                    renderReplyLibrary();
+
+                    if (failCount > 0) {
+                        showNotification('上传完成：' + successCount + ' 张成功，' + failCount + ' 张失败', 'warning');
+                    } else {
+                        showNotification('上传成功，共 ' + successCount + ' 张', 'success');
+                    }
+
+                    e.target.value = '';
+                });
             }
-        }
-
-        throttledSaveData();
-        renderReplyLibrary();
-
-        if (failCount > 0) {
-            showNotification('上传完成：' + successCount + ' 张成功，' + failCount + ' 张失败', 'warning');
-        } else {
-            showNotification('上传成功，共 ' + successCount + ' 张', 'success');
-        }
-
-        e.target.value = '';
-    });
-}
-
 const myStickerQuickUpload = document.getElementById('my-sticker-quick-upload');
 if (myStickerQuickUpload) {
     myStickerQuickUpload.addEventListener('change', async (e) => {
@@ -275,6 +267,7 @@ window.addEventListener('load', function() {
 function showHomeScreen() {
     document.getElementById('home-screen').classList.add('active');
     document.getElementById('chat-view').classList.remove('active');
+    // 可选：改变头部标题
 }
 
 // 显示聊天，隐藏桌面
@@ -328,20 +321,10 @@ function bindHomeIcons() {
     });
 }
 
-// 绑定聊天界面顶部“主页”按钮，点击返回桌面
-function bindHomeBackBtn() {
-    const homeBackBtn = document.getElementById('home-back-btn');
-    if (homeBackBtn) {
-        homeBackBtn.addEventListener('click', () => {
-            showHomeScreen();
-        });
-    }
-}
-
-// 在欢迎动画结束时调用，初始化桌面并绑定所有交互
+// 在欢迎动画结束时调用
 function afterWelcome() {
     showHomeScreen();
     bindHomeIcons();
-    bindHomeBackBtn();
+    // 保留原有主题和背景
     updateUI();
 }
