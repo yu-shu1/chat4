@@ -61,9 +61,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setInterval(checkStatusChange, 60000);
 
-
         updateLoader('连接成功，欢迎回来。', '100%');
-        setTimeout(hideWelcomeScreen, 3500);
+        setTimeout(() => {
+            hideWelcomeScreen();
+            // 等待欢迎动画完全消失后再显示主屏幕
+            if (typeof afterWelcome === 'function') afterWelcome();
+        }, 3500);
 
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
@@ -263,26 +266,40 @@ window.addEventListener('load', function() {
     }, 1000);
 });
 
-// 显示桌面，隐藏聊天
+// 修改原有的 afterWelcome 函数（若已存在则追加，否则新建）
+window.afterWelcome = function() {
+    ensureHomeReturnButton();
+    bindHomeIcons();        // 使用正确的 bindHomeIcons（基于 #home-screen .app-icon）
+    showHomeScreen();       // 开场动画后显示主屏幕
+    if (typeof updateUI === 'function') updateUI();
+};
+
+// 显示主屏幕（桌面）
 function showHomeScreen() {
-    document.getElementById('home-screen').classList.add('active');
-    document.getElementById('chat-view').classList.remove('active');
-    // 可选：改变头部标题
+    document.body.classList.remove('in-chat');
+    // 刷新消息列表（回到聊天时再渲染即可，这里不做额外操作）
+    if (typeof updateUI === 'function') updateUI();
 }
 
-// 显示聊天，隐藏桌面
+// 显示聊天界面
 function showChatScreen() {
-    document.getElementById('home-screen').classList.remove('active');
-    document.getElementById('chat-view').classList.add('active');
-    // 刷新消息列表
+    document.body.classList.add('in-chat');
     if (typeof renderMessages === 'function') renderMessages();
+    if (typeof updateUI === 'function') updateUI();
+    // 滚动到底部
+    const container = document.querySelector('.chat-container');
+    if (container) container.scrollTop = container.scrollHeight;
 }
 
-// 绑定桌面图标点击事件
+// 绑定主屏幕图标点击事件
 function bindHomeIcons() {
-    const icons = document.querySelectorAll('.app-icon');
+    const icons = document.querySelectorAll('#home-screen .app-icon');
     icons.forEach(icon => {
+        // 避免重复绑定
+        if (icon.dataset.bound) return;
+        icon.dataset.bound = 'true';
         icon.addEventListener('click', (e) => {
+            e.stopPropagation();
             const app = icon.dataset.app;
             switch(app) {
                 case 'chat':
@@ -312,19 +329,29 @@ function bindHomeIcons() {
                     showModal(document.getElementById('custom-replies-modal'));
                     if (typeof renderReplyLibrary === 'function') renderReplyLibrary();
                     break;
-                case 'data':
-                    showModal(document.getElementById('data-modal'));
+                case 'settings':
+                    showModal(document.getElementById('settings-modal'));
                     break;
-                default: break;
+                default:
+                    break;
             }
         });
     });
 }
 
-// 在欢迎动画结束时调用
-function afterWelcome() {
-    showHomeScreen();
-    bindHomeIcons();
-    // 保留原有主题和背景
-    updateUI();
+// 在 header 的 actions 区域添加返回主页按钮（如果不存在则动态添加）
+function ensureHomeReturnButton() {
+    const headerActions = document.querySelector('.header-actions');
+    if (!headerActions) return;
+    if (document.getElementById('home-return-btn')) return;
+    const homeBtn = document.createElement('button');
+    homeBtn.id = 'home-return-btn';
+    homeBtn.className = 'action-btn';
+    homeBtn.title = '回到桌面';
+    homeBtn.innerHTML = '<i class="fas fa-home"></i>';
+    homeBtn.addEventListener('click', () => {
+        showHomeScreen();
+    });
+    headerActions.appendChild(homeBtn);
 }
+
