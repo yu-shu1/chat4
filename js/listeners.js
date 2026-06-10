@@ -1106,34 +1106,6 @@ if (_chatSettingsEl) _chatSettingsEl.addEventListener('click', () => {
                     '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情混入消息' }
             };
 
-            // ---- 表情混入概率滑块 ----
-            const probSlider = document.getElementById('emoji-mix-prob-slider');
-            const probValue = document.getElementById('emoji-mix-prob-value');
-            if (probSlider) {
-                probSlider.value = settings.emojiMixProbability !== undefined ? settings.emojiMixProbability : 100;
-                if (probValue) probValue.textContent = probSlider.value + '%';
-            
-                probSlider.addEventListener('input', (e) => {
-                    const val = parseInt(e.target.value, 10);
-                    settings.emojiMixProbability = val;
-                    if (probValue) probValue.textContent = val + '%';
-                });
-                probSlider.addEventListener('change', () => throttledSaveData());
-            
-                // 与表情混入开关联动（开关关闭时隐藏滑块）
-                const emojiMixToggle = document.querySelector('#emoji-mix-toggle');
-                const probRow = document.getElementById('emoji-mix-prob-row');
-                const updateProbRowVisibility = () => {
-                    if (probRow) probRow.style.display = (settings.emojiMixEnabled !== false) ? 'flex' : 'none';
-                };
-                updateProbRowVisibility();
-                if (emojiMixToggle) {
-                    emojiMixToggle.addEventListener('click', () => {
-                        setTimeout(updateProbRowVisibility, 30);
-                    });
-                }
-            }
-
             const phraseCombiningToggle = document.getElementById('phrase-combining-toggle');
             if (phraseCombiningToggle) {
                 // 删除下面这行

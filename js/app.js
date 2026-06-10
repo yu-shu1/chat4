@@ -61,9 +61,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setInterval(checkStatusChange, 60000);
 
-
         updateLoader('连接成功，欢迎回来。', '100%');
-        setTimeout(hideWelcomeScreen, 3500);
+        // 修改：欢迎动画结束后，先隐藏欢迎屏幕，再显示桌面
+        setTimeout(() => {
+            hideWelcomeScreen();
+            setTimeout(() => {
+                afterWelcome();  // 显示桌面并绑定图标
+            }, 850);
+        }, 3500);
 
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
@@ -157,10 +162,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('[boot] 初始化失败后的恢复也失败:', recoverErr);
         }
         updateLoader('加载遇到问题，已强制进入...', '100%');
-        setTimeout(hideWelcomeScreen, 3500);
+        setTimeout(() => {
+            hideWelcomeScreen();
+            setTimeout(() => afterWelcome(), 850);
+        }, 3500);
     }
     
-    // 确保所有开关在页面完全加载后同步
     setTimeout(() => {
         if (typeof syncAllToggles === 'function') syncAllToggles();
     }, 1500);    
@@ -168,50 +175,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => {
         if (typeof syncAllToggles === 'function') syncAllToggles();
     }, 2500);    
-    
 });
+
 const stickerInput = document.getElementById('sticker-file-input');
-            if (stickerInput) {
-                stickerInput.addEventListener('change', async (e) => {
-                    const files = Array.from(e.target.files);
-                    if (!files.length) return;
+if (stickerInput) {
+    stickerInput.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
 
-                    const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
-                    if (oversized.length > 0) {
-                        showNotification(oversized.length + ' 张图片超过 2MB 限制，已跳过', 'warning');
-                    }
+        const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
+        if (oversized.length > 0) {
+            showNotification(oversized.length + ' 张图片超过 2MB 限制，已跳过', 'warning');
+        }
 
-                    const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
-                    if (!validFiles.length) return;
+        const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
+        if (!validFiles.length) return;
 
-                    showNotification('正在批量处理 ' + validFiles.length + ' 张图片...', 'info');
+        showNotification('正在批量处理 ' + validFiles.length + ' 张图片...', 'info');
 
-                    let successCount = 0;
-                    let failCount = 0;
+        let successCount = 0;
+        let failCount = 0;
 
-                    for (const file of validFiles) {
-                        try {
-                            const base64 = await optimizeImage(file, 300, 0.8);
-                            stickerLibrary.push(base64);
-                            successCount++;
-                        } catch (err) {
-                            console.error(err);
-                            failCount++;
-                        }
-                    }
-
-                    throttledSaveData();
-                    renderReplyLibrary();
-
-                    if (failCount > 0) {
-                        showNotification('上传完成：' + successCount + ' 张成功，' + failCount + ' 张失败', 'warning');
-                    } else {
-                        showNotification('上传成功，共 ' + successCount + ' 张', 'success');
-                    }
-
-                    e.target.value = '';
-                });
+        for (const file of validFiles) {
+            try {
+                const base64 = await optimizeImage(file, 300, 0.8);
+                stickerLibrary.push(base64);
+                successCount++;
+            } catch (err) {
+                console.error(err);
+                failCount++;
             }
+        }
+
+        throttledSaveData();
+        renderReplyLibrary();
+
+        if (failCount > 0) {
+            showNotification('上传完成：' + successCount + ' 张成功，' + failCount + ' 张失败', 'warning');
+        } else {
+            showNotification('上传成功，共 ' + successCount + ' 张', 'success');
+        }
+
+        e.target.value = '';
+    });
+}
+
 const myStickerQuickUpload = document.getElementById('my-sticker-quick-upload');
 if (myStickerQuickUpload) {
     myStickerQuickUpload.addEventListener('change', async (e) => {
@@ -262,3 +270,78 @@ window.addEventListener('load', function() {
         }
     }, 1000);
 });
+
+// 显示桌面，隐藏聊天
+function showHomeScreen() {
+    document.getElementById('home-screen').classList.add('active');
+    document.getElementById('chat-view').classList.remove('active');
+}
+
+// 显示聊天，隐藏桌面
+function showChatScreen() {
+    document.getElementById('home-screen').classList.remove('active');
+    document.getElementById('chat-view').classList.add('active');
+    // 刷新消息列表
+    if (typeof renderMessages === 'function') renderMessages();
+}
+
+// 绑定桌面图标点击事件
+function bindHomeIcons() {
+    const icons = document.querySelectorAll('.app-icon');
+    icons.forEach(icon => {
+        icon.addEventListener('click', (e) => {
+            const app = icon.dataset.app;
+            switch(app) {
+                case 'chat':
+                    showChatScreen();
+                    break;
+                case 'envelope':
+                    if (typeof renderEnvelopeBoard === 'function') renderEnvelopeBoard();
+                    else if (typeof showModal === 'function') showModal(document.getElementById('envelope-board-modal'));
+                    break;
+                case 'anniversary':
+                    if (typeof renderAnniversariesList === 'function') renderAnniversariesList();
+                    showModal(document.getElementById('anniversary-modal'));
+                    break;
+                case 'mood':
+                    showModal(document.getElementById('mood-modal'));
+                    if (typeof renderMoodCalendar === 'function') renderMoodCalendar();
+                    break;
+                case 'music':
+                    if (typeof toggleMusicPlayer === 'function') toggleMusicPlayer();
+                    else document.getElementById('player').classList.toggle('visible');
+                    break;
+                case 'fortune':
+                    generateFortune();
+                    showModal(document.getElementById('fortune-lenormand-modal'));
+                    break;
+                case 'reply':
+                    showModal(document.getElementById('custom-replies-modal'));
+                    if (typeof renderReplyLibrary === 'function') renderReplyLibrary();
+                    break;
+                case 'data':
+                    showModal(document.getElementById('data-modal'));
+                    break;
+                default: break;
+            }
+        });
+    });
+}
+
+// 绑定聊天界面顶部“主页”按钮，点击返回桌面
+function bindHomeBackBtn() {
+    const homeBackBtn = document.getElementById('home-back-btn');
+    if (homeBackBtn) {
+        homeBackBtn.addEventListener('click', () => {
+            showHomeScreen();
+        });
+    }
+}
+
+// 在欢迎动画结束时调用，初始化桌面并绑定所有交互
+function afterWelcome() {
+    showHomeScreen();
+    bindHomeIcons();
+    bindHomeBackBtn();
+    updateUI();
+}
