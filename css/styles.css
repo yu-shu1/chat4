@@ -11570,22 +11570,43 @@
 }
 
 
-/* ========== 主屏幕 Launcher 优化版 ========== */
+/* ========== 主屏幕 Launcher 最终修复版 ========== */
+.main-chat-area {
+    position: relative;
+}
+
+.header {
+    z-index: 30;
+}
+
+.launcher-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--primary-bg);
+    z-index: 20;
+    overflow-y: auto;
+    backdrop-filter: blur(2px);
+    transition: all 0.3s ease;
+    padding-top: env(safe-area-inset-top, 0px);
+    box-sizing: border-box;
+}
+
 .launcher-grid {
     display: grid;
-    /* 前4行均分可用空间，第5、6行由内容撑开，第7行留白增大 */
-    grid-template-rows: repeat(4, 1fr) auto auto 1.5fr;
-    gap: 10px;               /* 整体间距略微缩小 */
-    padding: 20px 16px 40px;
+    grid-template-rows: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
     max-width: 560px;
     margin: 0 auto;
     height: 100%;
     box-sizing: border-box;
 }
 
-/* 顶部空白区（第1-4行）保持不变 */
 .launcher-blank-area {
-    grid-row: span 4;
+    grid-row: 1 / 5;
     background: rgba(var(--accent-color-rgb), 0.02);
     border-radius: 24px;
     display: flex;
@@ -11597,6 +11618,7 @@
     text-align: center;
     backdrop-filter: blur(4px);
 }
+
 .launcher-blank-area::before {
     content: "✦ 拾光 ✦";
     font-size: 20px;
@@ -11605,26 +11627,31 @@
     font-weight: 300;
 }
 
-/* 功能按钮网格行（第5、6行） */
 .launcher-func-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;               /* 按钮间间距缩小为 10px */
+    gap: 8px;
     align-items: center;
 }
 
-/* 功能卡片 – 正方形、紧凑、圆角最大时接近圆形 */
+.launcher-func-row:first-of-type {
+    grid-row: 5 / 6;
+}
+
+.launcher-func-row:last-of-type {
+    grid-row: 6 / 7;
+}
+
 .func-item {
     background: var(--secondary-bg);
     border-radius: var(--launcher-btn-radius, 24px);
-    padding: 8px 4px;        /* 减小上下内边距，左右内边距保持最小 */
+    padding: 6px 4px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
     border: 1px solid var(--border-color);
     box-shadow: 0 4px 12px rgba(0,0,0,0.04);
     backdrop-filter: blur(8px);
-    /* 关键：固定宽高比 1:1，使按钮成为正方形 */
     aspect-ratio: 1 / 1;
     display: flex;
     flex-direction: column;
@@ -11633,14 +11660,14 @@
 }
 
 .func-item i {
-    font-size: 22px;          /* 图标从 28px 缩小到 22px */
+    font-size: 20px;
     color: var(--accent-color);
-    margin-bottom: 4px;       /* 图标与文字间距缩小 */
+    margin-bottom: 4px;
     display: block;
 }
 
 .func-item span {
-    font-size: 11px;          /* 文字从 12px 缩小到 11px */
+    font-size: 10px;
     font-weight: 500;
     color: var(--text-primary);
     letter-spacing: 0.3px;
@@ -11657,9 +11684,6 @@
     transform: scale(0.96);
 }
 
-/* 底部留空行（第7行）– 自动占据更大空间 */
 .launcher-blank-bottom {
-    grid-row: span 1;
-    /* 完全透明，仅占位，高度由 1.5fr 保证更大 */
+    grid-row: 7 / 8;
 }
-
