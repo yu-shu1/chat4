@@ -61,13 +61,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setInterval(checkStatusChange, 60000);
 
+
         updateLoader('连接成功，欢迎回来。', '100%');
         setTimeout(() => {
             hideWelcomeScreen();
-            // 等待欢迎动画完全消失后再显示主屏幕
-            if (typeof afterWelcome === 'function') afterWelcome();
+            showLauncherScreen();   // 新增：显示主屏幕
         }, 3500);
-
+        
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 try {
@@ -266,92 +266,87 @@ window.addEventListener('load', function() {
     }, 1000);
 });
 
-// 修改原有的 afterWelcome 函数（若已存在则追加，否则新建）
-window.afterWelcome = function() {
-    ensureHomeReturnButton();
-    bindHomeIcons();        // 使用正确的 bindHomeIcons（基于 #home-screen .app-icon）
-    showHomeScreen();       // 开场动画后显示主屏幕
-    if (typeof updateUI === 'function') updateUI();
-};
-
-// 显示主屏幕（桌面）
-function showHomeScreen() {
-    document.body.classList.remove('in-chat');
-    // 刷新消息列表（回到聊天时再渲染即可，这里不做额外操作）
-    if (typeof updateUI === 'function') updateUI();
+// 显示主屏幕，隐藏聊天界面
+function showLauncherScreen() {
+    const launcher = document.getElementById('launcher-screen');
+    const chatContainer = document.getElementById('chat-container');
+    const inputArea = document.querySelector('.input-area-wrapper');
+    if (launcher) launcher.style.display = 'block';
+    if (chatContainer) chatContainer.style.display = 'none';
+    if (inputArea) inputArea.style.display = 'none';
+    document.body.classList.add('launcher-active');
 }
 
-// 显示聊天界面
+// 显示聊天界面，隐藏主屏幕
 function showChatScreen() {
-    document.body.classList.add('in-chat');
-    if (typeof renderMessages === 'function') renderMessages();
-    if (typeof updateUI === 'function') updateUI();
-    // 滚动到底部
-    const container = document.querySelector('.chat-container');
-    if (container) container.scrollTop = container.scrollHeight;
+    const launcher = document.getElementById('launcher-screen');
+    const chatContainer = document.getElementById('chat-container');
+    const inputArea = document.querySelector('.input-area-wrapper');
+    if (launcher) launcher.style.display = 'none';
+    if (chatContainer) chatContainer.style.display = 'flex';
+    if (inputArea) inputArea.style.display = 'block';
+    document.body.classList.remove('launcher-active');
+    // 确保消息滚动到底部
+    setTimeout(() => {
+        const container = document.getElementById('chat-container');
+        if (container) container.scrollTop = container.scrollHeight;
+    }, 100);
 }
 
-// 绑定主屏幕图标点击事件
-function bindHomeIcons() {
-    const icons = document.querySelectorAll('#home-screen .app-icon');
-    icons.forEach(icon => {
-        // 避免重复绑定
-        if (icon.dataset.bound) return;
-        icon.dataset.bound = 'true';
-        icon.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const app = icon.dataset.app;
-            switch(app) {
+// 初始化主屏幕功能点击
+function initLauncherEvents() {
+    const items = document.querySelectorAll('.func-item');
+    items.forEach(item => {
+        item.addEventListener('click', (e) => {
+            const func = item.dataset.func;
+            switch(func) {
                 case 'chat':
                     showChatScreen();
                     break;
-                case 'envelope':
-                    if (typeof renderEnvelopeBoard === 'function') renderEnvelopeBoard();
-                    else if (typeof showModal === 'function') showModal(document.getElementById('envelope-board-modal'));
+                case 'reply':
+                    showModal(DOMElements.customRepliesModal.modal);
                     break;
                 case 'anniversary':
-                    if (typeof renderAnniversariesList === 'function') renderAnniversariesList();
-                    showModal(document.getElementById('anniversary-modal'));
+                    showModal(DOMElements.anniversaryModal.modal);
+                    break;
+                case 'envelope':
+                    if (typeof renderEnvelopeBoard === 'function') renderEnvelopeBoard();
+                    showModal(document.getElementById('envelope-board-modal'));
                     break;
                 case 'mood':
                     showModal(document.getElementById('mood-modal'));
-                    if (typeof renderMoodCalendar === 'function') renderMoodCalendar();
-                    break;
-                case 'music':
-                    if (typeof toggleMusicPlayer === 'function') toggleMusicPlayer();
-                    else document.getElementById('player').classList.toggle('visible');
                     break;
                 case 'fortune':
                     generateFortune();
                     showModal(document.getElementById('fortune-lenormand-modal'));
                     break;
-                case 'reply':
-                    showModal(document.getElementById('custom-replies-modal'));
-                    if (typeof renderReplyLibrary === 'function') renderReplyLibrary();
+                case 'music':
+                    if (settings.musicPlayerEnabled) {
+                        document.getElementById('player').classList.add('visible');
+                    } else {
+                        settings.musicPlayerEnabled = true;
+                        throttledSaveData();
+                        document.getElementById('player').classList.add('visible');
+                        showNotification('音乐播放器已开启', 'success');
+                    }
                     break;
-                case 'settings':
-                    showModal(document.getElementById('settings-modal'));
-                    break;
-                default:
+                case 'poke':
+                    showModal(DOMElements.pokeModal.modal);
                     break;
             }
         });
     });
 }
 
-// 在 header 的 actions 区域添加返回主页按钮（如果不存在则动态添加）
-function ensureHomeReturnButton() {
-    const headerActions = document.querySelector('.header-actions');
-    if (!headerActions) return;
-    if (document.getElementById('home-return-btn')) return;
-    const homeBtn = document.createElement('button');
-    homeBtn.id = 'home-return-btn';
-    homeBtn.className = 'action-btn';
-    homeBtn.title = '回到桌面';
-    homeBtn.innerHTML = '<i class="fas fa-home"></i>';
+// 在页面完全加载后调用
+window.addEventListener('load', () => {
+    initLauncherEvents();
+});
+
+const homeBtn = document.getElementById('home-btn');
+if (homeBtn) {
     homeBtn.addEventListener('click', () => {
-        showHomeScreen();
+        showLauncherScreen();
     });
-    headerActions.appendChild(homeBtn);
 }
 

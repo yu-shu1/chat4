@@ -441,6 +441,13 @@ const loadData = async () => {
         setTimeout(() => {
             syncAllToggles();
         }, 50);
+        
+        const homeBtn = document.getElementById('home-btn');
+        if (homeBtn) {
+            homeBtn.addEventListener('click', () => {
+                showLauncherScreen();
+            });
+        }
 
     } catch (e) {
         console.error("LoadData 内部致命错误:", e);
