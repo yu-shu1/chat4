@@ -236,6 +236,21 @@ if (target.classList.contains('delete-btn')) {
 
         function initHeaderAndSettingsListeners() {
 
+
+            const radiusSlider = document.getElementById('launcher-btn-radius-slider');
+            const radiusVal = document.getElementById('launcher-btn-radius-value');
+            if (radiusSlider) {
+                radiusSlider.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    radiusVal.textContent = val + 'px';
+                    document.documentElement.style.setProperty('--launcher-btn-radius', val + 'px');
+                });
+                radiusSlider.addEventListener('change', () => {
+                    settings.launcherBtnRadius = parseInt(radiusSlider.value);
+                    throttledSaveData();
+                });
+            }
+            
             const openNameModal = (isPartner) => {
                 const modal = DOMElements.editModal;
                 showModal(modal.modal, modal.input);
@@ -307,27 +322,27 @@ if (target.classList.contains('delete-btn')) {
                 });
 
 
-fileInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        if (file.size > MAX_AVATAR_SIZE) {
-            showNotification('头像图片不能超过2MB', 'error');
-            return;
-        }
-
-        showNotification('正在裁剪处理...', 'info', 1000);
-        
-        cropImageToSquare(file, 300).then(base64Data => {
-            currentAvatarData = base64Data;
-            previewImg.src = currentAvatarData;
-            previewDiv.style.display = 'block';
-            saveBtn.disabled = false;
-        }).catch(err => {
-            console.error(err);
-            showNotification('图片处理失败', 'error');
-        });
-    }
-});
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        if (file.size > MAX_AVATAR_SIZE) {
+                            showNotification('头像图片不能超过2MB', 'error');
+                            return;
+                        }
+                
+                        showNotification('正在裁剪处理...', 'info', 1000);
+                        
+                        cropImageToSquare(file, 300).then(base64Data => {
+                            currentAvatarData = base64Data;
+                            previewImg.src = currentAvatarData;
+                            previewDiv.style.display = 'block';
+                            saveBtn.disabled = false;
+                        }).catch(err => {
+                            console.error(err);
+                            showNotification('图片处理失败', 'error');
+                        });
+                    }
+                });
 
 
                 urlInput.addEventListener('input',
@@ -419,124 +434,124 @@ fileInput.addEventListener('change', function(e) {
             });
 
 
-window.setReadReceiptStyle = function(style) {
-    settings.readReceiptStyle = style;
-    throttledSaveData();
-    const iconBtn = document.getElementById('rr-style-icon');
-    const textBtn = document.getElementById('rr-style-text');
-    if (iconBtn) { iconBtn.className = style === 'icon' ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary'; iconBtn.style.cssText = 'padding:5px 12px;font-size:12px;'; }
-    if (textBtn) { textBtn.className = style === 'text' ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary'; textBtn.style.cssText = 'padding:5px 12px;font-size:12px;'; }
-    renderMessages();
-    showNotification('已读回执样式已更新', 'success');
-};
+            window.setReadReceiptStyle = function(style) {
+                settings.readReceiptStyle = style;
+                throttledSaveData();
+                const iconBtn = document.getElementById('rr-style-icon');
+                const textBtn = document.getElementById('rr-style-text');
+                if (iconBtn) { iconBtn.className = style === 'icon' ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary'; iconBtn.style.cssText = 'padding:5px 12px;font-size:12px;'; }
+                if (textBtn) { textBtn.className = style === 'text' ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary'; textBtn.style.cssText = 'padding:5px 12px;font-size:12px;'; }
+                renderMessages();
+                showNotification('已读回执样式已更新', 'success');
+            };
+            
+            // 初始化两个新开关的状态
+            const enterToSendToggle = document.getElementById('enter-to-send-toggle');
+            const keepKeyboardToggle = document.getElementById('keep-keyboard-toggle');
+            if (enterToSendToggle) {
+                // 删除下面这行，不要在初始化时设置 class
+                // enterToSendToggle.classList.toggle('active', settings.enterToSend !== false);
+            }
+            if (keepKeyboardToggle) {
+                // 删除下面这行
+                // keepKeyboardToggle.classList.toggle('active', !!settings.keepKeyboardAfterSend);
+            }
+            
+            // 回车发送开关
+            if (enterToSendToggle) {
+                enterToSendToggle.addEventListener('click', () => {
+                    settings.enterToSend = !settings.enterToSend;
+                    throttledSaveData();
+                    syncAllToggles();   // ← 添加这一行
+                    // 删除下面这行，由 syncAllToggles 负责
+                    // enterToSendToggle.classList.toggle('active', settings.enterToSend);
+                    showNotification(`回车${settings.enterToSend ? '发送' : '换行'}模式`, 'success');
+                });
+            }
+            
+            // 保留键盘开关
+            if (keepKeyboardToggle) {
+                keepKeyboardToggle.addEventListener('click', () => {
+                    settings.keepKeyboardAfterSend = !settings.keepKeyboardAfterSend;
+                    throttledSaveData();
+                    syncAllToggles();   // ← 添加这一行
+                    // 删除下面这行
+                    // keepKeyboardToggle.classList.toggle('active', settings.keepKeyboardAfterSend);
+                    showNotification(`发送后${settings.keepKeyboardAfterSend ? '保留' : '收起'}键盘`, 'success');
+                });
+            }
 
-// 初始化两个新开关的状态
-const enterToSendToggle = document.getElementById('enter-to-send-toggle');
-const keepKeyboardToggle = document.getElementById('keep-keyboard-toggle');
-if (enterToSendToggle) {
-    // 删除下面这行，不要在初始化时设置 class
-    // enterToSendToggle.classList.toggle('active', settings.enterToSend !== false);
-}
-if (keepKeyboardToggle) {
-    // 删除下面这行
-    // keepKeyboardToggle.classList.toggle('active', !!settings.keepKeyboardAfterSend);
-}
-
-// 回车发送开关
-if (enterToSendToggle) {
-    enterToSendToggle.addEventListener('click', () => {
-        settings.enterToSend = !settings.enterToSend;
-        throttledSaveData();
-        syncAllToggles();   // ← 添加这一行
-        // 删除下面这行，由 syncAllToggles 负责
-        // enterToSendToggle.classList.toggle('active', settings.enterToSend);
-        showNotification(`回车${settings.enterToSend ? '发送' : '换行'}模式`, 'success');
-    });
-}
-
-// 保留键盘开关
-if (keepKeyboardToggle) {
-    keepKeyboardToggle.addEventListener('click', () => {
-        settings.keepKeyboardAfterSend = !settings.keepKeyboardAfterSend;
-        throttledSaveData();
-        syncAllToggles();   // ← 添加这一行
-        // 删除下面这行
-        // keepKeyboardToggle.classList.toggle('active', settings.keepKeyboardAfterSend);
-        showNotification(`发送后${settings.keepKeyboardAfterSend ? '保留' : '收起'}键盘`, 'success');
-    });
-}
-
-const _chatSettingsEl = document.getElementById('chat-settings');
-if (_chatSettingsEl) _chatSettingsEl.addEventListener('click', () => {
-    hideModal(DOMElements.settingsModal.modal);
-    
-    const toggleSyncMap = {
-        '#reply-toggle': { prop: 'replyEnabled', name: '引用回复' },
-        '#sound-toggle': { prop: 'soundEnabled', name: '音效' },
-        '#read-receipts-toggle': { prop: 'readReceiptsEnabled', name: '已读回执' },
-        '#typing-indicator-toggle': { prop: 'typingIndicatorEnabled', name: '正在输入' },
-        '#read-no-reply-toggle': { prop: 'allowReadNoReply', name: '已读不回' },
-        '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情消息' }
-    };
-    for (const [selector, { prop }] of Object.entries(toggleSyncMap)) {
-        const el = document.querySelector(selector);
-        const val = prop === 'emojiMixEnabled' ? (settings[prop] !== false) : !!settings[prop];
-        if (el) el.classList.toggle('active', val);
-    }
-    const svSlider = document.getElementById('sound-volume-slider');
-    const svVal = document.getElementById('sound-volume-value');
-    if (svSlider) { svSlider.value = Math.round((settings.soundVolume || 0.15) * 100); if (svVal) svVal.textContent = svSlider.value + '%'; }
-    const legacyCustom = (settings.customSoundUrl || '').trim();
-
-    const setSelect = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.value = val || 'tone_low';
-    };
-    const setInput = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.value = val || '';
-    };
-    // 音频自定义值显示：base64 数据只显示友好文字
-    const setSoundUrlInput = (id, val) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        if (val && val.startsWith('data:audio')) {
-            el.value = '[本地文件（已上传）]';
-        } else {
-            el.value = val || '';
-        }
-    };
-
-
-    setSelect('sound-my-send-preset', settings.mySendSoundPreset || 'tone_low');
-    setSoundUrlInput('sound-my-send-custom-url', (settings.mySendCustomSoundUrl || '').trim() || legacyCustom);
-
-    setSelect('sound-partner-message-preset', settings.partnerMessageSoundPreset || 'tone_low');
-    setSoundUrlInput('sound-partner-message-custom-url', (settings.partnerMessageCustomSoundUrl || '').trim() || legacyCustom);
-
-    setSelect('sound-my-poke-preset', settings.myPokeSoundPreset || 'tone_low');
-    setSoundUrlInput('sound-my-poke-custom-url', (settings.myPokeCustomSoundUrl || '').trim() || legacyCustom);
-
-    setSelect('sound-partner-poke-preset', settings.partnerPokeSoundPreset || 'tone_low');
-    setSoundUrlInput('sound-partner-poke-custom-url', (settings.partnerPokeCustomSoundUrl || '').trim() || legacyCustom);
-    document.querySelectorAll('.time-fmt-opt').forEach(opt => {
-        opt.classList.toggle('active', opt.dataset.fmt === (settings.timeFormat || 'HH:mm'));
-    });
-    const autoToggle = document.getElementById('auto-send-toggle');
-    if (autoToggle) autoToggle.classList.toggle('active', !!settings.autoSendEnabled);
-    updateAutoSendUI();
-    updateDelayUI();
-    const immToggle = document.getElementById('immersive-toggle');
-    if (immToggle) immToggle.classList.toggle('active', document.body.classList.contains('immersive-mode'));
-    const rrStyle = settings.readReceiptStyle || 'icon';
-    const rrIconBtn = document.getElementById('rr-style-icon');
-    const rrTextBtn = document.getElementById('rr-style-text');
-    if (rrIconBtn) { rrIconBtn.className = rrStyle === 'icon' ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary'; rrIconBtn.style.cssText = 'padding:5px 12px;font-size:12px;'; }
-    if (rrTextBtn) { rrTextBtn.className = rrStyle === 'text' ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary'; rrTextBtn.style.cssText = 'padding:5px 12px;font-size:12px;'; }
-    
-    showModal(DOMElements.chatModal.modal);
-    setupAvatarFrameSettings();
-});
+            const _chatSettingsEl = document.getElementById('chat-settings');
+            if (_chatSettingsEl) _chatSettingsEl.addEventListener('click', () => {
+                hideModal(DOMElements.settingsModal.modal);
+                
+                const toggleSyncMap = {
+                    '#reply-toggle': { prop: 'replyEnabled', name: '引用回复' },
+                    '#sound-toggle': { prop: 'soundEnabled', name: '音效' },
+                    '#read-receipts-toggle': { prop: 'readReceiptsEnabled', name: '已读回执' },
+                    '#typing-indicator-toggle': { prop: 'typingIndicatorEnabled', name: '正在输入' },
+                    '#read-no-reply-toggle': { prop: 'allowReadNoReply', name: '已读不回' },
+                    '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情消息' }
+                };
+                for (const [selector, { prop }] of Object.entries(toggleSyncMap)) {
+                    const el = document.querySelector(selector);
+                    const val = prop === 'emojiMixEnabled' ? (settings[prop] !== false) : !!settings[prop];
+                    if (el) el.classList.toggle('active', val);
+                }
+                const svSlider = document.getElementById('sound-volume-slider');
+                const svVal = document.getElementById('sound-volume-value');
+                if (svSlider) { svSlider.value = Math.round((settings.soundVolume || 0.15) * 100); if (svVal) svVal.textContent = svSlider.value + '%'; }
+                const legacyCustom = (settings.customSoundUrl || '').trim();
+            
+                const setSelect = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = val || 'tone_low';
+                };
+                const setInput = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = val || '';
+                };
+                // 音频自定义值显示：base64 数据只显示友好文字
+                const setSoundUrlInput = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    if (val && val.startsWith('data:audio')) {
+                        el.value = '[本地文件（已上传）]';
+                    } else {
+                        el.value = val || '';
+                    }
+                };
+            
+            
+                setSelect('sound-my-send-preset', settings.mySendSoundPreset || 'tone_low');
+                setSoundUrlInput('sound-my-send-custom-url', (settings.mySendCustomSoundUrl || '').trim() || legacyCustom);
+            
+                setSelect('sound-partner-message-preset', settings.partnerMessageSoundPreset || 'tone_low');
+                setSoundUrlInput('sound-partner-message-custom-url', (settings.partnerMessageCustomSoundUrl || '').trim() || legacyCustom);
+            
+                setSelect('sound-my-poke-preset', settings.myPokeSoundPreset || 'tone_low');
+                setSoundUrlInput('sound-my-poke-custom-url', (settings.myPokeCustomSoundUrl || '').trim() || legacyCustom);
+            
+                setSelect('sound-partner-poke-preset', settings.partnerPokeSoundPreset || 'tone_low');
+                setSoundUrlInput('sound-partner-poke-custom-url', (settings.partnerPokeCustomSoundUrl || '').trim() || legacyCustom);
+                document.querySelectorAll('.time-fmt-opt').forEach(opt => {
+                    opt.classList.toggle('active', opt.dataset.fmt === (settings.timeFormat || 'HH:mm'));
+                });
+                const autoToggle = document.getElementById('auto-send-toggle');
+                if (autoToggle) autoToggle.classList.toggle('active', !!settings.autoSendEnabled);
+                updateAutoSendUI();
+                updateDelayUI();
+                const immToggle = document.getElementById('immersive-toggle');
+                if (immToggle) immToggle.classList.toggle('active', document.body.classList.contains('immersive-mode'));
+                const rrStyle = settings.readReceiptStyle || 'icon';
+                const rrIconBtn = document.getElementById('rr-style-icon');
+                const rrTextBtn = document.getElementById('rr-style-text');
+                if (rrIconBtn) { rrIconBtn.className = rrStyle === 'icon' ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary'; rrIconBtn.style.cssText = 'padding:5px 12px;font-size:12px;'; }
+                if (rrTextBtn) { rrTextBtn.className = rrStyle === 'text' ? 'modal-btn modal-btn-primary' : 'modal-btn modal-btn-secondary'; rrTextBtn.style.cssText = 'padding:5px 12px;font-size:12px;'; }
+                
+                showModal(DOMElements.chatModal.modal);
+                setupAvatarFrameSettings();
+            });
             const _advancedEl = document.getElementById('advanced-settings');
             if (_advancedEl) _advancedEl.addEventListener('click', () => {
                 hideModal(DOMElements.settingsModal.modal);
@@ -1311,58 +1326,58 @@ if (_chatSettingsEl) _chatSettingsEl.addEventListener('click', () => {
                 });
             }
 
-const autoSendToggle = document.getElementById('auto-send-toggle');
-const autoSendControl = document.getElementById('auto-send-control');
-const autoSendSlider = document.getElementById('auto-send-slider');
-const autoSendValue = document.getElementById('auto-send-value');
-
-const updateAutoSendUI = () => {
-    autoSendToggle.classList.toggle('active', !!settings.autoSendEnabled);
-    autoSendControl.style.display = settings.autoSendEnabled ? "flex" : "none";
-    const currentVal = settings.autoSendInterval || 5;
-    autoSendSlider.value = currentVal;
-    autoSendValue.textContent = `${currentVal}分钟`;
-};
-
-updateAutoSendUI();
-
-autoSendToggle.addEventListener('click', () => {
-    settings.autoSendEnabled = !settings.autoSendEnabled;
-    updateAutoSendUI();
-    scheduleAutoSend();
-    throttledSaveData();
-    showNotification(`主动发送已${settings.autoSendEnabled ? '开启' : '关闭'}`, 'success');
-});
-
-// 主动留言开关
-const boardPartnerWriteToggle = document.getElementById('board-partner-write-toggle');
-if (boardPartnerWriteToggle) {
-    // 删除或注释掉下面这行（或确保它不会错误地覆盖 active 状态）
-    // boardPartnerWriteToggle.classList.toggle('active', !!settings.boardPartnerWriteEnabled);
-    // 只保留事件监听，UI 同步交给 syncAllToggles
-    boardPartnerWriteToggle.addEventListener('click', () => {
-        settings.boardPartnerWriteEnabled = !settings.boardPartnerWriteEnabled;
-        throttledSaveData();
-        syncAllToggles();   // ← 添加这一行
-        // boardPartnerWriteToggle.classList.toggle('active', settings.boardPartnerWriteEnabled); // 这行也删除
-        showNotification(`主动留言已${settings.boardPartnerWriteEnabled ? '开启' : '关闭'}`, 'success');
-        if (typeof window._resetBoardAutoSend === 'function') window._resetBoardAutoSend();
-    });
-}
-
-autoSendSlider.value = settings.autoSendInterval || 5;
-autoSendValue.textContent = `${settings.autoSendInterval || 5}分钟`;
-
-autoSendSlider.addEventListener('input', (e) => {
-    const val = parseInt(e.target.value);
-    settings.autoSendInterval = val;
-    autoSendValue.textContent = `${val}分钟`;
-});
-
-autoSendSlider.addEventListener('change', () => {
-    scheduleAutoSend();
-    throttledSaveData();
-});
+            const autoSendToggle = document.getElementById('auto-send-toggle');
+            const autoSendControl = document.getElementById('auto-send-control');
+            const autoSendSlider = document.getElementById('auto-send-slider');
+            const autoSendValue = document.getElementById('auto-send-value');
+            
+            const updateAutoSendUI = () => {
+                autoSendToggle.classList.toggle('active', !!settings.autoSendEnabled);
+                autoSendControl.style.display = settings.autoSendEnabled ? "flex" : "none";
+                const currentVal = settings.autoSendInterval || 5;
+                autoSendSlider.value = currentVal;
+                autoSendValue.textContent = `${currentVal}分钟`;
+            };
+            
+            updateAutoSendUI();
+            
+            autoSendToggle.addEventListener('click', () => {
+                settings.autoSendEnabled = !settings.autoSendEnabled;
+                updateAutoSendUI();
+                scheduleAutoSend();
+                throttledSaveData();
+                showNotification(`主动发送已${settings.autoSendEnabled ? '开启' : '关闭'}`, 'success');
+            });
+            
+            // 主动留言开关
+            const boardPartnerWriteToggle = document.getElementById('board-partner-write-toggle');
+            if (boardPartnerWriteToggle) {
+                // 删除或注释掉下面这行（或确保它不会错误地覆盖 active 状态）
+                // boardPartnerWriteToggle.classList.toggle('active', !!settings.boardPartnerWriteEnabled);
+                // 只保留事件监听，UI 同步交给 syncAllToggles
+                boardPartnerWriteToggle.addEventListener('click', () => {
+                    settings.boardPartnerWriteEnabled = !settings.boardPartnerWriteEnabled;
+                    throttledSaveData();
+                    syncAllToggles();   // ← 添加这一行
+                    // boardPartnerWriteToggle.classList.toggle('active', settings.boardPartnerWriteEnabled); // 这行也删除
+                    showNotification(`主动留言已${settings.boardPartnerWriteEnabled ? '开启' : '关闭'}`, 'success');
+                    if (typeof window._resetBoardAutoSend === 'function') window._resetBoardAutoSend();
+                });
+            }
+            
+            autoSendSlider.value = settings.autoSendInterval || 5;
+            autoSendValue.textContent = `${settings.autoSendInterval || 5}分钟`;
+            
+            autoSendSlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                settings.autoSendInterval = val;
+                autoSendValue.textContent = `${val}分钟`;
+            });
+            
+            autoSendSlider.addEventListener('change', () => {
+                scheduleAutoSend();
+                throttledSaveData();
+            });
 
             const resetBgBtn = document.getElementById('reset-default-bg');
             if (resetBgBtn) {

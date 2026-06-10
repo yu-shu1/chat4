@@ -188,10 +188,92 @@ function loadMoreHistory() {
                 bottomCollapseMode: false,
                 emojiMixEnabled: true,
                 phraseCombiningEnabled: false,
+                launcherBtnRadius: 24,
                 boardPartnerWriteEnabled: false,   // 主动留言开关，默认关闭
                 enterToSend: true,          // 默认回车发送
                 keepKeyboardAfterSend: false // 默认发送后不保留键盘
             };
+        }
+
+        // 显示主屏幕，隐藏聊天界面
+        function showLauncherScreen() {
+            const launcher = document.getElementById('launcher-screen');
+            const chatContainer = document.getElementById('chat-container');
+            const inputArea = document.querySelector('.input-area-wrapper');
+            if (launcher) launcher.style.display = 'block';
+            if (chatContainer) chatContainer.style.display = 'none';
+            if (inputArea) inputArea.style.display = 'none';
+            document.body.classList.add('launcher-active');
+            if (DOMElements.messageInput) DOMElements.messageInput.blur();
+            // 可选：隐藏音乐播放器
+            const player = document.getElementById('player');
+            if (player) player.style.display = 'none';
+        }
+        
+        // 显示聊天界面，隐藏主屏幕
+        function showChatScreen() {
+            const launcher = document.getElementById('launcher-screen');
+            const chatContainer = document.getElementById('chat-container');
+            const inputArea = document.querySelector('.input-area-wrapper');
+            if (launcher) launcher.style.display = 'none';
+            if (chatContainer) chatContainer.style.display = 'flex';
+            if (inputArea) inputArea.style.display = 'block';
+            document.body.classList.remove('launcher-active');
+            // 恢复音乐播放器显示（如果之前隐藏了）
+            const player = document.getElementById('player');
+            if (player && settings.musicPlayerEnabled) player.style.display = 'block';
+            setTimeout(() => {
+                const container = document.getElementById('chat-container');
+                if (container) container.scrollTop = container.scrollHeight;
+            }, 100);
+        }
+        
+        // 初始化主屏幕功能点击（只执行一次）
+        function initLauncherEvents() {
+            const items = document.querySelectorAll('.func-item');
+            items.forEach(item => {
+                // 避免重复绑定
+                if (item.dataset.listenerAdded) return;
+                item.dataset.listenerAdded = 'true';
+                item.addEventListener('click', (e) => {
+                    const func = item.dataset.func;
+                    switch(func) {
+                        case 'chat':
+                            showChatScreen();
+                            break;
+                        case 'reply':
+                            showModal(DOMElements.customRepliesModal.modal);
+                            break;
+                        case 'anniversary':
+                            showModal(DOMElements.anniversaryModal.modal);
+                            break;
+                        case 'envelope':
+                            if (typeof renderEnvelopeBoard === 'function') renderEnvelopeBoard();
+                            showModal(document.getElementById('envelope-board-modal'));
+                            break;
+                        case 'mood':
+                            showModal(document.getElementById('mood-modal'));
+                            break;
+                        case 'fortune':
+                            generateFortune();
+                            showModal(document.getElementById('fortune-lenormand-modal'));
+                            break;
+                        case 'music':
+                            if (settings.musicPlayerEnabled) {
+                                document.getElementById('player').classList.add('visible');
+                            } else {
+                                settings.musicPlayerEnabled = true;
+                                throttledSaveData();
+                                document.getElementById('player').classList.add('visible');
+                                showNotification('音乐播放器已开启', 'success');
+                            }
+                            break;
+                        case 'settings':
+                            showModal(DOMElements.settingsModal.modal);
+                            break;
+                    }
+                });
+            });
         }
 
 
@@ -339,6 +421,10 @@ const loadData = async () => {
 
         if (savedSettings) Object.assign(settings, savedSettings);
 
+        if (settings.launcherBtnRadius) {
+            document.documentElement.style.setProperty('--launcher-btn-radius', settings.launcherBtnRadius + 'px');
+        }
+        
         if (settings.showPartnerNameInChat !== undefined) {
             showPartnerNameInChat = settings.showPartnerNameInChat;
         } else if (savedShowNameConfig !== null) {
@@ -442,6 +528,18 @@ const loadData = async () => {
             syncAllToggles();
         }, 50);
         
+        // 初始化主屏幕功能（只执行一次）
+        if (typeof initLauncherEvents === 'function') initLauncherEvents();
+        
+        // 同步按钮圆角滑块的值（修复初始显示问题）
+        const radiusSlider = document.getElementById('launcher-btn-radius-slider');
+        const radiusVal = document.getElementById('launcher-btn-radius-value');
+        if (radiusSlider && settings.launcherBtnRadius !== undefined) {
+            radiusSlider.value = settings.launcherBtnRadius;
+            if (radiusVal) radiusVal.textContent = settings.launcherBtnRadius + 'px';
+            document.documentElement.style.setProperty('--launcher-btn-radius', settings.launcherBtnRadius + 'px');
+        }
+
         const homeBtn = document.getElementById('home-btn');
         if (homeBtn) {
             homeBtn.addEventListener('click', () => {
