@@ -11569,3 +11569,114 @@
     display: none !important;
 }
 
+/* 主屏幕桌面样式 */
+#home-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--primary-bg);
+    z-index: 1000;
+    overflow-y: auto;
+    backdrop-filter: blur(2px);
+}
+
+.home-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.home-grid-container {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.home-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: minmax(80px, auto);
+    gap: 16px;
+    background: transparent;
+}
+
+/* 前4行占位格子完全透明且不可点击 */
+.grid-placeholder {
+    opacity: 0;
+    pointer-events: none;
+    background: transparent;
+}
+
+/* 功能图标卡片 */
+.app-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--secondary-bg-rgb), 0.7);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 12px 8px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    border: 1px solid rgba(var(--accent-color-rgb), 0.2);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    color: var(--text-primary);
+}
+
+.app-icon i {
+    font-size: 28px;
+    margin-bottom: 8px;
+    color: var(--accent-color);
+}
+
+.app-icon span {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.app-icon:hover {
+    transform: translateY(-6px);
+    background: rgba(var(--secondary-bg-rgb), 0.9);
+    border-color: rgba(var(--accent-color-rgb), 0.5);
+    box-shadow: 0 12px 28px rgba(var(--accent-color-rgb), 0.2);
+}
+
+.app-icon:active {
+    transform: scale(0.96);
+}
+
+/* 聊天视图与主屏幕切换 */
+#chat-view {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+body:not(.in-chat) #home-screen {
+    display: flex;
+}
+
+body.in-chat #chat-view {
+    display: flex !important;
+}
+
+body.in-chat #home-screen {
+    display: none !important;
+}
+
+/* 头部增加返回主页按钮 */
+.header-actions #home-return-btn {
+    display: none;
+}
+
+body.in-chat .header-actions #home-return-btn {
+    display: flex;
+}
