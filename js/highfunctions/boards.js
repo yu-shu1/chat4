@@ -195,12 +195,13 @@ function stopBoardAutoSend() {
     }
 }
 
-// 执行一次主动留言（概率触发）
+
+// ===== 主动留言调度与概率 =====
 async function tryBoardPartnerAutoWrite() {
     // 检查开关
     if (!settings.boardPartnerWriteEnabled) return;
-    // 10% 概率
-    if (Math.random() >= 0.1) return;
+    // 5% 概率（原 10% → 5%）
+    if (Math.random() >= 0.05) return;
     
     // 确保字卡池同步
     syncReplyPool();
@@ -241,22 +242,7 @@ async function tryBoardPartnerAutoWrite() {
     }
 }
 
-// 调度下一次主动留言检查（递归定时）
-function scheduleBoardAutoSend() {
-    stopBoardAutoSend();
-    if (!settings.boardPartnerWriteEnabled) return;
-    
-    // 随机 4~6 小时（毫秒）
-    const minDelay = 4 * 60 * 60 * 1000;
-    const maxDelay = 6 * 60 * 60 * 1000;
-    const delay = minDelay + Math.random() * (maxDelay - minDelay);
-    
-    boardAutoSendTimer = setTimeout(async () => {
-        await tryBoardPartnerAutoWrite();
-        scheduleBoardAutoSend();  // 继续下一次调度
-    }, delay);
-}
-
+// ===== 生成回复核心函数（统一控制句子数量） =====
 function generatePartnerReply() {
     if (boardData.boardReplyPool.length === 0 && typeof showNotification === 'function') {
         showNotification('请先在自定义回复中添加字卡，留言板才能收到回复', 'warning', 4000);
@@ -267,7 +253,8 @@ function generatePartnerReply() {
     const emojis = (typeof customEmojis !== 'undefined' && customEmojis.length > 0) ? [...customEmojis] : [];
     if (pool.length === 0 && stickers.length === 0) return null;
 
-    const count = 8 + Math.floor(Math.random() * 5);
+    // 修改点：句子数量从 8~12 改为 3~6
+    const count = 3 + Math.floor(Math.random() * 4);   // 3,4,5,6
     const uniquePool = getUniqueShuffled(pool, count);
     const punctuations = ['。', '！', '…', '～', '，', '、'];
     const rawSentences = uniquePool.map(s => s + punctuations[Math.floor(Math.random() * punctuations.length)]);
@@ -307,6 +294,25 @@ function generatePartnerReply() {
     };
     return [replyObj];
 }
+
+
+
+// 调度下一次主动留言检查（递归定时）
+function scheduleBoardAutoSend() {
+    stopBoardAutoSend();
+    if (!settings.boardPartnerWriteEnabled) return;
+    
+    // 随机 4~6 小时（毫秒）
+    const minDelay = 4 * 60 * 60 * 1000;
+    const maxDelay = 6 * 60 * 60 * 1000;
+    const delay = minDelay + Math.random() * (maxDelay - minDelay);
+    
+    boardAutoSendTimer = setTimeout(async () => {
+        await tryBoardPartnerAutoWrite();
+        scheduleBoardAutoSend();  // 继续下一次调度
+    }, delay);
+}
+
 
 function initModals() {
     bindStaticEvents();
@@ -664,31 +670,17 @@ function exitEditMode(replyId) {
     if (section) { const actions = section.querySelector('.board-edit-actions'); if (actions) actions.remove(); }
 }
 
-
 async function deleteThread(id, type) {
     if (!confirm('确定删除这条留言记录吗？')) return;
+    if (type === 'me') boardData.myThreads = boardData.myThreads.filter(t => t.id !== id);
+    else boardData.partnerThreads = boardData.partnerThreads.filter(t => t.id !== id);
+    await saveData();
 
-    // 根据类型删除对应数组中的线程
-    if (type === 'me') {
-        boardData.myThreads = boardData.myThreads.filter(t => t.id !== id);
-    } else {
-        boardData.partnerThreads = boardData.partnerThreads.filter(t => t.id !== id);
-    }
-
-    await saveData();                     // 持久化存储
-
-    hideModal(document.getElementById('board-detail-modal'));   // 关闭详情弹窗
-    switchTab(type);                     // 刷新列表（停留在当前标签页）
-    showModal(document.getElementById('envelope-board-modal')); // 重新打开留言板列表
-
-    if (typeof showNotification === 'function') {
-        showNotification('已删除', 'success');
-    }
+    hideModal(document.getElementById('board-detail-modal'));
+    switchTab(type);
+    showModal(document.getElementById('envelope-board-modal'));
+    if (typeof showNotification === 'function') showNotification('已删除', 'success');
 }
-
-// 导出或挂载到全局（根据实际模块系统调整）
-window._bv2_deleteThread = deleteThread;
-
 
 window._bv2_toggleGlobalEdit = function() {
     const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
