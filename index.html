@@ -81,32 +81,39 @@
     <!-- 新增手机桌面视图 -->
     <div id="home-screen" class="home-screen">
         <div class="home-grid">
-            <!-- 上方 4x4 区域：直接放置 4列 × 4行 = 16 个单元格 -->
-            <!-- 第1行 -->
-            <div class="home-cell" style="grid-row: 1; grid-column: 1;">📅 2025.06.10</div>
-            <div class="home-cell" style="grid-row: 1; grid-column: 2;">☀️ 晴朗</div>
-            <div class="home-cell" style="grid-row: 1; grid-column: 3;">❤️ 开心</div>
-            <div class="home-cell" style="grid-row: 1; grid-column: 4;">✨</div>
-            <!-- 第2行 -->
-            <div class="home-cell" style="grid-row: 2; grid-column: 1;">👤 我</div>
-            <div class="home-cell" style="grid-row: 2; grid-column: 2;">👤 梦角</div>
-            <div class="home-cell" style="grid-row: 2; grid-column: 3;">✨ 在线</div>
-            <div class="home-cell" style="grid-row: 2; grid-column: 4;">💬</div>
-            <!-- 第3行 -->
-            <div class="home-cell" style="grid-row: 3; grid-column: span 4;">愿你今天也有好心情 ✨</div>
-            <!-- 第4行（留空，可放其他信息） -->
-            <div class="home-cell" style="grid-row: 4; grid-column: span 4;"></div>
-            <!-- 注意：上面已经定义了4行，下面再放功能图标会变成第5、6行，因此不需要额外的 .home-row 嵌套 -->
+            <!-- 上方 4x4 区域（第一行~第四行） -->
+            <div class="home-row" style="grid-row: span 4;">
+                <div class="home-cell">📅 2025.01.01</div>
+                <div class="home-cell">☀️ 晴朗</div>
+                <div class="home-cell">❤️ 开心</div>
+                <div class="home-cell">✨</div>
+                <div class="home-cell">👤 我</div>
+                <div class="home-cell">👤 梦角</div>
+                <div class="home-cell">✨ 在线</div>
+                <div class="home-cell">💬</div>
+                <div class="home-cell" colspan="4">愿你今天也有好心情 ✨</div>
+                <div class="home-cell"></div>
+                <div class="home-cell"></div>
+                <div class="home-cell"></div>
+                <div class="home-cell"></div>
+                <div class="home-cell"></div>
+                <div class="home-cell"></div>
+                <div class="home-cell"></div>
+            </div>
     
-            <!-- 下方 4x2 区域（功能图标）：共8个，每个占1x1，自动排成两行（5行和6行） -->
-            <div class="home-cell app-icon" data-app="chat" style="grid-row: 5; grid-column: 1;">💬 对话</div>
-            <div class="home-cell app-icon" data-app="envelope" style="grid-row: 5; grid-column: 2;">✉️ 信封</div>
-            <div class="home-cell app-icon" data-app="anniversary" style="grid-row: 5; grid-column: 3;">🎉 纪念日</div>
-            <div class="home-cell app-icon" data-app="mood" style="grid-row: 5; grid-column: 4;">🌤️ 心晴</div>
-            <div class="home-cell app-icon" data-app="music" style="grid-row: 6; grid-column: 1;">🎵 音乐</div>
-            <div class="home-cell app-icon" data-app="fortune" style="grid-row: 6; grid-column: 2;">🔮 运势</div>
-            <div class="home-cell app-icon" data-app="reply" style="grid-row: 6; grid-column: 3;">📝 字卡</div>
-            <div class="home-cell app-icon" data-app="data" style="grid-row: 6; grid-column: 4;">⚙️ 数据</div>
+            <!-- 下方 4x2 区域（第五行~第六行） -->
+            <div class="home-row" style="grid-row: span 2;">
+                <!-- 第5行 -->
+                <div class="home-cell app-icon" data-app="chat">💬 对话</div>
+                <div class="home-cell app-icon" data-app="envelope">✉️ 信封</div>
+                <div class="home-cell app-icon" data-app="anniversary">🎉 纪念日</div>
+                <div class="home-cell app-icon" data-app="mood">🌤️ 心晴</div>
+                <!-- 第6行 -->
+                <div class="home-cell app-icon" data-app="music">🎵 音乐</div>
+                <div class="home-cell app-icon" data-app="fortune">🔮 运势</div>
+                <div class="home-cell app-icon" data-app="reply">📝 字卡</div>
+                <div class="home-cell app-icon" data-app="data">⚙️ 数据</div>
+            </div>
         </div>
     </div>
 
