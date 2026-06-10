@@ -77,55 +77,9 @@
             <div id="loader-status-text" style="font-size:10px;opacity:0.5;letter-spacing:1px;color:var(--welcome-text-sub);margin-top:4px;font-family:monospace;"></div>
         </div>
     </div>
-    
-    <!-- 主屏幕桌面（开场动画后显示） -->
-    <div id="home-screen" style="display: none;">
-        <div class="home-content">
-            <div class="home-grid-container">
-                <div class="home-grid">
-                    <!-- 前16个格子留空（4行 × 4列） -->
-                    <div class="grid-placeholder"></div><div class="grid-placeholder"></div><div class="grid-placeholder"></div><div class="grid-placeholder"></div>
-                    <div class="grid-placeholder"></div><div class="grid-placeholder"></div><div class="grid-placeholder"></div><div class="grid-placeholder"></div>
-                    <div class="grid-placeholder"></div><div class="grid-placeholder"></div><div class="grid-placeholder"></div><div class="grid-placeholder"></div>
-                    <div class="grid-placeholder"></div><div class="grid-placeholder"></div><div class="grid-placeholder"></div><div class="grid-placeholder"></div>
-                    
-                    <!-- 下面2行放置功能图标（列×行=4×2），对话必须存在，其余推荐 -->
-                    <div class="app-icon" data-app="chat">
-                        <i class="fas fa-comment-dots"></i><span>对话</span>
-                    </div>
-                    <div class="app-icon" data-app="envelope">
-                        <i class="fas fa-envelope"></i><span>留言板</span>
-                    </div>
-                    <div class="app-icon" data-app="anniversary">
-                        <i class="fas fa-heart"></i><span>纪念日</span>
-                    </div>
-                    <div class="app-icon" data-app="mood">
-                        <i class="fas fa-book-open"></i><span>心晴手账</span>
-                    </div>
-                    <div class="app-icon" data-app="fortune">
-                        <i class="fas fa-star-and-crescent"></i><span>运势占卜</span>
-                    </div>
-                    <div class="app-icon" data-app="reply">
-                        <i class="fas fa-comment-dots"></i><span>字卡回复</span>
-                    </div>
-                    <div class="app-icon" data-app="music">
-                        <i class="fas fa-music"></i><span>播放器</span>
-                    </div>
-                    <div class="app-icon" data-app="settings">
-                        <i class="fas fa-cog"></i><span>设置</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-<!-- 将原有聊天界面用 chat-view 包裹 -->
-
     <button id="immersive-exit-btn" onclick="toggleImmersiveMode(false)" title="退出沉浸模式">
-    <i class="fas fa-expand"></i>
-    </button>
-    
-<div id="chat-view" style="display: flex; flex-direction: column; height: 100%;">    
+<i class="fas fa-expand"></i>
+</button>
     <div class="header">
         <div class="header-motto"></div>
         <div class="header-inner">
@@ -143,6 +97,7 @@
                 </div>
             </div>
             <div class="header-actions">
+                <button id="home-btn" class="action-btn" title="主屏幕"><i class="fas fa-home"></i></button>
                 <button id="session-manager-btn" class="action-btn" title="会话管理"><i class="fas fa-comments"></i></button>
                 <button id="group-chat-btn" class="action-btn" title="群聊设置"><i class="fas fa-users"></i></button>
                 <button id="daily-greeting-btn" class="action-btn" title="今日公告" onclick="reopenDailyGreeting()"><i class="fas fa-newspaper"></i></button>
@@ -167,6 +122,52 @@
             </div>
         </div>
     </div>
+
+<!-- 主屏幕 Launcher -->
+<div class="launcher-screen" id="launcher-screen" style="display: none;">
+    <div class="launcher-grid">
+        <!-- 顶部 4 行空白区（共 16 格） -->
+        <div class="launcher-blank-area"></div>
+
+        <!-- 底部 2 行功能区（8 个格子） -->
+        <div class="launcher-func-row">
+            <div class="func-item" data-func="chat">
+                <i class="fas fa-comment-dots"></i>
+                <span>对 话</span>
+            </div>
+            <div class="func-item" data-func="reply">
+                <i class="fas fa-comment"></i>
+                <span>字 卡</span>
+            </div>
+            <div class="func-item" data-func="anniversary">
+                <i class="fas fa-heart"></i>
+                <span>纪 念</span>
+            </div>
+            <div class="func-item" data-func="envelope">
+                <i class="fas fa-envelope"></i>
+                <span>留 言</span>
+            </div>
+        </div>
+        <div class="launcher-func-row">
+            <div class="func-item" data-func="mood">
+                <i class="fas fa-book-open"></i>
+                <span>手 账</span>
+            </div>
+            <div class="func-item" data-func="fortune">
+                <i class="fas fa-star-and-crescent"></i>
+                <span>运 势</span>
+            </div>
+            <div class="func-item" data-func="music">
+                <i class="fas fa-music"></i>
+                <span>播 放</span>
+            </div>
+            <div class="func-item" data-func="poke">
+                <i class="fas fa-hand-peace"></i>
+                <span>拍 拍</span>
+            </div>
+        </div>
+    </div>
+</div>
 
     <div class="main-chat-area">
 
@@ -197,67 +198,6 @@
             </div>
         </div>
     </div>
-    
-    <div class="input-area-wrapper">
-        <div class="batch-preview" id="batch-preview"></div>
-        <div id="reply-preview-container"></div>
-        <div id="collapsed-extras-panel" style="display:none;">
-            <div class="collapsed-extras-inner" style="padding:12px; background:var(--secondary-bg); border-top:1px solid var(--border-color);">
-                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:12px;">
-                    <button class="collapsed-extra-btn" id="attachment-btn-extra" title="发送图片" onclick="document.getElementById('image-input').click()">
-                        <i class="fas fa-image"></i>
-                    </button>
-                    <button class="collapsed-extra-btn" id="combo-btn-extra" title="表情拍一拍">
-                        <i class="fas fa-laugh-beam"></i>
-                    </button>
-                    <button class="collapsed-extra-btn" title="字卡回复" onclick="(function(){document.getElementById('collapsed-extras-panel').style.display='none';document.getElementById('collapse-expand-btn').classList.remove('open');showModal(document.getElementById('custom-replies-modal'));})();">
-                        <i class="fas fa-comment-dots"></i>
-                    </button>
-                    <button class="collapsed-extra-btn" title="塔罗占卜" onclick="(function(){document.getElementById('collapsed-extras-panel').style.display='none';document.getElementById('collapse-expand-btn').classList.remove('open');generateFortune();})();">
-                        <i class="fas fa-star-and-crescent"></i>
-                    </button>
-                    <button class="collapsed-extra-btn" id="collapsed-call-btn" title="视频通话" onclick="(function(){document.getElementById('collapsed-extras-panel').style.display='none';document.getElementById('collapse-expand-btn').classList.remove('open');if(window.callFeature&&typeof window.callFeature.startCall==='function')window.callFeature.startCall(false);})();">
-                        <i class="fas fa-video"></i>
-                    </button>
-                    <button class="collapsed-extra-btn" title="退出收纳" onclick="window.exitCollapseMode && window.exitCollapseMode()" style="color:#ff5050; background:rgba(255,80,80,0.1);">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="input-area">
-            <button id="collapse-expand-btn" title="展开更多" style="display:none;width:36px;height:36px;border:none;border-radius:50%;cursor:pointer;background:rgba(var(--accent-color-rgb),0.12);color:var(--accent-color);font-size:14px;transition:all 0.25s;flex-shrink:0;align-items:center;justify-content:center;" onclick="window.toggleCollapsedExtras && window.toggleCollapsedExtras()"><i class="fas fa-chevron-up"></i></button>
-            <button class="attachment-btn input-btn collapse-hideable" id="attachment-btn" title="发送图片"><i class="fas fa-image"></i></button>
-            
-            <button class="combo-btn input-btn collapse-hideable" id="combo-btn" title="表情 & 拍一拍">
-                <i class="fas fa-laugh-beam"></i>
-            </button>
-        
-            <textarea class="message-input" id="message-input" placeholder="" rows="1"></textarea>
-            
-            <div class="input-buttons">
-            <button class="continue-btn input-btn" id="continue-btn" title="让对方继续说"><i class="fas fa-ellipsis-h"></i></button>
-                <button class="send-btn input-btn" id="send-btn" title="发送消息"><i class="fas fa-paper-plane"></i></button>
-                
-                <div class="sticker-picker-popover" id="user-sticker-picker">
-                    <div class="combo-tabs-header">
-                        <button class="combo-tab-btn active" data-tab="my-sticker"><i class="fas fa-user" style="font-size:10px;"></i> 我</button>
-                        <button class="combo-tab-btn" data-tab="partner-sticker"><i class="fas fa-heart" style="font-size:10px;"></i> 对方</button>
-                        <button class="combo-tab-btn" data-tab="poke">拍一拍</button>
-                        <div style="margin-left:auto;display:flex;align-items:center;gap:4px;">
-                            <button id="sticker-add-btn" onclick="document.getElementById('my-sticker-quick-upload').click()" title="添加我的表情" style="background:var(--accent-color);border:none;cursor:pointer;padding:4px 10px;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;border-radius:8px;transition:all 0.2s;box-shadow:0 2px 8px rgba(var(--accent-color-rgb),0.35);" onmouseover="this.style.opacity='0.85';this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='1';this.style.transform='scale(1)'"><i class="fas fa-plus"></i> 添加</button>
-                            <button onclick="window.openMyStickerSettings()" title="管理表情库" style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--text-secondary);font-size:12px;display:flex;align-items:center;gap:3px;border-radius:6px;transition:all 0.2s;" onmouseover="this.style.background='rgba(var(--accent-color-rgb),0.12)';this.style.color='var(--accent-color)'" onmouseout="this.style.background='none';this.style.color='var(--text-secondary)'"><i class="fas fa-cog"></i></button>
-                        </div>
-                    </div>
-                    <div class="combo-content-area" id="combo-content-area">
-                    </div>
-                </div>
-            </div>
-            <input type="file" id="image-input" class="file-input" accept="image/*">
-            <input type="file" id="my-sticker-quick-upload" class="file-input" accept="image/*" multiple>
-        </div>
-    </div>
-</div>
 
     <div id="ti-settings-modal">
         <div id="ti-settings-panel">
@@ -313,6 +253,65 @@
                 </div>
             </div>
         </div>
+    </div>
+    <div class="input-area-wrapper">
+        <div class="batch-preview" id="batch-preview"></div>
+        <div id="reply-preview-container"></div>
+        <div id="collapsed-extras-panel" style="display:none;">
+            <div class="collapsed-extras-inner" style="padding:12px; background:var(--secondary-bg); border-top:1px solid var(--border-color);">
+                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:12px;">
+                    <button class="collapsed-extra-btn" id="attachment-btn-extra" title="发送图片" onclick="document.getElementById('image-input').click()">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <button class="collapsed-extra-btn" id="combo-btn-extra" title="表情拍一拍">
+                        <i class="fas fa-laugh-beam"></i>
+                    </button>
+                    <button class="collapsed-extra-btn" title="字卡回复" onclick="(function(){document.getElementById('collapsed-extras-panel').style.display='none';document.getElementById('collapse-expand-btn').classList.remove('open');showModal(document.getElementById('custom-replies-modal'));})();">
+                        <i class="fas fa-comment-dots"></i>
+                    </button>
+                    <button class="collapsed-extra-btn" title="塔罗占卜" onclick="(function(){document.getElementById('collapsed-extras-panel').style.display='none';document.getElementById('collapse-expand-btn').classList.remove('open');generateFortune();})();">
+                        <i class="fas fa-star-and-crescent"></i>
+                    </button>
+                    <button class="collapsed-extra-btn" id="collapsed-call-btn" title="视频通话" onclick="(function(){document.getElementById('collapsed-extras-panel').style.display='none';document.getElementById('collapse-expand-btn').classList.remove('open');if(window.callFeature&&typeof window.callFeature.startCall==='function')window.callFeature.startCall(false);})();">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="collapsed-extra-btn" title="退出收纳" onclick="window.exitCollapseMode && window.exitCollapseMode()" style="color:#ff5050; background:rgba(255,80,80,0.1);">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="input-area">
+    <button id="collapse-expand-btn" title="展开更多" style="display:none;width:36px;height:36px;border:none;border-radius:50%;cursor:pointer;background:rgba(var(--accent-color-rgb),0.12);color:var(--accent-color);font-size:14px;transition:all 0.25s;flex-shrink:0;align-items:center;justify-content:center;" onclick="window.toggleCollapsedExtras && window.toggleCollapsedExtras()"><i class="fas fa-chevron-up"></i></button>
+    <button class="attachment-btn input-btn collapse-hideable" id="attachment-btn" title="发送图片"><i class="fas fa-image"></i></button>
+    
+    <button class="combo-btn input-btn collapse-hideable" id="combo-btn" title="表情 & 拍一拍">
+        <i class="fas fa-laugh-beam"></i>
+    </button>
+
+    <textarea class="message-input" id="message-input" placeholder="" rows="1"></textarea>
+    
+    <div class="input-buttons">
+    <button class="continue-btn input-btn" id="continue-btn" title="让对方继续说"><i class="fas fa-ellipsis-h"></i></button>
+        <button class="send-btn input-btn" id="send-btn" title="发送消息"><i class="fas fa-paper-plane"></i></button>
+        
+        <div class="sticker-picker-popover" id="user-sticker-picker">
+            <div class="combo-tabs-header">
+                <button class="combo-tab-btn active" data-tab="my-sticker"><i class="fas fa-user" style="font-size:10px;"></i> 我</button>
+                <button class="combo-tab-btn" data-tab="partner-sticker"><i class="fas fa-heart" style="font-size:10px;"></i> 对方</button>
+                <button class="combo-tab-btn" data-tab="poke">拍一拍</button>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:4px;">
+                    <button id="sticker-add-btn" onclick="document.getElementById('my-sticker-quick-upload').click()" title="添加我的表情" style="background:var(--accent-color);border:none;cursor:pointer;padding:4px 10px;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;border-radius:8px;transition:all 0.2s;box-shadow:0 2px 8px rgba(var(--accent-color-rgb),0.35);" onmouseover="this.style.opacity='0.85';this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='1';this.style.transform='scale(1)'"><i class="fas fa-plus"></i> 添加</button>
+                    <button onclick="window.openMyStickerSettings()" title="管理表情库" style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--text-secondary);font-size:12px;display:flex;align-items:center;gap:3px;border-radius:6px;transition:all 0.2s;" onmouseover="this.style.background='rgba(var(--accent-color-rgb),0.12)';this.style.color='var(--accent-color)'" onmouseout="this.style.background='none';this.style.color='var(--text-secondary)'"><i class="fas fa-cog"></i></button>
+                </div>
+            </div>
+            <div class="combo-content-area" id="combo-content-area">
+            </div>
+        </div>
+    </div>
+    <input type="file" id="image-input" class="file-input" accept="image/*">
+    <input type="file" id="my-sticker-quick-upload" class="file-input" accept="image/*" multiple>
+</div>
     </div>
 
 
