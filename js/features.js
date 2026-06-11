@@ -546,7 +546,7 @@ function showPokeTab() {
         showModal(DOMElements.pokeModal.modal, DOMElements.pokeModal.input);
     };
     area.appendChild(customBtn);
-}       
+}
         function initCoreListeners() {
 
 
@@ -821,135 +821,134 @@ function _getDailyGreetingData() {
     else if (hour >= 18 && hour < 22) { timeLabel = '傍晚好'; timeEmoji = '🌇'; }
     else if (hour >= 22 || hour < 6) { timeLabel = '晚上好'; timeEmoji = '🌙'; }
 
-    var festivals = [
-        { m:1, d:1, name:'元旦', emoji:'🎆', label:'NEW YEAR', note:'新年快乐！愿新的一年里，你们的爱情越来越甜蜜，每一天都充满幸福与惊喜～' },
-        { m:1, d:5, name:'小寒', emoji:'❄️', label:'MINOR COLD', note:'小寒至，春不远。有你在身边，心里总是暖暖的。' },
-        { m:1, d:20, name:'大寒', emoji:'🧊', label:'MAJOR COLD', note:'大寒快乐，记得添衣保暖。你的拥抱就是最暖的炉火。' },
-    
-        { m:2, d:4, name:'立春', emoji:'🌱', label:'START OF SPRING', note:'立春快乐！春天来了，我们的爱也像新芽一样蓬勃生长。' },
-        { m:2, d:14, name:'情人节', emoji:'💝', label:'VALENTINES DAY', note:'情人节快乐，亲爱的！你是我最美好的礼物，爱你哦～' },
-        { m:2, d:16, name:'除夕', emoji:'🧧', label:'CHINESE NEW YEAR EVE', note:'除夕快乐！辞旧迎新，愿你们携手跨入幸福的新一年，万事如意！' },
-        { m:2, d:17, name:'春节', emoji:'🎊', label:'SPRING FESTIVAL', note:'新年快乐！新的一年，愿你们相爱如初，甜蜜长久。' },
-        { m:2, d:18, name:'雨水', emoji:'☔', label:'RAIN WATER', note:'雨水节气，愿幸福像春雨一样滋润你的每一天。' },
-    
-        { m:3, d:3, name:'元宵节', emoji:'🏮', label:'LANTERN FESTIVAL', note:'元宵节快乐！花灯映月，你是我心里最亮的那盏灯。' },
-        { m:3, d:5, name:'惊蛰', emoji:'⚡', label:'AWAKENING OF INSECTS', note:'惊蛰春雷响，万物复苏，你是我最美的春天。' },
-        { m:3, d:8, name:'妇女节', emoji:'🌹', label:'WOMENS DAY', note:'今天是属于你的节日，愿你永远被温柔相待，被爱守护。' },
-        { m:3, d:12, name:'植树节', emoji:'🌳', label:'TREE PLANTING DAY', note:'今天种下一棵树，也在心里种下对你不变的爱。' },
-        { m:3, d:20, name:'春分', emoji:'🌸', label:'SPRING EQUINOX', note:'春分昼夜平分，我的爱对你从不偏心——永远满分。' },
-    
-        { m:4, d:1, name:'愚人节', emoji:'🤡', label:'APRIL FOOLS', note:'今天可以骗你说“我不爱你了”，但我的心骗不了自己～' },
-        { m:4, d:5, name:'清明节', emoji:'🌧', label:'QINGMING FESTIVAL', note:'慎终追远，珍惜眼前。有你在，每一天都格外温暖。' },
-        { m:4, d:20, name:'谷雨', emoji:'🌾', label:'GRAIN RAIN', note:'谷雨生百谷，你是我生命里最饱满的那颗。' },
-    
-        { m:5, d:1, name:'劳动节', emoji:'🛠️', label:'LABOR DAY', note:'劳动最光荣，但我更光荣的是能拥有你。' },
-        { m:5, d:4, name:'青年节', emoji:'✨', label:'YOUTH DAY', note:'青春正好，与你共度。愿我们永远年轻，永远热泪盈眶。' },
-        { m:5, d:5, name:'立夏', emoji:'☀️', label:'START OF SUMMER', note:'立夏快乐！愿我们的爱像夏天一样热情。' },
-        { m:5, d:20, name:'520', emoji:'💕', label:'I LOVE YOU', note:'520，我爱你！感谢你出现在我的生命里，你是我最好的选择。' },
-        { m:5, d:21, name:'小满', emoji:'🌾', label:'GRAIN BUDS', note:'小满未满，万物可期。我对你的爱永远在增长的季节。' },
-    
-        { m:6, d:1, name:'儿童节', emoji:'🎈', label:'CHILDRENS DAY', note:'愿你永远保持那颗童心，和我一起做个快乐的大小孩。' },
-        { m:6, d:5, name:'芒种', emoji:'🌽', label:'GRAIN IN EAR', note:'芒种忙种，有你在的日子，每天都是收获。' },
-        { m:6, d:19, name:'端午节', emoji:'🛶', label:'DRAGON BOAT FESTIVAL', note:'粽子软糯，你更甜～端午安康！' },
-        { m:6, d:21, name:'夏至', emoji:'🍉', label:'SUMMER SOLSTICE', note:'夏至最长的一天，我的思念比它还长。' },
-    
-        { m:7, d:6, name:'小暑', emoji:'🌡️', label:'MINOR HEAT', note:'小暑入伏天，你的怀抱是最清凉的风。' },
-        { m:7, d:23, name:'大暑', emoji:'🔥', label:'MAJOR HEAT', note:'大暑炎炎，你是我心里的冰镇西瓜。' },
-    
-        { m:8, d:7, name:'立秋', emoji:'🍁', label:'START OF AUTUMN', note:'立秋快乐，愿与你共赏每一片秋叶。' },
-        { m:8, d:19, name:'七夕节', emoji:'🌌', label:'QIXI FESTIVAL', note:'七夕快乐！牛郎织女一年只见一次，而我们每天都在一起，真幸运。' },
-        { m:8, d:23, name:'处暑', emoji:'🌬️', label:'END OF HEAT', note:'处暑出暑，炎热渐消，爱意不减。' },
-    
-        { m:9, d:7, name:'白露', emoji:'💧', label:'WHITE DEW', note:'白露为霜，所谓伊人，在我身旁。' },
-        { m:9, d:10, name:'教师节', emoji:'📚', label:'TEACHERS DAY', note:'你是我人生中最特别的老师，教会了我什么是爱。' },
-        { m:9, d:23, name:'秋分', emoji:'🍂', label:'AUTUMN EQUINOX', note:'秋分昼夜均，你是我心里的天平。' },
-        { m:9, d:25, name:'中秋节', emoji:'🌕', label:'MID AUTUMN FESTIVAL', note:'月圆人团圆，有你才叫团圆。中秋快乐！' },
-    
-        { m:10, d:1, name:'国庆节', emoji:'🎑', label:'NATIONAL DAY', note:'国庆快乐！和你在一起的每一天都像节日，爱你。' },
-        { m:10, d:8, name:'寒露', emoji:'🍃', label:'COLD DEW', note:'寒露凝霜，有你在心里总是暖的。' },
-        { m:10, d:23, name:'霜降', emoji:'❄️', label:'FROST DESCENT', note:'霜降叶落，我的爱却常青。' },
-        { m:10, d:31, name:'万圣夜', emoji:'🎃', label:'HALLOWEEN', note:'不给糖就捣蛋，但你给了我全世界最甜的糖——你的爱。' },
-    
-        { m:11, d:7, name:'立冬', emoji:'🧣', label:'START OF WINTER', note:'立冬快乐，你的拥抱是冬天里最暖的阳光。' },
-        { m:11, d:11, name:'光棍节', emoji:'👫', label:'SINGLES DAY', note:'幸好我们不用过这个节，因为我有你。' },
-        { m:11, d:22, name:'小雪', emoji:'⛄', label:'MINOR SNOW', note:'小雪飘飘，你是我心里最暖的那团火。' },
-        { m:11, d:26, name:'感恩节', emoji:'🙏', label:'THANKSGIVING', note:'感谢生命中有你，每一天都是恩赐。' },
-    
-        { m:12, d:7, name:'大雪', emoji:'☃️', label:'MAJOR SNOW', note:'大雪封门，封不住我对你的想念。' },
-        { m:12, d:22, name:'冬至', emoji:'🥟', label:'WINTER SOLSTICE', note:'冬至快乐，记得吃饺子，但记得想我。' },
-        { m:12, d:24, name:'平安夜', emoji:'🎄', label:'CHRISTMAS EVE', note:'平安夜快乐！愿你平平安安，我们的爱情也岁岁常安。' },
-        { m:12, d:25, name:'圣诞节', emoji:'🎅', label:'MERRY CHRISTMAS', note:'圣诞快乐！你就是我收到的最好的礼物，永远爱你。' },
-        { m:12, d:31, name:'跨年夜', emoji:'🎆', label:'NEW YEAR EVE', note:'再见这一年，你是我最好的收获。新的一年，继续爱你。' }
-    ];
-    var festival = null;
-        for (var fi = 0; fi < festivals.length; fi++) {
-            if (festivals[fi].m === month && festivals[fi].d === day) { festival = festivals[fi]; break; }
-        }
+var festivals = [
+    { m:1, d:1, name:'元旦', emoji:'🎆', label:'NEW YEAR', note:'新年快乐！愿新的一年里，你们的爱情越来越甜蜜，每一天都充满幸福与惊喜～' },
+    { m:1, d:5, name:'小寒', emoji:'❄️', label:'MINOR COLD', note:'小寒至，春不远。有你在身边，心里总是暖暖的。' },
+    { m:1, d:20, name:'大寒', emoji:'🧊', label:'MAJOR COLD', note:'大寒快乐，记得添衣保暖。你的拥抱就是最暖的炉火。' },
 
-    var weathers = [
-        '晴空万里',
-        '多云转晴',
-        '阴天有云',
-        '细雨蒙蒙',
-        '春风和煦',
-        '微微寒冷',
-        '清风徐徐',
-        '雨后初晴',
-        '夜色宁静',
-        '月光皎洁',
-        '晴间多云',
-        '大雨滂沱',
-        '雷雨交加',
-        '小雪纷飞',
-        '微风拂面',
-        '多云天气',
-        '雾气朦胧',
-        '星光璀璨',
-        '朝霞满天',
-        '夕阳西下',
-        '海风轻拂',
-        '山间清爽',
-        '秋叶飘落',
-        '花香四溢',
-        '绿意盎然',
-        '雨后清新',
-        '雪花飞舞',
-        '阳光明媚'
-    ];
+    { m:2, d:4, name:'立春', emoji:'🌱', label:'START OF SPRING', note:'立春快乐！春天来了，我们的爱也像新芽一样蓬勃生长。' },
+    { m:2, d:14, name:'情人节', emoji:'💝', label:'VALENTINES DAY', note:'情人节快乐，亲爱的！你是我最美好的礼物，爱你哦～' },
+    { m:2, d:16, name:'除夕', emoji:'🧧', label:'CHINESE NEW YEAR EVE', note:'除夕快乐！辞旧迎新，愿你们携手跨入幸福的新一年，万事如意！' },
+    { m:2, d:17, name:'春节', emoji:'🎊', label:'SPRING FESTIVAL', note:'新年快乐！新的一年，愿你们相爱如初，甜蜜长久。' },
+    { m:2, d:18, name:'雨水', emoji:'☔', label:'RAIN WATER', note:'雨水节气，愿幸福像春雨一样滋润你的每一天。' },
 
-    var statusPool = [
-        '正在想你 💭',
-        '忙碌中，但心里有你',
-        '好好的，别担心 ✨',
-        '期待见到你',
-        '有点想你了',
-        '在努力变更好',
-        '今天挺安静的',
-        '心情不错哦 🌱',
-        '一切都好，你呢？',
-        '看月亮，想到你 🌙',
-        '今天有点想你',
-        '刚刚看到一朵云像你 ☁️',
-        '工作再忙也会想你的',
-        '今天你开心吗？',
-        '梦里见 💤',
-        '好好吃饭了吗？',
-        '记得多喝水哦 💧',
-        '今天有没有照顾好自己',
-        '想你，但不说 🤫',
-        '全世界你最可爱',
-        '今天天气不错，适合想你',
-        '吃饱喝足，开始想你',
-        '今天也想牵你的手',
-        '你有没有想我',
-        '今天比昨天更想你',
-        '看到好吃的想分享给你 🍜',
-        '听到一首歌想到你 🎵',
-        '今天也要加油鸭',
-        '晚安，我的全世界 🌙',
-        '早安，又是想你的一天'
-    ];
-    
+    { m:3, d:3, name:'元宵节', emoji:'🏮', label:'LANTERN FESTIVAL', note:'元宵节快乐！花灯映月，你是我心里最亮的那盏灯。' },
+    { m:3, d:5, name:'惊蛰', emoji:'⚡', label:'AWAKENING OF INSECTS', note:'惊蛰春雷响，万物复苏，你是我最美的春天。' },
+    { m:3, d:8, name:'妇女节', emoji:'🌹', label:'WOMENS DAY', note:'今天是属于你的节日，愿你永远被温柔相待，被爱守护。' },
+    { m:3, d:12, name:'植树节', emoji:'🌳', label:'TREE PLANTING DAY', note:'今天种下一棵树，也在心里种下对你不变的爱。' },
+    { m:3, d:20, name:'春分', emoji:'🌸', label:'SPRING EQUINOX', note:'春分昼夜平分，我的爱对你从不偏心——永远满分。' },
+
+    { m:4, d:1, name:'愚人节', emoji:'🤡', label:'APRIL FOOLS', note:'今天可以骗你说“我不爱你了”，但我的心骗不了自己～' },
+    { m:4, d:5, name:'清明节', emoji:'🌧', label:'QINGMING FESTIVAL', note:'慎终追远，珍惜眼前。有你在，每一天都格外温暖。' },
+    { m:4, d:20, name:'谷雨', emoji:'🌾', label:'GRAIN RAIN', note:'谷雨生百谷，你是我生命里最饱满的那颗。' },
+
+    { m:5, d:1, name:'劳动节', emoji:'🛠️', label:'LABOR DAY', note:'劳动最光荣，但我更光荣的是能拥有你。' },
+    { m:5, d:4, name:'青年节', emoji:'✨', label:'YOUTH DAY', note:'青春正好，与你共度。愿我们永远年轻，永远热泪盈眶。' },
+    { m:5, d:5, name:'立夏', emoji:'☀️', label:'START OF SUMMER', note:'立夏快乐！愿我们的爱像夏天一样热情。' },
+    { m:5, d:20, name:'520', emoji:'💕', label:'I LOVE YOU', note:'520，我爱你！感谢你出现在我的生命里，你是我最好的选择。' },
+    { m:5, d:21, name:'小满', emoji:'🌾', label:'GRAIN BUDS', note:'小满未满，万物可期。我对你的爱永远在增长的季节。' },
+
+    { m:6, d:1, name:'儿童节', emoji:'🎈', label:'CHILDRENS DAY', note:'愿你永远保持那颗童心，和我一起做个快乐的大小孩。' },
+    { m:6, d:5, name:'芒种', emoji:'🌽', label:'GRAIN IN EAR', note:'芒种忙种，有你在的日子，每天都是收获。' },
+    { m:6, d:19, name:'端午节', emoji:'🛶', label:'DRAGON BOAT FESTIVAL', note:'粽子软糯，你更甜～端午安康！' },
+    { m:6, d:21, name:'夏至', emoji:'🍉', label:'SUMMER SOLSTICE', note:'夏至最长的一天，我的思念比它还长。' },
+
+    { m:7, d:6, name:'小暑', emoji:'🌡️', label:'MINOR HEAT', note:'小暑入伏天，你的怀抱是最清凉的风。' },
+    { m:7, d:23, name:'大暑', emoji:'🔥', label:'MAJOR HEAT', note:'大暑炎炎，你是我心里的冰镇西瓜。' },
+
+    { m:8, d:7, name:'立秋', emoji:'🍁', label:'START OF AUTUMN', note:'立秋快乐，愿与你共赏每一片秋叶。' },
+    { m:8, d:19, name:'七夕节', emoji:'🌌', label:'QIXI FESTIVAL', note:'七夕快乐！牛郎织女一年只见一次，而我们每天都在一起，真幸运。' },
+    { m:8, d:23, name:'处暑', emoji:'🌬️', label:'END OF HEAT', note:'处暑出暑，炎热渐消，爱意不减。' },
+
+    { m:9, d:7, name:'白露', emoji:'💧', label:'WHITE DEW', note:'白露为霜，所谓伊人，在我身旁。' },
+    { m:9, d:10, name:'教师节', emoji:'📚', label:'TEACHERS DAY', note:'你是我人生中最特别的老师，教会了我什么是爱。' },
+    { m:9, d:23, name:'秋分', emoji:'🍂', label:'AUTUMN EQUINOX', note:'秋分昼夜均，你是我心里的天平。' },
+    { m:9, d:25, name:'中秋节', emoji:'🌕', label:'MID AUTUMN FESTIVAL', note:'月圆人团圆，有你才叫团圆。中秋快乐！' },
+
+    { m:10, d:1, name:'国庆节', emoji:'🎑', label:'NATIONAL DAY', note:'国庆快乐！和你在一起的每一天都像节日，爱你。' },
+    { m:10, d:8, name:'寒露', emoji:'🍃', label:'COLD DEW', note:'寒露凝霜，有你在心里总是暖的。' },
+    { m:10, d:23, name:'霜降', emoji:'❄️', label:'FROST DESCENT', note:'霜降叶落，我的爱却常青。' },
+    { m:10, d:31, name:'万圣夜', emoji:'🎃', label:'HALLOWEEN', note:'不给糖就捣蛋，但你给了我全世界最甜的糖——你的爱。' },
+
+    { m:11, d:7, name:'立冬', emoji:'🧣', label:'START OF WINTER', note:'立冬快乐，你的拥抱是冬天里最暖的阳光。' },
+    { m:11, d:11, name:'光棍节', emoji:'👫', label:'SINGLES DAY', note:'幸好我们不用过这个节，因为我有你。' },
+    { m:11, d:22, name:'小雪', emoji:'⛄', label:'MINOR SNOW', note:'小雪飘飘，你是我心里最暖的那团火。' },
+    { m:11, d:26, name:'感恩节', emoji:'🙏', label:'THANKSGIVING', note:'感谢生命中有你，每一天都是恩赐。' },
+
+    { m:12, d:7, name:'大雪', emoji:'☃️', label:'MAJOR SNOW', note:'大雪封门，封不住我对你的想念。' },
+    { m:12, d:22, name:'冬至', emoji:'🥟', label:'WINTER SOLSTICE', note:'冬至快乐，记得吃饺子，但记得想我。' },
+    { m:12, d:24, name:'平安夜', emoji:'🎄', label:'CHRISTMAS EVE', note:'平安夜快乐！愿你平平安安，我们的爱情也岁岁常安。' },
+    { m:12, d:25, name:'圣诞节', emoji:'🎅', label:'MERRY CHRISTMAS', note:'圣诞快乐！你就是我收到的最好的礼物，永远爱你。' },
+    { m:12, d:31, name:'跨年夜', emoji:'🎆', label:'NEW YEAR EVE', note:'再见这一年，你是我最好的收获。新的一年，继续爱你。' }
+];
+var festival = null;
+    for (var fi = 0; fi < festivals.length; fi++) {
+        if (festivals[fi].m === month && festivals[fi].d === day) { festival = festivals[fi]; break; }
+    }
+
+  var weathers = [
+    '晴空万里',
+    '多云转晴',
+    '阴天有云',
+    '细雨蒙蒙',
+    '春风和煦',
+    '微微寒冷',
+    '清风徐徐',
+    '雨后初晴',
+    '夜色宁静',
+    '月光皎洁',
+    '晴间多云',
+    '大雨滂沱',
+    '雷雨交加',
+    '小雪纷飞',
+    '微风拂面',
+    '多云天气',
+    '雾气朦胧',
+    '星光璀璨',
+    '朝霞满天',
+    '夕阳西下',
+    '海风轻拂',
+    '山间清爽',
+    '秋叶飘落',
+    '花香四溢',
+    '绿意盎然',
+    '雨后清新',
+    '雪花飞舞',
+    '阳光明媚'
+];
+
+var statusPool = [
+    '正在想你 💭',
+    '忙碌中，但心里有你',
+    '好好的，别担心 ✨',
+    '期待见到你',
+    '有点想你了',
+    '在努力变更好',
+    '今天挺安静的',
+    '心情不错哦 🌱',
+    '一切都好，你呢？',
+    '看月亮，想到你 🌙',
+    '今天有点想你',
+    '刚刚看到一朵云像你 ☁️',
+    '工作再忙也会想你的',
+    '今天你开心吗？',
+    '梦里见 💤',
+    '好好吃饭了吗？',
+    '记得多喝水哦 💧',
+    '今天有没有照顾好自己',
+    '想你，但不说 🤫',
+    '全世界你最可爱',
+    '今天天气不错，适合想你',
+    '吃饱喝足，开始想你',
+    '今天也想牵你的手',
+    '你有没有想我',
+    '今天比昨天更想你',
+    '看到好吃的想分享给你 🍜',
+    '听到一首歌想到你 🎵',
+    '今天也要加油鸭',
+    '晚安，我的全世界 🌙',
+    '早安，又是想你的一天'
+];
     var todayKey = String(now.getFullYear()) + String(month) + String(day);
     // 为每个安装生成唯一 salt，确保每位用户每天的天气/状态各不相同
     var userSalt = localStorage.getItem('_dgUserSalt');
@@ -1188,7 +1187,6 @@ window.toggleImmersiveMode = function(force) {
     
     btn.removeAttribute('onclick');
 })();
-
 (function() {
     try {
         if (localStorage.getItem('immersive_mode') === '1') {
@@ -1218,12 +1216,10 @@ window.openDailyGreetingEditor = function() {
     modal.style.display = 'flex';
     modal.classList.add('active');
 };
-
 window.closeDailyGreetingEditor = function() {
     var modal = document.getElementById('dg-editor-modal');
     if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); }
 };
-
 window.saveDailyGreetingCustom = function() {
     var customData = {};
     try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e) {}
@@ -1244,7 +1240,6 @@ window.saveDailyGreetingCustom = function() {
     if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
     if (typeof showNotification === 'function') showNotification('公告已保存 ✦', 'success');
 };
-
 window.clearDgDecoImg = function() {
     var customData = {};
     try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e) {}
@@ -1255,7 +1250,6 @@ window.clearDgDecoImg = function() {
     var wrap = document.getElementById('dg-deco-img-wrap');
     if (wrap) wrap.style.display = 'none';
 };
-
 window.clearDgHeaderBg = function() {
     localStorage.removeItem('dg_header_bg');
     var bgEl = document.getElementById('dg-header-band-bg');
@@ -1557,11 +1551,30 @@ window.updateDynamicNames = function() {
         });
     } catch(e) { console.warn('updateDynamicNames error:', e); }
 };
-
 function setDgLabel(id, txt) {
     var el = document.getElementById(id);
     if (el && el.tagName !== 'INPUT') el.textContent = txt;
 }
+
+window.closeDailyGreeting = function() {
+    try {
+        var modal = document.getElementById('daily-greeting-modal');
+        if (modal) {
+            // 强制隐藏模态框
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            modal.style.opacity = '';
+            // 清除可能残留的过渡动画类
+            modal.style.transition = '';
+        }
+        // 注意：不删除 localStorage 中的 'dailyGreetingShown' 记录，
+        // 否则刷新后还会再弹（您之前要求“每次刷新都弹出”，所以这行要保留）
+        // 如果不想每次刷新都弹，就取消下面这行注释；如果每次都要弹，就保持注释状态
+        // localStorage.setItem('dailyGreetingShown', new Date().toDateString());
+    } catch(e) {
+        console.warn('关闭公告失败:', e);
+    }
+};
 
 window.reopenDailyGreeting = function() {
     try {
@@ -1582,20 +1595,6 @@ window.reopenDailyGreeting = function() {
     }
 };
 
-window.reopenDailyGreeting = function() {
-    try {
-        if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
-        var modal = document.getElementById('daily-greeting-modal');
-        if (modal) {
-            modal.style.opacity = '0';
-            modal.classList.remove('hidden');
-            requestAnimationFrame(function() {
-                modal.style.transition = 'opacity 0.3s ease';
-                modal.style.opacity = '1';
-            });
-        }
-    } catch(e) {}
-};
 
 window.tryShowDailyGreeting = function() {
     try {
