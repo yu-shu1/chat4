@@ -61,11 +61,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setInterval(checkStatusChange, 60000);
 
+
         updateLoader('连接成功，欢迎回来。', '100%');
-        setTimeout(() => {
-            hideWelcomeScreen();
-            showHomeScreen();    // 显示主屏，而非聊天界面
-        }, 3500);
+        setTimeout(hideWelcomeScreen, 3500);
 
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
