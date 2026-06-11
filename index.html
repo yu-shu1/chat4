@@ -97,7 +97,7 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button id="home-btn" class="action-btn" title="主屏幕"><i class="fas fa-home"></i></button>
+                <button id="home-back-btn" class="action-btn" title="返回主页" style="display: none;"><i class="fas fa-home"></i></button>
                 <button id="session-manager-btn" class="action-btn" title="会话管理"><i class="fas fa-comments"></i></button>
                 <button id="group-chat-btn" class="action-btn" title="群聊设置"><i class="fas fa-users"></i></button>
                 <button id="daily-greeting-btn" class="action-btn" title="今日公告" onclick="reopenDailyGreeting()"><i class="fas fa-newspaper"></i></button>
@@ -123,56 +123,51 @@
         </div>
     </div>
 
-<!-- 主屏幕 Launcher -->
-<div class="launcher-screen" id="launcher-screen" style="display: none;">
-    <div class="launcher-grid">
-        <!-- 第1-4行：留空白区 -->
-        <div class="launcher-blank-area" style="grid-row: span 4;"></div>
-
-        <!-- 第5行：4个功能 -->
-        <div class="launcher-func-row">
-            <div class="func-item" data-func="chat">
-                <i class="fas fa-comment-dots"></i>
-                <span>对 话</span>
+    <!-- 主屏界面（类似手机桌面） -->
+    <div id="home-screen" class="home-screen" style="display: none;">
+        <div class="home-grid">
+            <!-- 顶部 4×2 合并区域：头像 + 状态信息 -->
+            <div class="home-profile-area">
+                <div class="profile-left">
+                    <div class="profile-avatar" id="home-my-avatar"><i class="fas fa-user"></i></div>
+                    <div class="profile-info">
+                        <div class="profile-name" id="home-my-name">我</div>
+                        <div class="profile-signature" id="home-my-status">在线</div>
+                    </div>
+                </div>
+                <div class="profile-right">
+                    <div class="profile-avatar" id="home-partner-avatar"><i class="fas fa-user"></i></div>
+                    <div class="profile-info">
+                        <div class="profile-name" id="home-partner-name">梦角</div>
+                        <div class="profile-signature" id="home-partner-status">在线</div>
+                        <div class="profile-weather" id="home-partner-weather">🌤️ 晴</div>
+                    </div>
+                </div>
             </div>
-            <div class="func-item" data-func="reply">
-                <i class="fas fa-comment"></i>
-                <span>字 卡</span>
-            </div>
-            <div class="func-item" data-func="anniversary">
-                <i class="fas fa-heart"></i>
-                <span>纪 念</span>
-            </div>
-            <div class="func-item" data-func="envelope">
-                <i class="fas fa-envelope"></i>
-                <span>留 言</span>
+    
+            <!-- 中间第3-4行留白（空区域） -->
+            <div class="home-spacer"></div>
+            <div class="home-spacer"></div>
+    
+            <!-- 底部三行功能按钮（4列 × 3行，共12格） -->
+            <div class="home-buttons-row">
+                <button class="home-btn" data-action="chat"><i class="fas fa-comment-dots"></i><span>对话</span></button>
+                <button class="home-btn" data-action="replies"><i class="fas fa-reply"></i><span>字卡库</span></button>
+                <button class="home-btn" data-action="anniversary"><i class="fas fa-heart"></i><span>纪念日</span></button>
+                <button class="home-btn" data-action="music"><i class="fas fa-music"></i><span>音乐</span></button>
+    
+                <button class="home-btn" data-action="poke"><i class="fas fa-hand-peace"></i><span>拍一拍</span></button>
+                <button class="home-btn" data-action="fortune"><i class="fas fa-star-and-crescent"></i><span>占卜</span></button>
+                <button class="home-btn" data-action="coin"><i class="fas fa-coins"></i><span>抛硬币</span></button>
+                <button class="home-btn" data-action="board"><i class="fas fa-envelope"></i><span>留言板</span></button>
+    
+                <button class="home-btn" data-action="stats"><i class="fas fa-chart-bar"></i><span>统计</span></button>
+                <button class="home-btn" data-action="settings"><i class="fas fa-cog"></i><span>设置</span></button>
+                <button class="home-btn" data-action="theme"><i class="fas fa-palette"></i><span>主题</span></button>
+                <button class="home-btn" data-action="empty" style="visibility: hidden;"></button>
             </div>
         </div>
-
-        <!-- 第6行：4个功能（将原“拍拍”改为“设置”） -->
-        <div class="launcher-func-row">
-            <div class="func-item" data-func="mood">
-                <i class="fas fa-book-open"></i>
-                <span>手 账</span>
-            </div>
-            <div class="func-item" data-func="fortune">
-                <i class="fas fa-star-and-crescent"></i>
-                <span>运 势</span>
-            </div>
-            <div class="func-item" data-func="music">
-                <i class="fas fa-music"></i>
-                <span>播 放</span>
-            </div>
-            <div class="func-item" data-func="settings">
-                <i class="fas fa-cog"></i>
-                <span>设 置</span>
-            </div>
-        </div>
-
-        <!-- 第7行：留空（用一个空白块占位） -->
-        <div class="launcher-blank-bottom"></div>
     </div>
-</div>
 
     <div class="main-chat-area">
 
@@ -731,21 +726,6 @@
         </div>
     </div>
 
-    <!-- 在 appearance-panel-theme 内部合适位置添加 -->
-    <div class="settings-section">
-        <div class="settings-section-title">
-            <i class="fas fa-mobile-alt"></i> 主屏幕样式
-        </div>
-        <div class="font-size-control">
-            <span class="font-size-label">按钮圆角</span>
-            <input type="range" id="launcher-btn-radius-slider" min="4" max="40" step="2" value="24">
-            <span class="font-size-value" id="launcher-btn-radius-value">24px</span>
-        </div>
-        <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;">
-            调整主屏幕功能按钮的圆角弧度
-        </div>
-    </div>
-
     <div id="appearance-panel-avatar" class="appearance-sub-panel" style="display:none;">
         <div class="settings-section">
             <div class="settings-section-title"><i class="fas fa-user-circle"></i>聊天头像</div>
@@ -918,12 +898,12 @@
             <div class="settings-section-title"><i class="fas fa-comment-alt"></i>气泡 CSS</div>
             <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.5;">针对聊天气泡的样式覆盖，选择器限定在消息范围内。</div>
             <textarea id="custom-bubble-css" class="modal-textarea" style="font-family: monospace; font-size: 12px; height: 130px; white-space: pre;" placeholder=".message-sent {
-                  border-radius: 20px 20px 0 20px;
-                  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-                }
-                .message-received {
-                  border-bottom: 2px solid var(--accent-color);
-                }"></textarea>
+  border-radius: 20px 20px 0 20px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.message-received {
+  border-bottom: 2px solid var(--accent-color);
+}"></textarea>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top:8px;">
                 <button id="reset-css-btn" class="modal-btn modal-btn-secondary" style="padding: 6px 12px; font-size: 12px;">清空</button>
                 <button id="apply-css-btn" class="modal-btn modal-btn-primary" style="padding: 6px 12px; font-size: 12px;">应用 CSS</button>
@@ -951,23 +931,23 @@
             <div class="settings-section-title"><i class="fas fa-paint-brush"></i>全局主题 CSS</div>
             <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.5;">作用于整个页面的 CSS，可覆盖任意元素样式、CSS 变量、布局等。支持完整的 CSS 语法。</div>
             <textarea id="custom-global-css" class="modal-textarea" style="font-family: monospace; font-size: 12px; height: 160px; white-space: pre;" placeholder=":root {
-                  --accent-color: #ff6b9d;
-                  --primary-bg: #0d0d14;
-                  --border-color: rgba(255,255,255,0.08);
-                }
-                
-                #partner-info {
-                  background: linear-gradient(135deg, #1a1a2e, #16213e);
-                }
-                
-                #message-input {
-                  border-radius: 20px;
-                }
-                
-                ::-webkit-scrollbar-thumb {
-                  background: var(--accent-color);
-                  border-radius: 4px;
-                }"></textarea>
+  --accent-color: #ff6b9d;
+  --primary-bg: #0d0d14;
+  --border-color: rgba(255,255,255,0.08);
+}
+
+#partner-info {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+}
+
+#message-input {
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 4px;
+}"></textarea>
             <div style="display: flex; justify-content: space-between; align-items:center; gap: 10px; margin-top:8px;">
                 <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
                     <input type="checkbox" id="global-css-live-toggle" style="width:14px;height:14px;accent-color:var(--accent-color);">
