@@ -511,28 +511,94 @@ function showChatScreen() {
 }
 
 function bindHomeScreenButtons() {
+    // 安全调用辅助函数
+    function safeCall(fn, ...args) {
+        if (typeof fn === 'function') {
+            try { fn(...args); } catch(e) { console.error(e); showNotification('功能执行出错', 'error'); }
+        } else {
+            console.warn('功能未就绪:', fn);
+            showNotification('功能暂不可用，请稍后重试', 'warning');
+        }
+    }
+
     const btnMap = {
-        'chat': showChatScreen,
-        'replies': () => { if (typeof showModal === 'function') showModal(document.getElementById('custom-replies-modal')); },
-        'anniversary': () => { if (typeof renderAnniversariesList === 'function') renderAnniversariesList(); showModal(document.getElementById('anniversary-modal')); },
-        'music': () => { if (settings.musicPlayerEnabled !== undefined) settings.musicPlayerEnabled = true; document.getElementById('player').classList.add('visible'); showNotification('音乐播放器已开启', 'success'); },
-        'poke': () => showModal(DOMElements.pokeModal.modal),
-        'fortune': () => { if (typeof generateFortune === 'function') generateFortune(); showModal(document.getElementById('fortune-lenormand-modal')); },
-        'coin': () => { if (typeof handleCoinToss === 'function') handleCoinToss(); },
-        'board': () => { if (typeof renderEnvelopeBoard === 'function') { renderEnvelopeBoard(); showModal(document.getElementById('envelope-board-modal')); } },
-        'stats': () => { renderStatsContent(); showModal(DOMElements.statsModal.modal); },
-        'settings': () => showModal(DOMElements.settingsModal.modal),
-        'theme': () => { if (typeof showModal === 'function') showModal(DOMElements.appearanceModal.modal); }
+        'chat': () => safeCall(showChatScreen),
+        'replies': () => {
+            const modal = document.getElementById('custom-replies-modal');
+            if (modal && typeof showModal === 'function') safeCall(showModal, modal);
+            else showNotification('字卡库模块未加载', 'warning');
+        },
+        'anniversary': () => {
+            if (typeof renderAnniversariesList === 'function') {
+                renderAnniversariesList();
+                const modal = document.getElementById('anniversary-modal');
+                if (modal) safeCall(showModal, modal);
+            } else {
+                showNotification('纪念日模块加载中，请稍后', 'info');
+            }
+        },
+        'music': () => {
+            if (settings) {
+                settings.musicPlayerEnabled = true;
+                const player = document.getElementById('player');
+                if (player) player.classList.add('visible');
+                showNotification('音乐播放器已开启', 'success');
+            }
+        },
+        'poke': () => {
+            if (DOMElements && DOMElements.pokeModal && DOMElements.pokeModal.modal)
+                safeCall(showModal, DOMElements.pokeModal.modal);
+            else showNotification('拍一拍功能暂不可用', 'warning');
+        },
+        'fortune': () => {
+            if (typeof generateFortune === 'function') generateFortune();
+            else if (typeof window.generateFortune === 'function') window.generateFortune();
+            else showNotification('占卜功能未加载', 'warning');
+            const modal = document.getElementById('fortune-lenormand-modal');
+            if (modal) safeCall(showModal, modal);
+        },
+        'coin': () => {
+            if (typeof handleCoinToss === 'function') handleCoinToss();
+            else if (typeof window.handleCoinToss === 'function') window.handleCoinToss();
+            else showNotification('抛硬币功能未加载', 'warning');
+        },
+        'board': () => {
+            if (typeof renderEnvelopeBoard === 'function') {
+                renderEnvelopeBoard();
+                const modal = document.getElementById('envelope-board-modal');
+                if (modal) safeCall(showModal, modal);
+            } else showNotification('留言板模块未加载', 'warning');
+        },
+        'stats': () => {
+            if (typeof renderStatsContent === 'function') renderStatsContent();
+            else if (typeof window.renderStatsContent === 'function') window.renderStatsContent();
+            else showNotification('统计模块未加载', 'warning');
+            const modal = DOMElements && DOMElements.statsModal ? DOMElements.statsModal.modal : document.getElementById('stats-modal');
+            if (modal) safeCall(showModal, modal);
+        },
+        'settings': () => {
+            if (DOMElements && DOMElements.settingsModal && DOMElements.settingsModal.modal)
+                safeCall(showModal, DOMElements.settingsModal.modal);
+            else showNotification('设置模块未加载', 'warning');
+        },
+        'theme': () => {
+            const modal = document.getElementById('appearance-modal');
+            if (modal && typeof showModal === 'function') safeCall(showModal, modal);
+            else showNotification('主题设置暂不可用', 'warning');
+        }
     };
     
     document.querySelectorAll('.home-btn').forEach(btn => {
         const action = btn.dataset.action;
-        if (action && btnMap[action]) {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                btnMap[action]();
-            });
-        }
+        // 避免重复绑定
+        if (btn._bound) return;
+        btn._bound = true;
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (action && btnMap[action]) btnMap[action]();
+            else if (action === 'empty') { /* 占位按钮无操作 */ }
+            else console.warn('未知按钮动作:', action);
+        });
     });
 }
 
