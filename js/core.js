@@ -195,6 +195,22 @@ function loadMoreHistory() {
             };
         }
 
+        window.reopenDailyGreeting = function() {
+            try {
+                if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
+                var modal = document.getElementById('daily-greeting-modal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    modal.style.display = 'flex';
+                    modal.style.opacity = '1';
+                } else {
+                    console.warn('daily-greeting-modal not found');
+                }
+            } catch(e) {
+                console.error('reopenDailyGreeting error:', e);
+            }
+        };
+
         // 显示主屏幕，隐藏聊天界面
         function showLauncherScreen() {
             const launcher = document.getElementById('launcher-screen');
