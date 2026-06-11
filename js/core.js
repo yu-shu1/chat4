@@ -188,108 +188,10 @@ function loadMoreHistory() {
                 bottomCollapseMode: false,
                 emojiMixEnabled: true,
                 phraseCombiningEnabled: false,
-                launcherBtnRadius: 24,
                 boardPartnerWriteEnabled: false,   // 主动留言开关，默认关闭
                 enterToSend: true,          // 默认回车发送
                 keepKeyboardAfterSend: false // 默认发送后不保留键盘
             };
-        }
-
-        window.reopenDailyGreeting = function() {
-            try {
-                if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
-                var modal = document.getElementById('daily-greeting-modal');
-                if (modal) {
-                    modal.classList.remove('hidden');
-                    modal.style.display = 'flex';
-                    modal.style.opacity = '1';
-                } else {
-                    console.warn('daily-greeting-modal not found');
-                }
-            } catch(e) {
-                console.error('reopenDailyGreeting error:', e);
-            }
-        };
-
-        // 显示主屏幕，隐藏聊天界面
-        function showLauncherScreen() {
-            const launcher = document.getElementById('launcher-screen');
-            const chatContainer = document.getElementById('chat-container');
-            const inputArea = document.querySelector('.input-area-wrapper');
-            if (launcher) launcher.style.display = 'block';
-            if (chatContainer) chatContainer.style.display = 'none';
-            if (inputArea) inputArea.style.display = 'none';
-            document.body.classList.add('launcher-active');
-            if (DOMElements.messageInput) DOMElements.messageInput.blur();
-            // 可选：隐藏音乐播放器
-            const player = document.getElementById('player');
-            if (player) player.style.display = 'none';
-        }
-        
-        // 显示聊天界面，隐藏主屏幕
-        function showChatScreen() {
-            const launcher = document.getElementById('launcher-screen');
-            const chatContainer = document.getElementById('chat-container');
-            const inputArea = document.querySelector('.input-area-wrapper');
-            if (launcher) launcher.style.display = 'none';
-            if (chatContainer) chatContainer.style.display = 'flex';
-            if (inputArea) inputArea.style.display = 'block';
-            document.body.classList.remove('launcher-active');
-            // 恢复音乐播放器显示（如果之前隐藏了）
-            const player = document.getElementById('player');
-            if (player && settings.musicPlayerEnabled) player.style.display = 'block';
-            setTimeout(() => {
-                const container = document.getElementById('chat-container');
-                if (container) container.scrollTop = container.scrollHeight;
-            }, 100);
-        }
-        
-        // 初始化主屏幕功能点击（只执行一次）
-        function initLauncherEvents() {
-            const items = document.querySelectorAll('.func-item');
-            items.forEach(item => {
-                // 避免重复绑定
-                if (item.dataset.listenerAdded) return;
-                item.dataset.listenerAdded = 'true';
-                item.addEventListener('click', (e) => {
-                    const func = item.dataset.func;
-                    switch(func) {
-                        case 'chat':
-                            showChatScreen();
-                            break;
-                        case 'reply':
-                            showModal(DOMElements.customRepliesModal.modal);
-                            break;
-                        case 'anniversary':
-                            showModal(DOMElements.anniversaryModal.modal);
-                            break;
-                        case 'envelope':
-                            if (typeof renderEnvelopeBoard === 'function') renderEnvelopeBoard();
-                            showModal(document.getElementById('envelope-board-modal'));
-                            break;
-                        case 'mood':
-                            showModal(document.getElementById('mood-modal'));
-                            break;
-                        case 'fortune':
-                            generateFortune();
-                            showModal(document.getElementById('fortune-lenormand-modal'));
-                            break;
-                        case 'music':
-                            if (settings.musicPlayerEnabled) {
-                                document.getElementById('player').classList.add('visible');
-                            } else {
-                                settings.musicPlayerEnabled = true;
-                                throttledSaveData();
-                                document.getElementById('player').classList.add('visible');
-                                showNotification('音乐播放器已开启', 'success');
-                            }
-                            break;
-                        case 'settings':
-                            showModal(DOMElements.settingsModal.modal);
-                            break;
-                    }
-                });
-            });
         }
 
 
@@ -437,10 +339,6 @@ const loadData = async () => {
 
         if (savedSettings) Object.assign(settings, savedSettings);
 
-        if (settings.launcherBtnRadius) {
-            document.documentElement.style.setProperty('--launcher-btn-radius', settings.launcherBtnRadius + 'px');
-        }
-        
         if (settings.showPartnerNameInChat !== undefined) {
             showPartnerNameInChat = settings.showPartnerNameInChat;
         } else if (savedShowNameConfig !== null) {
@@ -543,25 +441,6 @@ const loadData = async () => {
         setTimeout(() => {
             syncAllToggles();
         }, 50);
-        
-        // 初始化主屏幕功能（只执行一次）
-        if (typeof initLauncherEvents === 'function') initLauncherEvents();
-        
-        // 同步按钮圆角滑块的值（修复初始显示问题）
-        const radiusSlider = document.getElementById('launcher-btn-radius-slider');
-        const radiusVal = document.getElementById('launcher-btn-radius-value');
-        if (radiusSlider && settings.launcherBtnRadius !== undefined) {
-            radiusSlider.value = settings.launcherBtnRadius;
-            if (radiusVal) radiusVal.textContent = settings.launcherBtnRadius + 'px';
-            document.documentElement.style.setProperty('--launcher-btn-radius', settings.launcherBtnRadius + 'px');
-        }
-
-        const homeBtn = document.getElementById('home-btn');
-        if (homeBtn) {
-            homeBtn.addEventListener('click', () => {
-                showLauncherScreen();
-            });
-        }
 
     } catch (e) {
         console.error("LoadData 内部致命错误:", e);
@@ -570,6 +449,96 @@ const loadData = async () => {
         updateUI();
     }
 };
+
+// ---------- 主屏控制 ----------
+let isHomeScreenVisible = true;
+
+function renderHomeScreen() {
+    // 更新双方头像
+    const myAvatarImg = DOMElements.me.avatar.querySelector('img');
+    const partnerAvatarImg = DOMElements.partner.avatar.querySelector('img');
+    const homeMyAvatar = document.getElementById('home-my-avatar');
+    const homePartnerAvatar = document.getElementById('home-partner-avatar');
+    
+    if (homeMyAvatar) {
+        homeMyAvatar.innerHTML = myAvatarImg ? `<img src="${myAvatarImg.src}">` : '<i class="fas fa-user"></i>';
+    }
+    if (homePartnerAvatar) {
+        homePartnerAvatar.innerHTML = partnerAvatarImg ? `<img src="${partnerAvatarImg.src}">` : '<i class="fas fa-user"></i>';
+    }
+    
+    // 更新名字和状态
+    document.getElementById('home-my-name').textContent = settings.myName || '我';
+    document.getElementById('home-partner-name').textContent = settings.partnerName || '梦角';
+    document.getElementById('home-my-status').textContent = settings.myStatus || '在线';
+    document.getElementById('home-partner-status').textContent = settings.partnerStatus || '在线';
+    
+    // 获取对方的天气（从公告系统或 localStorage）
+    let partnerWeather = '晴';
+    try {
+        const dgData = _getDailyGreetingData ? _getDailyGreetingData() : null;
+        if (dgData && dgData.weather) partnerWeather = dgData.weather;
+        else {
+            const savedWeather = localStorage.getItem('customWeather_' + new Date().toISOString().slice(0,10));
+            if (savedWeather) partnerWeather = savedWeather;
+        }
+    } catch(e) {}
+    document.getElementById('home-partner-weather').innerHTML = `🌤️ ${partnerWeather}`;
+}
+
+function showHomeScreen() {
+    document.getElementById('home-screen').style.display = 'block';
+    document.querySelector('.main-chat-area').style.display = 'none';
+    document.querySelector('.input-area-wrapper').style.display = 'none';
+    document.getElementById('home-back-btn').style.display = 'none';
+    document.body.classList.remove('immersive-mode');
+    isHomeScreenVisible = true;
+    renderHomeScreen();
+    bindHomeScreenButtons();   // 绑定主屏按钮事件
+}
+
+function showChatScreen() {
+    document.getElementById('home-screen').style.display = 'none';
+    document.querySelector('.main-chat-area').style.display = 'flex';
+    document.querySelector('.input-area-wrapper').style.display = 'block';
+    document.getElementById('home-back-btn').style.display = 'flex';
+    isHomeScreenVisible = false;
+    // 刷新消息渲染
+    renderMessages();
+    // 滚动到底部
+    const container = DOMElements.chatContainer;
+    if (container) container.scrollTop = container.scrollHeight;
+}
+
+function bindHomeScreenButtons() {
+    const btnMap = {
+        'chat': showChatScreen,
+        'replies': () => { if (typeof showModal === 'function') showModal(document.getElementById('custom-replies-modal')); },
+        'anniversary': () => { if (typeof renderAnniversariesList === 'function') renderAnniversariesList(); showModal(document.getElementById('anniversary-modal')); },
+        'music': () => { if (settings.musicPlayerEnabled !== undefined) settings.musicPlayerEnabled = true; document.getElementById('player').classList.add('visible'); showNotification('音乐播放器已开启', 'success'); },
+        'poke': () => showModal(DOMElements.pokeModal.modal),
+        'fortune': () => { if (typeof generateFortune === 'function') generateFortune(); showModal(document.getElementById('fortune-lenormand-modal')); },
+        'coin': () => { if (typeof handleCoinToss === 'function') handleCoinToss(); },
+        'board': () => { if (typeof renderEnvelopeBoard === 'function') { renderEnvelopeBoard(); showModal(document.getElementById('envelope-board-modal')); } },
+        'stats': () => { renderStatsContent(); showModal(DOMElements.statsModal.modal); },
+        'settings': () => showModal(DOMElements.settingsModal.modal),
+        'theme': () => { if (typeof showModal === 'function') showModal(DOMElements.appearanceModal.modal); }
+    };
+    
+    document.querySelectorAll('.home-btn').forEach(btn => {
+        const action = btn.dataset.action;
+        if (action && btnMap[action]) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                btnMap[action]();
+            });
+        }
+    });
+}
+
+document.getElementById('home-back-btn').addEventListener('click', () => {
+    showHomeScreen();
+});
 
 const LIBRARY_CONFIG = {
     reply: {
@@ -1139,6 +1108,7 @@ if (customIntros && customIntros.length > 0) {
                 }, 300);
             }      
             window.syncAllToggles = syncAllToggles;      
+            if (isHomeScreenVisible) renderHomeScreen();
         };
 
         const updateAvatar = (element, src) => {

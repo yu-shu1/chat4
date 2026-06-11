@@ -61,13 +61,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setInterval(checkStatusChange, 60000);
 
-
         updateLoader('连接成功，欢迎回来。', '100%');
         setTimeout(() => {
             hideWelcomeScreen();
-            showLauncherScreen();   // 新增：显示主屏幕
+            showHomeScreen();    // 显示主屏，而非聊天界面
         }, 3500);
-        
+
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 try {
@@ -265,7 +264,3 @@ window.addEventListener('load', function() {
         }
     }, 1000);
 });
-
-
-
-
