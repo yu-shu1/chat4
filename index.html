@@ -97,7 +97,6 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button id="home-back-btn" class="action-btn" title="返回主页" style="display: none;"><i class="fas fa-home"></i></button>
                 <button id="session-manager-btn" class="action-btn" title="会话管理"><i class="fas fa-comments"></i></button>
                 <button id="group-chat-btn" class="action-btn" title="群聊设置"><i class="fas fa-users"></i></button>
                 <button id="daily-greeting-btn" class="action-btn" title="今日公告" onclick="reopenDailyGreeting()"><i class="fas fa-newspaper"></i></button>
@@ -119,52 +118,6 @@
                 <div class="status" id="my-status-container">
                     <span id="my-status-text">在线</span>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 主屏界面（类似手机桌面） -->
-    <div id="home-screen" class="home-screen" style="display: none;">
-        <div class="home-grid">
-            <!-- 顶部 4×2 合并区域：头像 + 状态信息 -->
-            <div class="home-profile-area">
-                <div class="profile-left">
-                    <div class="profile-avatar" id="home-my-avatar"><i class="fas fa-user"></i></div>
-                    <div class="profile-info">
-                        <div class="profile-name" id="home-my-name">我</div>
-                        <div class="profile-signature" id="home-my-status">在线</div>
-                    </div>
-                </div>
-                <div class="profile-right">
-                    <div class="profile-avatar" id="home-partner-avatar"><i class="fas fa-user"></i></div>
-                    <div class="profile-info">
-                        <div class="profile-name" id="home-partner-name">梦角</div>
-                        <div class="profile-signature" id="home-partner-status">在线</div>
-                        <div class="profile-weather" id="home-partner-weather">🌤️ 晴</div>
-                    </div>
-                </div>
-            </div>
-    
-            <!-- 中间第3-4行留白（空区域） -->
-            <div class="home-spacer"></div>
-            <div class="home-spacer"></div>
-    
-            <!-- 底部三行功能按钮（4列 × 3行，共12格） -->
-            <div class="home-buttons-row">
-                <button class="home-btn" data-action="chat"><i class="fas fa-comment-dots"></i><span>对话</span></button>
-                <button class="home-btn" data-action="replies"><i class="fas fa-reply"></i><span>字卡库</span></button>
-                <button class="home-btn" data-action="anniversary"><i class="fas fa-heart"></i><span>纪念日</span></button>
-                <button class="home-btn" data-action="music"><i class="fas fa-music"></i><span>音乐</span></button>
-    
-                <button class="home-btn" data-action="poke"><i class="fas fa-hand-peace"></i><span>拍一拍</span></button>
-                <button class="home-btn" data-action="fortune"><i class="fas fa-star-and-crescent"></i><span>占卜</span></button>
-                <button class="home-btn" data-action="coin"><i class="fas fa-coins"></i><span>抛硬币</span></button>
-                <button class="home-btn" data-action="board"><i class="fas fa-envelope"></i><span>留言板</span></button>
-    
-                <button class="home-btn" data-action="stats"><i class="fas fa-chart-bar"></i><span>统计</span></button>
-                <button class="home-btn" data-action="settings"><i class="fas fa-cog"></i><span>设置</span></button>
-                <button class="home-btn" data-action="theme"><i class="fas fa-palette"></i><span>主题</span></button>
-                <button class="home-btn" data-action="empty" style="visibility: hidden;"></button>
             </div>
         </div>
     </div>
