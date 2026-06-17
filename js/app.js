@@ -64,6 +64,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         updateLoader('连接成功，欢迎回来。', '100%');
         setTimeout(hideWelcomeScreen, 3500);
+        setTimeout(() => {
+            // 显示主页，隐藏返回按钮
+            const homeScreen = document.getElementById('home-screen');
+            const backBtn = document.getElementById('back-home-btn');
+            if (homeScreen) homeScreen.style.display = 'flex';
+            if (backBtn) backBtn.style.display = 'none';
+            // 更新日期
+            const dateEl = document.getElementById('home-date');
+            if (dateEl) {
+                const now = new Date();
+                dateEl.textContent = now.getFullYear() + '年' + (now.getMonth()+1) + '月' + now.getDate() + '日';
+            }
+        }, 3500);  // 与欢迎动画的延时保持一致
 
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {

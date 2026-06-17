@@ -14,12 +14,111 @@ function setupEventListeners() {
         initThemeEditor(); 
         initThemeSchemes();
         initRingtoneSettings();
+        initHomeScreen();
         initReplyLibraryListeners();
         
     } catch (e) {
         console.error("事件绑定过程中发生错误:", e);
     }
 }
+
+function initHomeScreen() {
+    const homeItems = document.querySelectorAll('.home-item');
+    const homeScreen = document.getElementById('home-screen');
+    const backBtn = document.getElementById('back-home-btn');
+
+    // 功能卡片点击
+    homeItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            const action = this.dataset.action;
+            switch(action) {
+                case 'chat':
+                    // 进入聊天：隐藏主页，显示返回按钮
+                    if (homeScreen) homeScreen.style.display = 'none';
+                    if (backBtn) backBtn.style.display = 'flex';
+                    // 聚焦输入框
+                    setTimeout(() => DOMElements.messageInput.focus(), 300);
+                    break;
+
+                case 'envelope':
+                    if (typeof renderEnvelopeBoard === 'function') {
+                        renderEnvelopeBoard();
+                        showModal(document.getElementById('envelope-board-modal'));
+                    }
+                    break;
+
+                case 'anniversary':
+                    if (typeof renderAnniversariesList === 'function') {
+                        renderAnniversariesList();
+                        showModal(document.getElementById('anniversary-modal'));
+                    }
+                    break;
+
+                case 'fortune':
+                    if (typeof generateFortune === 'function') {
+                        generateFortune();
+                        if (typeof switchFLTab === 'function') switchFLTab('fortune');
+                        showModal(document.getElementById('fortune-lenormand-modal'));
+                    }
+                    break;
+
+                case 'mood':
+                    showModal(document.getElementById('mood-modal'));
+                    break;
+
+                case 'replies':
+                    // 切换到字卡库标签
+                    if (typeof currentMajorTab !== 'undefined') {
+                        currentMajorTab = 'reply';
+                        currentSubTab = 'custom';
+                    }
+                    if (typeof renderReplyLibrary === 'function') renderReplyLibrary();
+                    showModal(document.getElementById('custom-replies-modal'));
+                    break;
+
+                case 'music':
+                    // 切换音乐播放器
+                    if (typeof settings !== 'undefined') {
+                        settings.musicPlayerEnabled = !settings.musicPlayerEnabled;
+                        throttledSaveData();
+                        const player = document.getElementById('player');
+                        if (settings.musicPlayerEnabled) {
+                            player.classList.add('visible');
+                            showNotification('音乐播放器已开启', 'success');
+                        } else {
+                            player.classList.remove('visible');
+                            document.getElementById('playlist').classList.remove('active');
+                            const audio = document.getElementById('audio');
+                            if (audio) audio.pause();
+                            showNotification('音乐播放器已关闭', 'info');
+                        }
+                    }
+                    break;
+
+                case 'settings':
+                    showModal(DOMElements.settingsModal.modal);
+                    break;
+
+                default:
+                    break;
+            }
+        });
+    });
+
+    // 返回主页按钮
+    if (backBtn) {
+        backBtn.addEventListener('click', function() {
+            if (homeScreen) homeScreen.style.display = 'flex';
+            this.style.display = 'none';
+            // 关闭所有模态框，回到主页
+            document.querySelectorAll('.modal').forEach(m => {
+                if (m.style.display === 'flex') hideModal(m);
+            });
+            DOMElements.messageInput.blur();
+        });
+    }
+}
+
 
 function initChatActionListeners() {
             DOMElements.chatContainer.addEventListener('click', (e) => {
