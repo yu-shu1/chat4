@@ -77,12 +77,17 @@
             <div id="loader-status-text" style="font-size:10px;opacity:0.5;letter-spacing:1px;color:var(--welcome-text-sub);margin-top:4px;font-family:monospace;"></div>
         </div>
     </div>
-    <button id="immersive-exit-btn" onclick="toggleImmersiveMode(false)" title="退出沉浸模式">
+    
+<button id="immersive-exit-btn" onclick="toggleImmersiveMode(false)" title="退出沉浸模式">
 <i class="fas fa-expand"></i>
 </button>
+
     <div class="header">
         <div class="header-motto"></div>
         <div class="header-inner">
+        <button id="back-home-btn" class="back-home-btn" style="display:none;" title="返回主页">
+            <i class="fas fa-arrow-left"></i>
+        </button>
          <div class="user-info">
                 <div id="partner-name" class="username">
                     梦角
@@ -122,6 +127,49 @@
         </div>
     </div>
 
+<div id="home-screen" class="home-screen">
+    <div class="home-top">
+        <div class="home-greeting">✦ 传讯 · 你的专属空间 ✦</div>
+        <div class="home-date" id="home-date"></div>
+    </div>
+    <div class="home-grid">
+        <!-- 8 个功能卡片，可按需增删 -->
+        <div class="home-item" data-action="chat">
+            <i class="fas fa-comment-dots"></i>
+            <span>对话</span>
+        </div>
+        <div class="home-item" data-action="envelope">
+            <i class="fas fa-envelope"></i>
+            <span>留言板</span>
+        </div>
+        <div class="home-item" data-action="anniversary">
+            <i class="fas fa-heart"></i>
+            <span>重要日</span>
+        </div>
+        <div class="home-item" data-action="fortune">
+            <i class="fas fa-star-and-crescent"></i>
+            <span>占卜</span>
+        </div>
+        <div class="home-item" data-action="mood">
+            <i class="fas fa-calendar-day"></i>
+            <span>心晴手账</span>
+        </div>
+        <div class="home-item" data-action="replies">
+            <i class="fas fa-reply"></i>
+            <span>字卡库</span>
+        </div>
+        <div class="home-item" data-action="music">
+            <i class="fas fa-music"></i>
+            <span>音乐</span>
+        </div>
+        <div class="home-item" data-action="settings">
+            <i class="fas fa-cog"></i>
+            <span>设置</span>
+        </div>
+    </div>
+</div>
+
+
     <div class="main-chat-area">
 
         <div class="history-loader" id="history-loader">
@@ -130,6 +178,7 @@
 
         <div class="chat-container" id="chat-container">
     </div>
+    
     <div class="empty-state" id="empty-state" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;width:100%;pointer-events:none;z-index:1;">
             <div style="position:relative;margin-bottom:20px;">
                 <i class="fas fa-heart" style="font-size:52px;opacity:0.55;color:var(--accent-color);"></i>
@@ -138,6 +187,7 @@
             <p style="font-size:15px;font-weight:600;color:var(--accent-color);opacity:0.9;letter-spacing:1px;">✦ 我们的故事，始于此刻 ✦</p>
             <p style="font-size:12px;margin-top:8px;opacity:0.65;letter-spacing:0.5px;color:var(--text-secondary);">说点什么，让对话开始吧</p>
     </div>
+    
     <div id="typing-indicator-wrapper">
         <div class="typing-indicator" id="typing-indicator">
             <div class="typing-indicator-avatar" id="typing-indicator-avatar">
@@ -207,6 +257,7 @@
             </div>
         </div>
     </div>
+    
     <div class="input-area-wrapper">
         <div class="batch-preview" id="batch-preview"></div>
         <div id="reply-preview-container"></div>
@@ -235,36 +286,36 @@
             </div>
         </div>
         <div class="input-area">
-    <button id="collapse-expand-btn" title="展开更多" style="display:none;width:36px;height:36px;border:none;border-radius:50%;cursor:pointer;background:rgba(var(--accent-color-rgb),0.12);color:var(--accent-color);font-size:14px;transition:all 0.25s;flex-shrink:0;align-items:center;justify-content:center;" onclick="window.toggleCollapsedExtras && window.toggleCollapsedExtras()"><i class="fas fa-chevron-up"></i></button>
-    <button class="attachment-btn input-btn collapse-hideable" id="attachment-btn" title="发送图片"><i class="fas fa-image"></i></button>
-    
-    <button class="combo-btn input-btn collapse-hideable" id="combo-btn" title="表情 & 拍一拍">
-        <i class="fas fa-laugh-beam"></i>
-    </button>
-
-    <textarea class="message-input" id="message-input" placeholder="" rows="1"></textarea>
-    
-    <div class="input-buttons">
-    <button class="continue-btn input-btn" id="continue-btn" title="让对方继续说"><i class="fas fa-ellipsis-h"></i></button>
-        <button class="send-btn input-btn" id="send-btn" title="发送消息"><i class="fas fa-paper-plane"></i></button>
+            <button id="collapse-expand-btn" title="展开更多" style="display:none;width:36px;height:36px;border:none;border-radius:50%;cursor:pointer;background:rgba(var(--accent-color-rgb),0.12);color:var(--accent-color);font-size:14px;transition:all 0.25s;flex-shrink:0;align-items:center;justify-content:center;" onclick="window.toggleCollapsedExtras && window.toggleCollapsedExtras()"><i class="fas fa-chevron-up"></i></button>
+            <button class="attachment-btn input-btn collapse-hideable" id="attachment-btn" title="发送图片"><i class="fas fa-image"></i></button>
+            
+            <button class="combo-btn input-btn collapse-hideable" id="combo-btn" title="表情 & 拍一拍">
+                <i class="fas fa-laugh-beam"></i>
+            </button>
         
-        <div class="sticker-picker-popover" id="user-sticker-picker">
-            <div class="combo-tabs-header">
-                <button class="combo-tab-btn active" data-tab="my-sticker"><i class="fas fa-user" style="font-size:10px;"></i> 我</button>
-                <button class="combo-tab-btn" data-tab="partner-sticker"><i class="fas fa-heart" style="font-size:10px;"></i> 对方</button>
-                <button class="combo-tab-btn" data-tab="poke">拍一拍</button>
-                <div style="margin-left:auto;display:flex;align-items:center;gap:4px;">
-                    <button id="sticker-add-btn" onclick="document.getElementById('my-sticker-quick-upload').click()" title="添加我的表情" style="background:var(--accent-color);border:none;cursor:pointer;padding:4px 10px;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;border-radius:8px;transition:all 0.2s;box-shadow:0 2px 8px rgba(var(--accent-color-rgb),0.35);" onmouseover="this.style.opacity='0.85';this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='1';this.style.transform='scale(1)'"><i class="fas fa-plus"></i> 添加</button>
-                    <button onclick="window.openMyStickerSettings()" title="管理表情库" style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--text-secondary);font-size:12px;display:flex;align-items:center;gap:3px;border-radius:6px;transition:all 0.2s;" onmouseover="this.style.background='rgba(var(--accent-color-rgb),0.12)';this.style.color='var(--accent-color)'" onmouseout="this.style.background='none';this.style.color='var(--text-secondary)'"><i class="fas fa-cog"></i></button>
+            <textarea class="message-input" id="message-input" placeholder="" rows="1"></textarea>
+            
+            <div class="input-buttons">
+            <button class="continue-btn input-btn" id="continue-btn" title="让对方继续说"><i class="fas fa-ellipsis-h"></i></button>
+                <button class="send-btn input-btn" id="send-btn" title="发送消息"><i class="fas fa-paper-plane"></i></button>
+                
+                <div class="sticker-picker-popover" id="user-sticker-picker">
+                    <div class="combo-tabs-header">
+                        <button class="combo-tab-btn active" data-tab="my-sticker"><i class="fas fa-user" style="font-size:10px;"></i> 我</button>
+                        <button class="combo-tab-btn" data-tab="partner-sticker"><i class="fas fa-heart" style="font-size:10px;"></i> 对方</button>
+                        <button class="combo-tab-btn" data-tab="poke">拍一拍</button>
+                        <div style="margin-left:auto;display:flex;align-items:center;gap:4px;">
+                            <button id="sticker-add-btn" onclick="document.getElementById('my-sticker-quick-upload').click()" title="添加我的表情" style="background:var(--accent-color);border:none;cursor:pointer;padding:4px 10px;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;border-radius:8px;transition:all 0.2s;box-shadow:0 2px 8px rgba(var(--accent-color-rgb),0.35);" onmouseover="this.style.opacity='0.85';this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='1';this.style.transform='scale(1)'"><i class="fas fa-plus"></i> 添加</button>
+                            <button onclick="window.openMyStickerSettings()" title="管理表情库" style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--text-secondary);font-size:12px;display:flex;align-items:center;gap:3px;border-radius:6px;transition:all 0.2s;" onmouseover="this.style.background='rgba(var(--accent-color-rgb),0.12)';this.style.color='var(--accent-color)'" onmouseout="this.style.background='none';this.style.color='var(--text-secondary)'"><i class="fas fa-cog"></i></button>
+                        </div>
+                    </div>
+                    <div class="combo-content-area" id="combo-content-area">
+                    </div>
                 </div>
             </div>
-            <div class="combo-content-area" id="combo-content-area">
-            </div>
+            <input type="file" id="image-input" class="file-input" accept="image/*">
+            <input type="file" id="my-sticker-quick-upload" class="file-input" accept="image/*" multiple>
         </div>
-    </div>
-    <input type="file" id="image-input" class="file-input" accept="image/*">
-    <input type="file" id="my-sticker-quick-upload" class="file-input" accept="image/*" multiple>
-</div>
     </div>
 
 
@@ -536,35 +587,35 @@
     <div class="modal" id="appearance-modal">
         <div class="modal-content">
 
-<div class="modal-title" id="appearance-modal-title">
-    <i class="fas fa-palette"></i><span>外观设置</span>
-</div>
-<div id="gallery-banner-entry" style="margin-bottom: 15px; padding: 12px 16px; background: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.1), rgba(var(--accent-color-rgb), 0.02)); border: 1px solid rgba(var(--accent-color-rgb), 0.2); border-radius: 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);">
-    <div style="display:flex; align-items:center; gap: 12px;">
-        <div style="width: 36px; height: 36px; background: var(--accent-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 4px 10px rgba(var(--accent-color-rgb), 0.3);">
-            <i class="fas fa-images" style="font-size: 16px;"></i>
+    <div class="modal-title" id="appearance-modal-title">
+        <i class="fas fa-palette"></i><span>外观设置</span>
+    </div>
+    <div id="gallery-banner-entry" style="margin-bottom: 15px; padding: 12px 16px; background: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.1), rgba(var(--accent-color-rgb), 0.02)); border: 1px solid rgba(var(--accent-color-rgb), 0.2); border-radius: 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);">
+        <div style="display:flex; align-items:center; gap: 12px;">
+            <div style="width: 36px; height: 36px; background: var(--accent-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 4px 10px rgba(var(--accent-color-rgb), 0.3);">
+                <i class="fas fa-images" style="font-size: 16px;"></i>
+            </div>
+            <div>
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.5px;">传讯专属画廊</div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">获取气泡等素材</div>
+            </div>
         </div>
-        <div>
-            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.5px;">传讯专属画廊</div>
-            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">获取气泡等素材</div>
+        <i class="fas fa-chevron-right" style="color: var(--accent-color); opacity: 0.7;"></i>
+    </div>
+    <div id="appearance-nav-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0 12px;">
+        <div class="settings-card" onclick="showAppearancePanel('theme')" style="cursor:pointer;">
+            <i class="fas fa-paint-roller"></i><span>主题配色</span>
+        </div>
+        <div class="settings-card" onclick="showAppearancePanel('font-bg')" style="cursor:pointer;">
+            <i class="fas fa-font"></i><span>背景 & 字体</span>
+        </div>
+        <div class="settings-card" onclick="showAppearancePanel('bubble-css')" style="cursor:pointer;">
+            <i class="fas fa-comment"></i><span>气泡 & CSS</span>
+        </div>
+        <div class="settings-card" onclick="showAppearancePanel('avatar')" style="cursor:pointer;">
+            <i class="fas fa-user-circle"></i><span>聊天头像</span>
         </div>
     </div>
-    <i class="fas fa-chevron-right" style="color: var(--accent-color); opacity: 0.7;"></i>
-</div>
-<div id="appearance-nav-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0 12px;">
-    <div class="settings-card" onclick="showAppearancePanel('theme')" style="cursor:pointer;">
-        <i class="fas fa-paint-roller"></i><span>主题配色</span>
-    </div>
-    <div class="settings-card" onclick="showAppearancePanel('font-bg')" style="cursor:pointer;">
-        <i class="fas fa-font"></i><span>背景 & 字体</span>
-    </div>
-    <div class="settings-card" onclick="showAppearancePanel('bubble-css')" style="cursor:pointer;">
-        <i class="fas fa-comment"></i><span>气泡 & CSS</span>
-    </div>
-    <div class="settings-card" onclick="showAppearancePanel('avatar')" style="cursor:pointer;">
-        <i class="fas fa-user-circle"></i><span>聊天头像</span>
-    </div>
-</div>
 
 <div id="appearance-panel-container" style="display:none;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
@@ -851,12 +902,12 @@
             <div class="settings-section-title"><i class="fas fa-comment-alt"></i>气泡 CSS</div>
             <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.5;">针对聊天气泡的样式覆盖，选择器限定在消息范围内。</div>
             <textarea id="custom-bubble-css" class="modal-textarea" style="font-family: monospace; font-size: 12px; height: 130px; white-space: pre;" placeholder=".message-sent {
-  border-radius: 20px 20px 0 20px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-.message-received {
-  border-bottom: 2px solid var(--accent-color);
-}"></textarea>
+              border-radius: 20px 20px 0 20px;
+              box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            }
+            .message-received {
+              border-bottom: 2px solid var(--accent-color);
+            }"></textarea>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top:8px;">
                 <button id="reset-css-btn" class="modal-btn modal-btn-secondary" style="padding: 6px 12px; font-size: 12px;">清空</button>
                 <button id="apply-css-btn" class="modal-btn modal-btn-primary" style="padding: 6px 12px; font-size: 12px;">应用 CSS</button>
@@ -884,23 +935,23 @@
             <div class="settings-section-title"><i class="fas fa-paint-brush"></i>全局主题 CSS</div>
             <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.5;">作用于整个页面的 CSS，可覆盖任意元素样式、CSS 变量、布局等。支持完整的 CSS 语法。</div>
             <textarea id="custom-global-css" class="modal-textarea" style="font-family: monospace; font-size: 12px; height: 160px; white-space: pre;" placeholder=":root {
-  --accent-color: #ff6b9d;
-  --primary-bg: #0d0d14;
-  --border-color: rgba(255,255,255,0.08);
-}
-
-#partner-info {
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-}
-
-#message-input {
-  border-radius: 20px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--accent-color);
-  border-radius: 4px;
-}"></textarea>
+              --accent-color: #ff6b9d;
+              --primary-bg: #0d0d14;
+              --border-color: rgba(255,255,255,0.08);
+            }
+            
+            #partner-info {
+              background: linear-gradient(135deg, #1a1a2e, #16213e);
+            }
+            
+            #message-input {
+              border-radius: 20px;
+            }
+            
+            ::-webkit-scrollbar-thumb {
+              background: var(--accent-color);
+              border-radius: 4px;
+            }"></textarea>
             <div style="display: flex; justify-content: space-between; align-items:center; gap: 10px; margin-top:8px;">
                 <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
                     <input type="checkbox" id="global-css-live-toggle" style="width:14px;height:14px;accent-color:var(--accent-color);">
