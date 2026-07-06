@@ -22,7 +22,7 @@ function _getGroupCtx(tab) {
 // 判断当前 tab 是否支持分组
 function _tabHasGroups(tab) {
     tab = tab || currentSubTab;
-    return tab === 'custom' || tab === 'pokes' || tab === 'statuses';
+    return tab === 'custom' || tab === 'emojis' || tab === 'pokes' || tab === 'statuses';
 }
 
 let _batchSelectedIndices = new Set();
@@ -139,11 +139,8 @@ function _renderListContentOnly() {
     let renderType = 'text';
 
     if (currentMajorTab === 'reply') {
-        if (currentSubTab === 'custom') {
-            itemsToRender = customReplies;
-        } else if (currentSubTab === 'emojis') {
-            itemsToRender = CONSTANTS.REPLY_EMOJIS;
-            renderType = 'emoji';
+        if (currentSubTab === 'custom' || currentSubTab === 'emojis') {
+            itemsToRender = customReplies;   // emojis 现在显示主字卡内容
         } else if (currentSubTab === 'stickers') {
             itemsToRender = stickerLibrary;
             renderType = 'image';
@@ -155,7 +152,6 @@ function _renderListContentOnly() {
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }
 
-    if (renderType === 'emoji') { _renderEmojiTab(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
 
     const q = _searchQuery.toLowerCase().trim();
@@ -227,11 +223,8 @@ function renderReplyLibrary() {
     let renderType = 'text';
 
     if (currentMajorTab === 'reply') {
-        if (currentSubTab === 'custom') {
-            itemsToRender = customReplies;
-        } else if (currentSubTab === 'emojis') {
-            itemsToRender = CONSTANTS.REPLY_EMOJIS;
-            renderType = 'emoji';
+        if (currentSubTab === 'custom' || currentSubTab === 'emojis') {
+            itemsToRender = customReplies;   // emojis 现在显示主字卡内容
         } else if (currentSubTab === 'stickers') {
             itemsToRender = stickerLibrary;
             renderType = 'image';
@@ -243,7 +236,6 @@ function renderReplyLibrary() {
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }
 
-    if (renderType === 'emoji') { _renderEmojiTab(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
 
     const q = _searchQuery.toLowerCase().trim();
@@ -263,11 +255,10 @@ function renderReplyLibrary() {
 
 function _renderModernToolbar() {
     let toolbar = document.getElementById('batch-ops-toolbar');
-    const isMainCustom = currentMajorTab === 'reply' && currentSubTab === 'custom';
+    const isMainCustom = currentMajorTab === 'reply' && (currentSubTab === 'custom' || currentSubTab === 'emojis');
     const isStickersTab = currentMajorTab === 'reply' && currentSubTab === 'stickers';
     const hasGroupSupport = _tabHasGroups();
     const canBatch = isMainCustom || isStickersTab;
-
     if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.id = 'batch-ops-toolbar';
@@ -823,38 +814,6 @@ function _renderAtmosphereList(list, items) {
     list.appendChild(frag);
 }
 
-function _renderEmojiTab(list, itemsToRender) {
-    if (itemsToRender.length === 0 && customEmojis.length === 0) {
-        list.innerHTML = renderEmptyState('暂无 Emoji'); return;
-    }
-    itemsToRender.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'emoji-item';
-        div.textContent = item;
-        list.appendChild(div);
-    });
-    if (customEmojis.length > 0) {
-        const sep = document.createElement('div');
-        sep.style.cssText = 'grid-column:1/-1;font-size:11px;color:var(--text-secondary);padding:4px 2px 2px;border-top:1px dashed var(--border-color);margin-top:4px;';
-        sep.textContent = '— 自定义 —';
-        list.appendChild(sep);
-        customEmojis.forEach((item, idx) => {
-            const div = document.createElement('div');
-            div.className = 'emoji-item';
-            div.style.position = 'relative';
-            div.innerHTML = `<span style="pointer-events:none;">${item}</span><span class="emoji-custom-del" style="position:absolute;top:-4px;right:-4px;font-size:10px;background:var(--text-secondary);color:#fff;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity 0.2s;">×</span>`;
-            div.addEventListener('mouseenter', () => div.querySelector('.emoji-custom-del').style.opacity = '1');
-            div.addEventListener('mouseleave', () => div.querySelector('.emoji-custom-del').style.opacity = '0');
-            div.querySelector('.emoji-custom-del').addEventListener('click', e => {
-                e.stopPropagation();
-                customEmojis.splice(idx, 1);
-                throttledSaveData();
-                renderReplyLibrary();
-            });
-            list.appendChild(div);
-        });
-    }
-}
 
 function _renderStickerTab(list, itemsToRender) {
     const disabledSet = _getDisabledStickerItemsSet();
@@ -2140,7 +2099,7 @@ function _showBatchAddDialog() {
         const newItems = [];
         lines.forEach(val => {
             const norm = normalizeStringStrict(val);
-            const isDup = currentSubTab === 'custom'
+            const isDup = (currentSubTab === 'custom' || currentSubTab === 'emojis')
                 ? (customReplies.some(r => normalizeStringStrict(r) === norm) || CONSTANTS.REPLY_MESSAGES.some(r => normalizeStringStrict(r) === norm))
                 : currentSubTab === 'pokes'
                 ? customPokes.some(r => normalizeStringStrict(r) === norm)
@@ -2289,13 +2248,8 @@ function initReplyLibraryListeners() {
             if (currentSubTab === 'stickers') {
                 document.getElementById('sticker-file-input')?.click(); return;
             }
-            if (currentSubTab === 'emojis') {
-                const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
-                if (input?.trim()) {
-                    customEmojis.push(input.trim());
-                    throttledSaveData(); renderReplyLibrary();
-                    showNotification('✓ Emoji 已添加', 'success');
-                }
+            if (currentSubTab === 'custom' || currentSubTab === 'emojis' || currentSubTab === 'pokes' || currentSubTab === 'statuses') {
+                _showBatchAddDialog(); // 或直接用 prompt 添加单条，取决于你的实现
                 return;
             }
             if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses') {
