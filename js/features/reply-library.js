@@ -163,8 +163,9 @@ function _renderListContentOnly() {
         list.appendChild(empty.firstElementChild || empty);
         return;
     }
-
-    if (currentMajorTab === 'reply' && currentSubTab === 'custom') {
+    
+    // ✅ 新代码
+    if (currentMajorTab === 'reply' && _tabHasGroups()) {
         _renderCardViewWithGroups(list, filtered);
     } else {
         _renderAtmosphereList(list, filtered);
@@ -2251,9 +2252,6 @@ function initReplyLibraryListeners() {
             if (currentSubTab === 'custom' || currentSubTab === 'emojis' || currentSubTab === 'pokes' || currentSubTab === 'statuses') {
                 _showBatchAddDialog(); // 或直接用 prompt 添加单条，取决于你的实现
                 return;
-            }
-            if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses') {
-                _showBatchAddDialog(); return;
             }
             let input;
             if (currentSubTab === 'intros') {
