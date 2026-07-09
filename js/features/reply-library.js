@@ -173,12 +173,13 @@ function _renderListContentOnly() {
         list.appendChild(empty.firstElementChild || empty);
         return;
     }
-
-    if (currentMajorTab === 'reply' && currentSubTab === 'custom') {
+    
+    if (currentMajorTab === 'reply' && (currentSubTab === 'custom' || currentSubTab === 'emojis')) {
         _renderCardViewWithGroups(list, filtered);
     } else {
         _renderAtmosphereList(list, filtered);
     }
+    
 }
 
 let _rlRafId = null;
