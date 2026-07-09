@@ -1,6 +1,7 @@
 if (typeof customReplyGroups === 'undefined') window.customReplyGroups = [];
 if (typeof replyGroupsEnabled === 'undefined') window.replyGroupsEnabled = false;
 if (typeof customPokeGroups === 'undefined') window.customPokeGroups = [];
+if (typeof customEmojiGroups === 'undefined') window.customEmojiGroups = [];
 if (typeof customStatusGroups === 'undefined') window.customStatusGroups = [];
 
 // 根据当前 tab 返回对应的分组上下文 {groups, items, itemLabel}
@@ -14,6 +15,10 @@ function _getGroupCtx(tab) {
         if (!window.customStatusGroups) window.customStatusGroups = [];
         return { groups: window.customStatusGroups, items: customStatuses, itemLabel: '状态' };
     }
+    if (tab === 'emojis') {
+        if (!window.customEmojiGroups) window.customEmojiGroups = []; // 如果需要分组，可建新数组
+        return { groups: window.customEmojiGroups, items: customEmojis, itemLabel: 'Emoji' };
+    }
     // default: custom replies
     if (!window.customReplyGroups) window.customReplyGroups = [];
     return { groups: window.customReplyGroups, items: customReplies, itemLabel: '字卡' };
@@ -22,7 +27,8 @@ function _getGroupCtx(tab) {
 // 判断当前 tab 是否支持分组
 function _tabHasGroups(tab) {
     tab = tab || currentSubTab;
-    return tab === 'custom' || tab === 'emojis' || tab === 'pokes' || tab === 'statuses';
+    // 添加对 emojis 的支持
+    return tab === 'custom' || tab === 'pokes' || tab === 'statuses' || tab === 'emojis';
 }
 
 let _batchSelectedIndices = new Set();
@@ -139,8 +145,11 @@ function _renderListContentOnly() {
     let renderType = 'text';
 
     if (currentMajorTab === 'reply') {
-        if (currentSubTab === 'custom' || currentSubTab === 'emojis') {
-            itemsToRender = customReplies;   // emojis 现在显示主字卡内容
+        if (currentSubTab === 'custom') {
+            itemsToRender = customReplies;
+        } else if (currentSubTab === 'emojis') {
+            itemsToRender = customEmojis;
+            renderType = 'text';
         } else if (currentSubTab === 'stickers') {
             itemsToRender = stickerLibrary;
             renderType = 'image';
@@ -152,6 +161,7 @@ function _renderListContentOnly() {
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }
 
+    if (renderType === 'emoji') { _renderEmojiTab(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
 
     const q = _searchQuery.toLowerCase().trim();
@@ -163,9 +173,8 @@ function _renderListContentOnly() {
         list.appendChild(empty.firstElementChild || empty);
         return;
     }
-    
-    // ✅ 新代码
-    if (currentMajorTab === 'reply' && _tabHasGroups()) {
+
+    if (currentMajorTab === 'reply' && currentSubTab === 'custom') {
         _renderCardViewWithGroups(list, filtered);
     } else {
         _renderAtmosphereList(list, filtered);
@@ -224,8 +233,11 @@ function renderReplyLibrary() {
     let renderType = 'text';
 
     if (currentMajorTab === 'reply') {
-        if (currentSubTab === 'custom' || currentSubTab === 'emojis') {
-            itemsToRender = customReplies;   // emojis 现在显示主字卡内容
+        if (currentSubTab === 'custom') {
+            itemsToRender = customReplies;
+        } else if (currentSubTab === 'emojis') {
+            itemsToRender = CONSTANTS.REPLY_EMOJIS;
+            renderType = 'emoji';
         } else if (currentSubTab === 'stickers') {
             itemsToRender = stickerLibrary;
             renderType = 'image';
@@ -237,6 +249,7 @@ function renderReplyLibrary() {
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }
 
+    if (renderType === 'emoji') { _renderEmojiTab(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
 
     const q = _searchQuery.toLowerCase().trim();
@@ -256,10 +269,13 @@ function renderReplyLibrary() {
 
 function _renderModernToolbar() {
     let toolbar = document.getElementById('batch-ops-toolbar');
-    const isMainCustom = currentMajorTab === 'reply' && (currentSubTab === 'custom' || currentSubTab === 'emojis');
+    const isMainCustom = currentMajorTab === 'reply' && currentSubTab === 'custom';
     const isStickersTab = currentMajorTab === 'reply' && currentSubTab === 'stickers';
+    const isEmojisTab = currentMajorTab === 'reply' && currentSubTab === 'emojis';
     const hasGroupSupport = _tabHasGroups();
-    const canBatch = isMainCustom || isStickersTab;
+    const canBatch = isMainCustom || isStickersTab || isEmojisTab;
+    const totalItems = isMainCustom ? customReplies.length : (isStickersTab ? stickerLibrary.length : (isEmojisTab ? customEmojis.length : 0));
+    
     if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.id = 'batch-ops-toolbar';
@@ -815,6 +831,38 @@ function _renderAtmosphereList(list, items) {
     list.appendChild(frag);
 }
 
+function _renderEmojiTab(list, itemsToRender) {
+    if (itemsToRender.length === 0 && customEmojis.length === 0) {
+        list.innerHTML = renderEmptyState('暂无 Emoji'); return;
+    }
+    itemsToRender.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'emoji-item';
+        div.textContent = item;
+        list.appendChild(div);
+    });
+    if (customEmojis.length > 0) {
+        const sep = document.createElement('div');
+        sep.style.cssText = 'grid-column:1/-1;font-size:11px;color:var(--text-secondary);padding:4px 2px 2px;border-top:1px dashed var(--border-color);margin-top:4px;';
+        sep.textContent = '— 自定义 —';
+        list.appendChild(sep);
+        customEmojis.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'emoji-item';
+            div.style.position = 'relative';
+            div.innerHTML = `<span style="pointer-events:none;">${item}</span><span class="emoji-custom-del" style="position:absolute;top:-4px;right:-4px;font-size:10px;background:var(--text-secondary);color:#fff;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity 0.2s;">×</span>`;
+            div.addEventListener('mouseenter', () => div.querySelector('.emoji-custom-del').style.opacity = '1');
+            div.addEventListener('mouseleave', () => div.querySelector('.emoji-custom-del').style.opacity = '0');
+            div.querySelector('.emoji-custom-del').addEventListener('click', e => {
+                e.stopPropagation();
+                customEmojis.splice(idx, 1);
+                throttledSaveData();
+                renderReplyLibrary();
+            });
+            list.appendChild(div);
+        });
+    }
+}
 
 function _renderStickerTab(list, itemsToRender) {
     const disabledSet = _getDisabledStickerItemsSet();
@@ -1304,10 +1352,12 @@ function deleteItem(index) {
     const ctx = _getGroupCtx();
     const item = _tabHasGroups() ? ctx.items[index] : null;
     if (currentMajorTab === 'reply' && currentSubTab === 'custom') customReplies.splice(index, 1);
+    else if (currentSubTab === 'emojis') customEmojis.splice(index, 1);   // 新增
     else if (currentSubTab === 'pokes') customPokes.splice(index, 1);
     else if (currentSubTab === 'statuses') customStatuses.splice(index, 1);
     else if (currentSubTab === 'mottos') customMottos.splice(index, 1);
     else if (currentSubTab === 'intros') customIntros.splice(index, 1);
+    // 处理分组同步（如果有）
     if (item && ctx.groups) {
         ctx.groups.forEach(g => { if (g.items) g.items = g.items.filter(t => t !== item); });
     }
@@ -1328,6 +1378,7 @@ function editItem(index, oldText) {
         newText = prompt('修改内容:', oldText);
     }
     if (newText === null || newText.trim() === '') return;
+    // 更新分组中的引用
     if (_tabHasGroups()) {
         const ctx = _getGroupCtx();
         if (ctx.groups) {
@@ -1337,6 +1388,7 @@ function editItem(index, oldText) {
         }
     }
     if (currentMajorTab === 'reply' && currentSubTab === 'custom') customReplies[index] = newText.trim();
+    else if (currentSubTab === 'emojis') customEmojis[index] = newText.trim();   // 新增
     else if (currentSubTab === 'pokes') customPokes[index] = newText.trim();
     else if (currentSubTab === 'statuses') customStatuses[index] = newText.trim();
     else if (currentSubTab === 'mottos') customMottos[index] = newText.trim();
@@ -2100,7 +2152,7 @@ function _showBatchAddDialog() {
         const newItems = [];
         lines.forEach(val => {
             const norm = normalizeStringStrict(val);
-            const isDup = (currentSubTab === 'custom' || currentSubTab === 'emojis')
+            const isDup = currentSubTab === 'custom'
                 ? (customReplies.some(r => normalizeStringStrict(r) === norm) || CONSTANTS.REPLY_MESSAGES.some(r => normalizeStringStrict(r) === norm))
                 : currentSubTab === 'pokes'
                 ? customPokes.some(r => normalizeStringStrict(r) === norm)
@@ -2111,6 +2163,7 @@ function _showBatchAddDialog() {
             if (currentSubTab === 'custom') { customReplies.push(val); newItems.push(val); }
             else if (currentSubTab === 'pokes') { customPokes.push(val); newItems.push(val); }
             else if (currentSubTab === 'statuses') { customStatuses.push(val); newItems.push(val); }
+            else if (currentSubTab === 'emojis') { customEmojis.push(val); newItems.push(val); }   // 新增
             else if (currentSubTab === 'mottos') customMottos.push(val);
             added++;
         });
@@ -2245,14 +2298,26 @@ function initReplyLibraryListeners() {
 
     const addBtn = document.getElementById('add-custom-reply');
     if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            if (currentSubTab === 'stickers') {
-                document.getElementById('sticker-file-input')?.click(); return;
-            }
-            if (currentSubTab === 'custom' || currentSubTab === 'emojis' || currentSubTab === 'pokes' || currentSubTab === 'statuses') {
-                _showBatchAddDialog(); // 或直接用 prompt 添加单条，取决于你的实现
-                return;
-            }
+            addBtn.addEventListener('click', () => {
+                if (currentSubTab === 'stickers') {
+                    document.getElementById('sticker-file-input')?.click();
+                    return;
+                }
+                if (currentSubTab === 'emojis') {
+                    const input = prompt('请输入要添加的 Emoji:');
+                    if (input?.trim()) {
+                        customEmojis.push(input.trim());
+                        throttledSaveData();
+                        renderReplyLibrary();
+                        showNotification('✓ Emoji 已添加', 'success');
+                    }
+                    return;
+                }
+                
+                if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses' || currentSubTab === 'emojis') {
+                    _showBatchAddDialog(); return;
+                }
+                
             let input;
             if (currentSubTab === 'intros') {
                 const l1 = prompt('请输入主标题 (如: 𝑳𝒐𝒗𝒆):');
