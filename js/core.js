@@ -455,7 +455,7 @@ const LIBRARY_CONFIG = {
         title: "回复库管理",
         tabs: [
             { id: 'custom', name: '主字卡', mode: 'list' },
-            { id: 'emojis', name: 'Emoji', mode: 'list' },
+            { id: 'emojis', name: 'Emoji', mode: 'grid' },
             { id: 'stickers', name: '表情库', mode: 'grid' }
         ]
     },
