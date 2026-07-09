@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         await Promise.allSettled([
             safeAwait(initializeRandomUI?.()),
+            safeAwait(initMusicPlayer?.())
         ]);
 
         setInterval(checkStatusChange, 60000);
