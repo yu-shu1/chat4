@@ -236,8 +236,8 @@ function renderReplyLibrary() {
         if (currentSubTab === 'custom') {
             itemsToRender = customReplies;
         } else if (currentSubTab === 'emojis') {
-            itemsToRender = CONSTANTS.REPLY_EMOJIS;
-            renderType = 'emoji';
+            itemsToRender = customEmojis;   // 使用自定义数组
+            renderType = 'text';            // 以文本列表渲染
         } else if (currentSubTab === 'stickers') {
             itemsToRender = stickerLibrary;
             renderType = 'image';
@@ -931,8 +931,18 @@ function _toggleItemDisable(itemText) {
 }
 
 function _batchToggleDisable() {
-    const set = _getDisabledItemsSet();
-    const selectedItems = [..._batchSelectedIndices].map(i => customReplies[i]);
+    const set = _getDisabledItemsSet(); // 共用同一屏蔽集合
+    let selectedItems;
+
+    // 根据当前子选项卡选择正确的数据源
+    if (currentSubTab === 'emojis') {
+        selectedItems = [..._batchSelectedIndices].map(i => customEmojis[i]);
+    } else {
+        selectedItems = [..._batchSelectedIndices].map(i => customReplies[i]);
+    }
+
+    if (selectedItems.length === 0) return;
+
     const allDisabled = selectedItems.every(item => set.has(item));
     if (allDisabled) {
         selectedItems.forEach(item => set.delete(item));
@@ -941,6 +951,7 @@ function _batchToggleDisable() {
         selectedItems.forEach(item => set.add(item));
         showNotification(`已屏蔽 ${selectedItems.length} 条`, 'info');
     }
+
     _saveDisabledItemsSet(set);
     _batchSelectedIndices.clear();
     renderReplyLibrary();
@@ -2301,16 +2312,6 @@ function initReplyLibraryListeners() {
             addBtn.addEventListener('click', () => {
                 if (currentSubTab === 'stickers') {
                     document.getElementById('sticker-file-input')?.click();
-                    return;
-                }
-                if (currentSubTab === 'emojis') {
-                    const input = prompt('请输入要添加的 Emoji:');
-                    if (input?.trim()) {
-                        customEmojis.push(input.trim());
-                        throttledSaveData();
-                        renderReplyLibrary();
-                        showNotification('✓ Emoji 已添加', 'success');
-                    }
                     return;
                 }
                 
