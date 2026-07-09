@@ -1,6 +1,7 @@
 if (typeof customReplyGroups === 'undefined') window.customReplyGroups = [];
 if (typeof replyGroupsEnabled === 'undefined') window.replyGroupsEnabled = false;
 if (typeof customPokeGroups === 'undefined') window.customPokeGroups = [];
+if (typeof customEmojiGroups === 'undefined') window.customEmojiGroups = [];
 if (typeof customStatusGroups === 'undefined') window.customStatusGroups = [];
 
 // 根据当前 tab 返回对应的分组上下文 {groups, items, itemLabel}
@@ -14,6 +15,10 @@ function _getGroupCtx(tab) {
         if (!window.customStatusGroups) window.customStatusGroups = [];
         return { groups: window.customStatusGroups, items: customStatuses, itemLabel: '状态' };
     }
+    if (tab === 'emojis') {
+        if (!window.customEmojiGroups) window.customEmojiGroups = []; // 如果需要分组，可建新数组
+        return { groups: window.customEmojiGroups, items: customEmojis, itemLabel: 'Emoji' };
+    }
     // default: custom replies
     if (!window.customReplyGroups) window.customReplyGroups = [];
     return { groups: window.customReplyGroups, items: customReplies, itemLabel: '字卡' };
@@ -22,7 +27,8 @@ function _getGroupCtx(tab) {
 // 判断当前 tab 是否支持分组
 function _tabHasGroups(tab) {
     tab = tab || currentSubTab;
-    return tab === 'custom' || tab === 'pokes' || tab === 'statuses';
+    // 添加对 emojis 的支持
+    return tab === 'custom' || tab === 'pokes' || tab === 'statuses' || tab === 'emojis';
 }
 
 let _batchSelectedIndices = new Set();
@@ -142,8 +148,8 @@ function _renderListContentOnly() {
         if (currentSubTab === 'custom') {
             itemsToRender = customReplies;
         } else if (currentSubTab === 'emojis') {
-            itemsToRender = CONSTANTS.REPLY_EMOJIS;
-            renderType = 'emoji';
+            itemsToRender = customEmojis;
+            renderType = 'text';
         } else if (currentSubTab === 'stickers') {
             itemsToRender = stickerLibrary;
             renderType = 'image';
@@ -167,12 +173,13 @@ function _renderListContentOnly() {
         list.appendChild(empty.firstElementChild || empty);
         return;
     }
-
-    if (currentMajorTab === 'reply' && currentSubTab === 'custom') {
+    
+    if (currentMajorTab === 'reply' && (currentSubTab === 'custom' || currentSubTab === 'emojis')) {
         _renderCardViewWithGroups(list, filtered);
     } else {
         _renderAtmosphereList(list, filtered);
     }
+    
 }
 
 let _rlRafId = null;
@@ -230,8 +237,8 @@ function renderReplyLibrary() {
         if (currentSubTab === 'custom') {
             itemsToRender = customReplies;
         } else if (currentSubTab === 'emojis') {
-            itemsToRender = CONSTANTS.REPLY_EMOJIS;
-            renderType = 'emoji';
+            itemsToRender = customEmojis;   // 使用自定义数组
+            renderType = 'text';            // 以文本列表渲染
         } else if (currentSubTab === 'stickers') {
             itemsToRender = stickerLibrary;
             renderType = 'image';
@@ -265,9 +272,11 @@ function _renderModernToolbar() {
     let toolbar = document.getElementById('batch-ops-toolbar');
     const isMainCustom = currentMajorTab === 'reply' && currentSubTab === 'custom';
     const isStickersTab = currentMajorTab === 'reply' && currentSubTab === 'stickers';
+    const isEmojisTab = currentMajorTab === 'reply' && currentSubTab === 'emojis';
     const hasGroupSupport = _tabHasGroups();
-    const canBatch = isMainCustom || isStickersTab;
-
+    const canBatch = isMainCustom || isStickersTab || isEmojisTab;
+    const totalItems = isMainCustom ? customReplies.length : (isStickersTab ? stickerLibrary.length : (isEmojisTab ? customEmojis.length : 0));
+    
     if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.id = 'batch-ops-toolbar';
@@ -923,8 +932,18 @@ function _toggleItemDisable(itemText) {
 }
 
 function _batchToggleDisable() {
-    const set = _getDisabledItemsSet();
-    const selectedItems = [..._batchSelectedIndices].map(i => customReplies[i]);
+    const set = _getDisabledItemsSet(); // 共用同一屏蔽集合
+    let selectedItems;
+
+    // 根据当前子选项卡选择正确的数据源
+    if (currentSubTab === 'emojis') {
+        selectedItems = [..._batchSelectedIndices].map(i => customEmojis[i]);
+    } else {
+        selectedItems = [..._batchSelectedIndices].map(i => customReplies[i]);
+    }
+
+    if (selectedItems.length === 0) return;
+
     const allDisabled = selectedItems.every(item => set.has(item));
     if (allDisabled) {
         selectedItems.forEach(item => set.delete(item));
@@ -933,6 +952,7 @@ function _batchToggleDisable() {
         selectedItems.forEach(item => set.add(item));
         showNotification(`已屏蔽 ${selectedItems.length} 条`, 'info');
     }
+
     _saveDisabledItemsSet(set);
     _batchSelectedIndices.clear();
     renderReplyLibrary();
@@ -1344,10 +1364,12 @@ function deleteItem(index) {
     const ctx = _getGroupCtx();
     const item = _tabHasGroups() ? ctx.items[index] : null;
     if (currentMajorTab === 'reply' && currentSubTab === 'custom') customReplies.splice(index, 1);
+    else if (currentSubTab === 'emojis') customEmojis.splice(index, 1);   // 新增
     else if (currentSubTab === 'pokes') customPokes.splice(index, 1);
     else if (currentSubTab === 'statuses') customStatuses.splice(index, 1);
     else if (currentSubTab === 'mottos') customMottos.splice(index, 1);
     else if (currentSubTab === 'intros') customIntros.splice(index, 1);
+    // 处理分组同步（如果有）
     if (item && ctx.groups) {
         ctx.groups.forEach(g => { if (g.items) g.items = g.items.filter(t => t !== item); });
     }
@@ -1368,6 +1390,7 @@ function editItem(index, oldText) {
         newText = prompt('修改内容:', oldText);
     }
     if (newText === null || newText.trim() === '') return;
+    // 更新分组中的引用
     if (_tabHasGroups()) {
         const ctx = _getGroupCtx();
         if (ctx.groups) {
@@ -1377,6 +1400,7 @@ function editItem(index, oldText) {
         }
     }
     if (currentMajorTab === 'reply' && currentSubTab === 'custom') customReplies[index] = newText.trim();
+    else if (currentSubTab === 'emojis') customEmojis[index] = newText.trim();   // 新增
     else if (currentSubTab === 'pokes') customPokes[index] = newText.trim();
     else if (currentSubTab === 'statuses') customStatuses[index] = newText.trim();
     else if (currentSubTab === 'mottos') customMottos[index] = newText.trim();
@@ -2151,6 +2175,7 @@ function _showBatchAddDialog() {
             if (currentSubTab === 'custom') { customReplies.push(val); newItems.push(val); }
             else if (currentSubTab === 'pokes') { customPokes.push(val); newItems.push(val); }
             else if (currentSubTab === 'statuses') { customStatuses.push(val); newItems.push(val); }
+            else if (currentSubTab === 'emojis') { customEmojis.push(val); newItems.push(val); }   // 新增
             else if (currentSubTab === 'mottos') customMottos.push(val);
             added++;
         });
@@ -2285,22 +2310,16 @@ function initReplyLibraryListeners() {
 
     const addBtn = document.getElementById('add-custom-reply');
     if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            if (currentSubTab === 'stickers') {
-                document.getElementById('sticker-file-input')?.click(); return;
-            }
-            if (currentSubTab === 'emojis') {
-                const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
-                if (input?.trim()) {
-                    customEmojis.push(input.trim());
-                    throttledSaveData(); renderReplyLibrary();
-                    showNotification('✓ Emoji 已添加', 'success');
+            addBtn.addEventListener('click', () => {
+                if (currentSubTab === 'stickers') {
+                    document.getElementById('sticker-file-input')?.click();
+                    return;
                 }
-                return;
-            }
-            if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses') {
-                _showBatchAddDialog(); return;
-            }
+                
+                if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses' || currentSubTab === 'emojis') {
+                    _showBatchAddDialog(); return;
+                }
+                
             let input;
             if (currentSubTab === 'intros') {
                 const l1 = prompt('请输入主标题 (如: 𝑳𝒐𝒗𝒆):');
