@@ -436,7 +436,7 @@ function _renderModernToolbar() {
             ${canBatch ? `
             ${isEmojiTab ? `
             <button class="toolbar-icon-btn" id="tb-add-single-emoji" title="添加单个 Emoji">
-                <i class="fas fa-plus-circle"></i>
+                <i class="fas fa-plus"></i>
             </button>
             ` : ''}
             <button class="toolbar-icon-btn ${_batchModeActive ? 'active' : ''}" id="tb-batch-btn" title="${_batchModeActive ? '退出批量' : '批量管理'}">
@@ -2627,18 +2627,152 @@ async function loadCustomEmojiGroups() {
         if (Array.isArray(data)) window.customEmojiGroups = data;
     } catch (e) { console.warn('加载 Emoji 分组失败', e); }
 }
+
 // 保存自定义 Emoji 分组
 function saveCustomEmojiGroups() {
     localforage.setItem(getStorageKey('customEmojiGroups'), window.customEmojiGroups).catch(e => console.warn('保存 Emoji 分组失败', e));
 }
 
-// ---------- 单个添加 Emoji ----------
+// ---------- 单个添加 Emoji（自定义模态框） ----------
 function _addSingleEmoji() {
-    const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
-    if (input && input.trim()) {
-        customEmojis.push(input.trim());
-        throttledSaveData();
-        renderReplyLibrary();
-        showNotification('✓ Emoji 已添加', 'success');
-    }
+    // 创建遮罩层
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: modalBgFadeIn 0.3s ease;
+    `;
+
+    // 内容容器
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        background: var(--secondary-bg);
+        border-radius: var(--radius);
+        padding: 24px;
+        width: 90%;
+        max-width: 380px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        animation: modalContentSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        border: 1px solid var(--surface-border, rgba(var(--accent-color-rgb), 0.18));
+    `;
+
+    modal.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+            <div style="
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: rgba(var(--accent-color-rgb), 0.12);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                color: var(--accent-color);
+                flex-shrink: 0;
+            ">
+                <span style="line-height: 1;">😊</span>
+            </div>
+            <div style="font-size: 17px; font-weight: 700; color: var(--text-primary);">
+                添加 Emoji
+            </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500;">
+                输入一个或多个 Emoji 字符
+            </label>
+            <input type="text" id="single-emoji-input" placeholder="例如：😊❤️✨" style="
+                width: 100%;
+                padding: 12px 14px;
+                border: 1.5px solid var(--border-color);
+                border-radius: var(--radius-sm);
+                background: var(--primary-bg);
+                color: var(--text-primary);
+                font-size: 18px;
+                font-family: var(--font-family);
+                outline: none;
+                transition: border-color 0.2s;
+                box-sizing: border-box;
+            " autofocus>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="single-emoji-cancel" style="
+                padding: 10px 20px;
+                border: 1.5px solid var(--border-color);
+                border-radius: var(--radius-sm);
+                background: transparent;
+                color: var(--text-secondary);
+                font-size: 14px;
+                font-family: var(--font-family);
+                cursor: pointer;
+                transition: all 0.2s;
+            ">取消</button>
+            <button id="single-emoji-confirm" style="
+                padding: 10px 24px;
+                border: none;
+                border-radius: var(--radius-sm);
+                background: var(--accent-color);
+                color: var(--message-sent-text);
+                font-size: 14px;
+                font-weight: 600;
+                font-family: var(--font-family);
+                cursor: pointer;
+                transition: all 0.2s;
+                box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
+            ">确认</button>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // 获取输入框和按钮
+    const input = modal.querySelector('#single-emoji-input');
+    const confirmBtn = modal.querySelector('#single-emoji-confirm');
+    const cancelBtn = modal.querySelector('#single-emoji-cancel');
+
+    // 聚焦输入框
+    setTimeout(() => input.focus(), 100);
+
+    // 确认逻辑
+    const confirm = () => {
+        const value = input.value.trim();
+        if (value) {
+            customEmojis.push(value);
+            throttledSaveData();
+            renderReplyLibrary();
+            showNotification('✓ Emoji 已添加', 'success');
+            overlay.remove();
+        } else {
+            showNotification('请输入要添加的 Emoji', 'warning');
+        }
+    };
+
+    // 取消逻辑
+    const cancel = () => overlay.remove();
+
+    // 绑定事件
+    confirmBtn.addEventListener('click', confirm);
+    cancelBtn.addEventListener('click', cancel);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) cancel();
+    });
+
+    // 键盘支持：Enter 确认，Escape 取消
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            confirm();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancel();
+        }
+    });
 }
+
