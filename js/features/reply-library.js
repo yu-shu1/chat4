@@ -2,6 +2,7 @@ if (typeof customReplyGroups === 'undefined') window.customReplyGroups = [];
 if (typeof replyGroupsEnabled === 'undefined') window.replyGroupsEnabled = false;
 if (typeof customPokeGroups === 'undefined') window.customPokeGroups = [];
 if (typeof customStatusGroups === 'undefined') window.customStatusGroups = [];
+if (typeof customEmojiGroups === 'undefined') window.customEmojiGroups = [];
 
 // 根据当前 tab 返回对应的分组上下文 {groups, items, itemLabel}
 function _getGroupCtx(tab) {
@@ -14,6 +15,10 @@ function _getGroupCtx(tab) {
         if (!window.customStatusGroups) window.customStatusGroups = [];
         return { groups: window.customStatusGroups, items: customStatuses, itemLabel: '状态' };
     }
+    if (tab === 'emojis') {                       // ← 新增
+        if (!window.customEmojiGroups) window.customEmojiGroups = [];
+        return { groups: window.customEmojiGroups, items: customEmojis, itemLabel: 'Emoji' };
+    }
     // default: custom replies
     if (!window.customReplyGroups) window.customReplyGroups = [];
     return { groups: window.customReplyGroups, items: customReplies, itemLabel: '字卡' };
@@ -22,7 +27,7 @@ function _getGroupCtx(tab) {
 // 判断当前 tab 是否支持分组
 function _tabHasGroups(tab) {
     tab = tab || currentSubTab;
-    return tab === 'custom' || tab === 'pokes' || tab === 'statuses';
+    return tab === 'custom' || tab === 'pokes' || tab === 'statuses' || tab === 'emojis';
 }
 
 let _batchSelectedIndices = new Set();
@@ -197,6 +202,9 @@ function renderReplyLibraryRaf() {
 }
 
 function renderReplyLibrary() {
+    if (!window._emojiGroupsLoaded) {
+        loadCustomEmojiGroups().then(() => { window._emojiGroupsLoaded = true; });
+    }
     if (currentMajorTab === 'announcement') return;
     const list = document.getElementById('custom-replies-list');
     const titleEl = document.getElementById('cr-modal-title');
@@ -2609,4 +2617,16 @@ function applyAllAvatarFrames() {
     if (settings.avatarCornerRadius) {
         document.documentElement.style.setProperty('--avatar-corner-radius', settings.avatarCornerRadius + 'px');
     }
+}
+
+// 加载自定义 Emoji 分组
+async function loadCustomEmojiGroups() {
+    try {
+        const data = await localforage.getItem(getStorageKey('customEmojiGroups'));
+        if (Array.isArray(data)) window.customEmojiGroups = data;
+    } catch (e) { console.warn('加载 Emoji 分组失败', e); }
+}
+// 保存自定义 Emoji 分组
+function saveCustomEmojiGroups() {
+    localforage.setItem(getStorageKey('customEmojiGroups'), window.customEmojiGroups).catch(e => console.warn('保存 Emoji 分组失败', e));
 }
