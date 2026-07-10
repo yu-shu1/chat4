@@ -434,6 +434,11 @@ function _renderModernToolbar() {
             </button>
             <div style="flex:1;"></div>
             ${canBatch ? `
+            ${isEmojiTab ? `
+            <button class="toolbar-icon-btn" id="tb-add-single-emoji" title="添加单个 Emoji">
+                <i class="fas fa-plus-circle"></i>
+            </button>
+            ` : ''}
             <button class="toolbar-icon-btn ${_batchModeActive ? 'active' : ''}" id="tb-batch-btn" title="${_batchModeActive ? '退出批量' : '批量管理'}">
                 ${ICONS.batch}
             </button>` : ''}
@@ -515,7 +520,12 @@ function _renderModernToolbar() {
             renderReplyLibrary();
         });
     });
-
+    
+    const singleEmojiBtn = toolbar.querySelector('#tb-add-single-emoji');
+    if (singleEmojiBtn) {
+        singleEmojiBtn.addEventListener('click', _addSingleEmoji);
+    }
+    
     if (_batchModeActive) {
         toolbar.querySelector('#batch-select-all-btn')?.addEventListener('click', () => {
             if (_batchSelectedIndices.size === totalItems) {
@@ -2258,11 +2268,14 @@ function _showBatchAddDialog() {
                 ? customPokes.some(r => normalizeStringStrict(r) === norm)
                 : currentSubTab === 'statuses'
                 ? customStatuses.some(r => normalizeStringStrict(r) === norm)
+                : currentSubTab === 'emojis'   // ← 添加这一行
+                ? customEmojis.some(r => normalizeStringStrict(r) === norm)
                 : false;
             if (isDup) { skipped++; return; }
             if (currentSubTab === 'custom') { customReplies.push(val); newItems.push(val); }
             else if (currentSubTab === 'pokes') { customPokes.push(val); newItems.push(val); }
             else if (currentSubTab === 'statuses') { customStatuses.push(val); newItems.push(val); }
+            else if (currentSubTab === 'emojis') { customEmojis.push(val); newItems.push(val); } // ← 添加这一行
             else if (currentSubTab === 'mottos') customMottos.push(val);
             added++;
         });
@@ -2402,12 +2415,8 @@ function initReplyLibraryListeners() {
                 document.getElementById('sticker-file-input')?.click(); return;
             }
             if (currentSubTab === 'emojis') {
-                const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
-                if (input?.trim()) {
-                    customEmojis.push(input.trim());
-                    throttledSaveData(); renderReplyLibrary();
-                    showNotification('✓ Emoji 已添加', 'success');
-                }
+                // 改为批量添加
+                _showBatchAddDialog();
                 return;
             }
             if (currentSubTab === 'custom' || currentSubTab === 'pokes' || currentSubTab === 'statuses') {
@@ -2443,7 +2452,7 @@ function initReplyLibraryListeners() {
 }
 
 function getCategoryName(tabId) {
-    return { custom: '回复', pokes: '拍一拍', statuses: '状态', mottos: '格言', intros: '开场语' }[tabId] || '内容';
+    return { custom: '回复', emojis: 'Emoji', pokes: '拍一拍', statuses: '状态', mottos: '格言', intros: '开场语' }[tabId] || '内容';
 }
 
 function updateTabUI() {
@@ -2621,4 +2630,15 @@ async function loadCustomEmojiGroups() {
 // 保存自定义 Emoji 分组
 function saveCustomEmojiGroups() {
     localforage.setItem(getStorageKey('customEmojiGroups'), window.customEmojiGroups).catch(e => console.warn('保存 Emoji 分组失败', e));
+}
+
+// ---------- 单个添加 Emoji ----------
+function _addSingleEmoji() {
+    const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
+    if (input && input.trim()) {
+        customEmojis.push(input.trim());
+        throttledSaveData();
+        renderReplyLibrary();
+        showNotification('✓ Emoji 已添加', 'success');
+    }
 }
