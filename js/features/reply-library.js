@@ -153,7 +153,7 @@ function _renderListContentOnly() {
         if (currentSubTab === 'custom') {
             itemsToRender = customReplies;
         } else if (currentSubTab === 'emojis') {
-            itemsToRender = CONSTANTS.REPLY_EMOJIS;
+            itemsToRender = customEmojis;   // ✅ 使用自定义 Emoji 数组
             renderType = 'emoji';
         } else if (currentSubTab === 'stickers') {
             itemsToRender = stickerLibrary;
@@ -166,7 +166,7 @@ function _renderListContentOnly() {
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }
 
-    if (renderType === 'emoji') { _renderEmojiTab(list, itemsToRender); return; }
+    if (renderType === 'emoji') { _renderEmojiList(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
 
     const q = _searchQuery.toLowerCase().trim();
@@ -241,7 +241,7 @@ function renderReplyLibrary() {
         if (currentSubTab === 'custom') {
             itemsToRender = customReplies;
         } else if (currentSubTab === 'emojis') {
-            itemsToRender = CONSTANTS.REPLY_EMOJIS;
+            itemsToRender = customEmojis;   // ✅ 使用自定义 Emoji 数组
             renderType = 'emoji';
         } else if (currentSubTab === 'stickers') {
             itemsToRender = stickerLibrary;
