@@ -171,7 +171,6 @@ function _renderListContentOnly() {
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }
 
-    if (renderType === 'emoji') { _renderEmojiList(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
 
     const q = _searchQuery.toLowerCase().trim();
@@ -263,13 +262,6 @@ function renderReplyLibrary() {
     }
     
     
-    // 在 renderReplyLibrary 函数中
-    if (renderType === 'emoji') {
-        // 原先是 _renderEmojiTab(list, itemsToRender);
-        // 现在我们改为使用列表视图
-        _renderEmojiList(list, itemsToRender);
-        return;
-    }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
 
     const q = _searchQuery.toLowerCase().trim();
@@ -607,8 +599,8 @@ function _renderCardViewWithGroups(list, items) {
     const ctx = _getGroupCtx();
     const groups = ctx.groups;
     const sourceItems = ctx.items;
-    const disabledSet = _getDisabledItemsSet();
-    // 预建索引 Map，避免 indexOf 的 O(n²) 查找
+    const isEmoji = currentSubTab === 'emojis';
+    const disabledSet = isEmoji ? _getDisabledEmojiSet() : _getDisabledItemsSet();
     const replyIndexMap = new Map();
     sourceItems.forEach((r, i) => { if (!replyIndexMap.has(r)) replyIndexMap.set(r, i); });
     const itemsWithIdx = items.map(text => ({
@@ -618,7 +610,7 @@ function _renderCardViewWithGroups(list, items) {
 
     if (_activeGroupFilter === null) {
         if (!groups || groups.length === 0) {
-            _renderCardList(list, itemsWithIdx, disabledSet);
+            _renderCardList(list, itemsWithIdx, disabledSet, isEmoji);
             return;
         }
 
@@ -628,12 +620,12 @@ function _renderCardViewWithGroups(list, items) {
                 .map(t => ({ text: t, idx: sourceItems.indexOf(t) }))
                 .filter(x => x.idx >= 0 && items.includes(x.text));
             groupItems.forEach(x => inGroup.add(x.idx));
-            _renderGroupBlock(list, g, groupItems, disabledSet);
+            _renderGroupBlock(list, g, groupItems, disabledSet, false, isEmoji);
         });
 
         const ungrouped = itemsWithIdx.filter(x => !inGroup.has(x.idx));
         if (ungrouped.length > 0) {
-            _renderGroupBlock(list, { id: '__ungrouped', name: '未分组', color: '#868E96', disabled: false }, ungrouped, disabledSet, true);
+            _renderGroupBlock(list, { id: '__ungrouped', name: '未分组', color: '#868E96', disabled: false }, ungrouped, disabledSet, true, isEmoji);
         }
     } else if (_activeGroupFilter === 'ungrouped') {
         const inGroup = new Set();
@@ -659,7 +651,7 @@ function _renderCardViewWithGroups(list, items) {
     }
 }
 
-function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = false) {
+function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = false, isEmoji = false) {
     const section = document.createElement('div');
     section.className = 'rl-group-block';
     const isCollapsed = group._collapsed || false;
@@ -705,7 +697,7 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
     if (groupItems.length === 0) {
         body.innerHTML = `<div style="padding:18px;text-align:center;font-size:12px;color:var(--text-secondary);opacity:0.6;">此分组暂无内容</div>`;
     } else {
-        _renderCardList(body, groupItems, disabledSet);
+        _renderCardList(body, groupItems, disabledSet, isEmoji);  // 这里现在有 isEmoji
     }
 
     section.querySelector('.grp-select-all-btn')?.addEventListener('click', e => {
@@ -744,16 +736,16 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
     });
 }
 
-const _CARD_PAGE_SIZE = 80; // 每次最多渲染 80 张，超过时追加"显示更多"
+const _CARD_PAGE_SIZE = 150; // 每次最多渲染 150 张，超过时追加"显示更多"
 
-function _renderCardList(container, itemsWithIdx, disabledSet) {
+function _renderCardList(container, itemsWithIdx, disabledSet, isEmoji = false) {
     const total = itemsWithIdx.length;
     const toRender = itemsWithIdx.slice(0, _CARD_PAGE_SIZE);
     const remaining = total - toRender.length;
 
     const frag = document.createDocumentFragment();
     toRender.forEach(({ text, idx }) => {
-        frag.appendChild(_createCard(text, idx, disabledSet));
+        frag.appendChild(_createCard(text, idx, disabledSet, isEmoji)); // 已传递
     });
 
     if (remaining > 0) {
@@ -764,7 +756,7 @@ function _renderCardList(container, itemsWithIdx, disabledSet) {
             btn.remove();
             const moreFrag = document.createDocumentFragment();
             itemsWithIdx.slice(_CARD_PAGE_SIZE).forEach(({ text, idx }) => {
-                moreFrag.appendChild(_createCard(text, idx, disabledSet));
+                moreFrag.appendChild(_createCard(text, idx, disabledSet, isEmoji));
             });
             container.appendChild(moreFrag);
         };
