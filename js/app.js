@@ -243,12 +243,20 @@ function showHomeScreen() {
     const homeScreen = document.getElementById('home-screen');
     if (!homeScreen) return;
 
+    // ★ 关键：覆盖内联 display:none
     homeScreen.style.display = 'flex';
-    homeScreen.classList.add('active');
-    homeScreen._pendingActivation = false;   // 取消待激活标记
 
-    updateBannerGreeting();   // 刷新横幅问候语
-    // 网格内容不变，无需重新初始化，但若需要可调用 initHomeGrid()
+    const modal = document.getElementById('daily-greeting-modal');
+    const isModalVisible = modal && !modal.classList.contains('hidden') && modal.style.display !== 'none';
+    if (isModalVisible) {
+        homeScreen._pendingActivation = true;
+        return;
+    }
+
+    updateBannerGreeting();
+    initHomeGrid();
+    homeScreen.classList.add('active');
+    homeScreen._pendingActivation = false;
 }
 
 /**
