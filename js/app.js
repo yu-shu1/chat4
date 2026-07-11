@@ -243,20 +243,12 @@ function showHomeScreen() {
     const homeScreen = document.getElementById('home-screen');
     if (!homeScreen) return;
 
-    // ★ 关键：覆盖内联 display:none
     homeScreen.style.display = 'flex';
-
-    const modal = document.getElementById('daily-greeting-modal');
-    const isModalVisible = modal && !modal.classList.contains('hidden') && modal.style.display !== 'none';
-    if (isModalVisible) {
-        homeScreen._pendingActivation = true;
-        return;
-    }
-
-    updateBannerGreeting();
-    initHomeGrid();
     homeScreen.classList.add('active');
-    homeScreen._pendingActivation = false;
+    homeScreen._pendingActivation = false;   // 取消待激活标记
+
+    updateBannerGreeting();   // 刷新横幅问候语
+    // 网格内容不变，无需重新初始化，但若需要可调用 initHomeGrid()
 }
 
 /**
@@ -357,18 +349,22 @@ function handleHomeAction(action) {
     const homeScreen = document.getElementById('home-screen');
 
     switch (action) {
+        // app.js - handleHomeAction 关键修改
         case 'chat':
-            if (homeScreen) homeScreen.classList.remove('active');
-            const chatContainer = document.getElementById('chat-container');
-            if (chatContainer) {
-                setTimeout(() => {
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                }, 100);
+            if (homeScreen) {
+                homeScreen.classList.remove('active');
+                homeScreen.style.display = 'none';   // 彻底隐藏，以便显示聊天
             }
-            const input = document.getElementById('message-input');
-            if (input) setTimeout(() => input.focus(), 200);
+            // 滚动聊天、聚焦输入框...
             break;
-
+        default:
+            // 其他功能：确保桌面显示，然后打开对应模态框
+            if (homeScreen) {
+                homeScreen.style.display = 'flex';
+                homeScreen.classList.add('active');
+            }
+            // 打开模态框...
+            break;
         case 'mood':
             const moodModal = document.getElementById('mood-modal');
             if (moodModal && typeof showModal === 'function') {
