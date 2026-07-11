@@ -243,16 +243,16 @@ function showHomeScreen() {
     const homeScreen = document.getElementById('home-screen');
     if (!homeScreen) return;
 
-    // 检查公告弹窗是否正在显示
+    // ★ 关键：覆盖内联 display:none
+    homeScreen.style.display = 'flex';
+
     const modal = document.getElementById('daily-greeting-modal');
     const isModalVisible = modal && !modal.classList.contains('hidden') && modal.style.display !== 'none';
     if (isModalVisible) {
-        // 公告弹窗正在显示，标记待激活，等待公告关闭后再激活
         homeScreen._pendingActivation = true;
         return;
     }
 
-    // 公告未显示，直接激活桌面
     updateBannerGreeting();
     initHomeGrid();
     homeScreen.classList.add('active');
@@ -483,6 +483,9 @@ window.closeDailyGreeting = function() {
         const homeScreen = document.getElementById('home-screen');
         if (homeScreen && homeScreen._pendingActivation) {
             homeScreen._pendingActivation = false;
+            // ★★★ 添加下面这一行，强制覆盖内联 display:none ★★★
+            homeScreen.style.display = 'flex';
+
             // 重新初始化桌面内容
             if (typeof updateBannerGreeting === 'function') updateBannerGreeting();
             if (typeof initHomeGrid === 'function') initHomeGrid();
