@@ -845,7 +845,7 @@ function _createCard(item, index, disabledSet, isEmoji = false) {
             <button class="rl-act-btn ${isDisabled ? 'active' : ''}" data-action="disable" title="${isDisabled ? '启用' : '屏蔽'}">
                 ${isDisabled ? ICONS.eye : ICONS.eyeOff}
             </button>
-            ${!isEmoji ? `<button class="rl-act-btn" data-action="tag" title="分组">${ICONS.tag}</button>` : ''}
+            ${_tabHasGroups() ? `<button class="rl-act-btn" data-action="tag" title="分组">${ICONS.tag}</button>` : ''}
             <button class="rl-act-btn" data-action="edit" title="编辑">${ICONS.edit}</button>
             <button class="rl-act-btn danger" data-action="delete" title="删除">${ICONS.trash}</button>
         </div>
