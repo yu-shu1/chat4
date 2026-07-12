@@ -368,15 +368,7 @@ function handleHomeAction(action) {
             const input = document.getElementById('message-input');
             if (input) setTimeout(() => input.focus(), 200);
             break;
-            
-        default:
-            // 其他功能：确保桌面显示，然后打开对应模态框
-            if (homeScreen) {
-                homeScreen.style.display = 'flex';
-                homeScreen.classList.add('active');
-            }
-            // 打开模态框...
-            break;
+
         case 'mood':
             const moodModal = document.getElementById('mood-modal');
             if (moodModal && typeof showModal === 'function') {
@@ -509,8 +501,10 @@ window.closeDailyGreeting = function() {
     }
 };
 
+
 // 暴露全局函数
 window.showHomeScreen = showHomeScreen;
 window.handleHomeAction = handleHomeAction;
 window.initHomeGrid = initHomeGrid;
 window.updateBannerGreeting = updateBannerGreeting;
+
