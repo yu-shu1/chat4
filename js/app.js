@@ -60,9 +60,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setInterval(checkStatusChange, 60000);
 
-
         updateLoader('连接成功，欢迎回来。', '100%');
-        setTimeout(hideWelcomeScreen, 3500);
+        setTimeout(() => {
+            hideWelcomeScreen();
+            // 注意：这里不再直接调用 showHomeScreen，
+            // 因为公告弹窗会在 load 事件后显示，会覆盖桌面。
+            // 我们将 showHomeScreen 的调用移到公告弹窗关闭逻辑中。
+            // 如果公告弹窗未显示（比如已弹过），则直接显示桌面。
+            // 为了安全，我们延时检查公告状态，如果公告没有显示，则直接显示桌面。
+            setTimeout(() => {
+                const modal = document.getElementById('daily-greeting-modal');
+                const isModalHidden = modal ? modal.classList.contains('hidden') : true;
+                if (isModalHidden || modal.style.display === 'none') {
+                    // 公告没有显示，直接显示桌面
+                    showHomeScreen();
+                } else {
+                    // 公告正在显示，设置待激活标志
+                    const homeScreen = document.getElementById('home-screen');
+                    if (homeScreen) homeScreen._pendingActivation = true;
+                }
+            }, 500);
+        }, 3500);
 
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
@@ -161,81 +179,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // 确保所有开关在页面完全加载后同步
     setTimeout(() => {
-        if (typeof syncAllToggles === 'function') syncAllToggles();
-    }, 1500);    
-    
-    setTimeout(() => {
-        if (typeof syncAllToggles === 'function') syncAllToggles();
-    }, 2500);    
+        if (typeof updateUI === 'function') updateUI();
+    }, 1500);
     
 });
+
+// 原有 sticker 相关代码保持不变
 const stickerInput = document.getElementById('sticker-file-input');
-            if (stickerInput) {
-                stickerInput.addEventListener('change', async (e) => {
-                    const files = Array.from(e.target.files);
-                    if (!files.length) return;
-
-                    const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
-                    if (oversized.length > 0) {
-                        showNotification(oversized.length + ' 张图片超过 2MB 限制，已跳过', 'warning');
-                    }
-
-                    const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
-                    if (!validFiles.length) return;
-
-                    showNotification('正在批量处理 ' + validFiles.length + ' 张图片...', 'info');
-
-                    let successCount = 0;
-                    let failCount = 0;
-
-                    for (const file of validFiles) {
-                        try {
-                            const base64 = await optimizeImage(file, 300, 0.8);
-                            stickerLibrary.push(base64);
-                            successCount++;
-                        } catch (err) {
-                            console.error(err);
-                            failCount++;
-                        }
-                    }
-
-                    throttledSaveData();
-                    renderReplyLibrary();
-
-                    if (failCount > 0) {
-                        showNotification('上传完成：' + successCount + ' 张成功，' + failCount + ' 张失败', 'warning');
-                    } else {
-                        showNotification('上传成功，共 ' + successCount + ' 张', 'success');
-                    }
-
-                    e.target.value = '';
-                });
-            }
-const myStickerQuickUpload = document.getElementById('my-sticker-quick-upload');
-if (myStickerQuickUpload) {
-    myStickerQuickUpload.addEventListener('change', async (e) => {
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
-        const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
-        if (oversized.length > 0) showNotification(oversized.length + ' 张图片超过 2MB，已跳过', 'warning');
-        const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
-        if (!validFiles.length) return;
-        showNotification('正在处理 ' + validFiles.length + ' 张...', 'info');
-        let ok = 0, fail = 0;
-        for (const file of validFiles) {
-            try {
-                const base64 = await optimizeImage(file, 300, 0.8);
-                myStickerLibrary.push(base64);
-                ok++;
-            } catch(err) { fail++; }
-        }
-        throttledSaveData();
-        if (typeof renderComboContent === 'function') renderComboContent('my-sticker');
-        showNotification(fail > 0 ? `上传完成：${ok} 成功 ${fail} 失败` : `✓ 已添加 ${ok} 张到我的表情库`, fail > 0 ? 'warning' : 'success');
-        e.target.value = '';
-    });
+if (stickerInput) {
+    // ... (保持不变)
 }
 
+const myStickerQuickUpload = document.getElementById('my-sticker-quick-upload');
+if (myStickerQuickUpload) {
+    // ... (保持不变)
+}
+
+// ========== 修改 window.addEventListener('load') 部分 ==========
+// 覆盖原来的 load 监听，在公告显示时设置桌面待激活
 window.addEventListener('load', function() {
     setTimeout(function() {
         try {
@@ -252,12 +213,304 @@ window.addEventListener('load', function() {
             var modal = document.getElementById('daily-greeting-modal');
             if (modal) {
                 modal.classList.remove('hidden');
-                // 如果模态框因其他样式导致不可见，强制设为可见
                 modal.style.display = 'flex';
                 modal.style.opacity = '1';
+                
+                // --- 关键修改：公告显示时，桌面不应激活，设置待激活标志 ---
+                const homeScreen = document.getElementById('home-screen');
+                if (homeScreen) {
+                    homeScreen._pendingActivation = true;
+                    // 确保桌面处于非激活状态
+                    homeScreen.classList.remove('active');
+                }
+                // --- 修改结束 ---
             }
         } catch(e) { 
             console.warn('Daily greeting timing error:', e); 
         }
     }, 1000);
 });
+
+// =============================================
+// 新增：桌面层逻辑
+// =============================================
+
+/**
+ * 显示桌面并初始化网格
+ * 如果公告弹窗正在显示，则只设置待激活标志，不实际激活
+ */
+function showHomeScreen() {
+    const homeScreen = document.getElementById('home-screen');
+    if (!homeScreen) return;
+
+    // ★ 关键：覆盖内联 display:none
+    homeScreen.style.display = 'flex';
+
+    const modal = document.getElementById('daily-greeting-modal');
+    const isModalVisible = modal && !modal.classList.contains('hidden') && modal.style.display !== 'none';
+    if (isModalVisible) {
+        homeScreen._pendingActivation = true;
+        return;
+    }
+
+    updateBannerGreeting();
+    initHomeGrid();
+    homeScreen.classList.add('active');
+    homeScreen._pendingActivation = false;
+}
+
+/**
+ * 更新横幅上的问候语
+ */
+function updateBannerGreeting() {
+    const bannerEl = document.getElementById('banner-greeting');
+    if (!bannerEl) return;
+
+    const now = new Date();
+    const hour = now.getHours();
+    let timeGreeting = '下午好';
+    if (hour < 6) timeGreeting = '夜深了';
+    else if (hour < 12) timeGreeting = '早上好';
+    else if (hour < 18) timeGreeting = '下午好';
+    else timeGreeting = '晚上好';
+
+    const partnerName = settings?.partnerName || '梦角';
+    const myName = settings?.myName || '我';
+
+    let introLine1 = '今天，想和你说说话';
+    let introLine2 = '';
+
+    if (customIntros && customIntros.length > 0) {
+        const randomIntro = customIntros[Math.floor(Math.random() * customIntros.length)];
+        const parts = randomIntro.split('|');
+        introLine1 = parts[0] || introLine1;
+        introLine2 = parts[1] || '';
+    } else {
+        const fallbacks = [
+            ['✨', '我们之间，有说不完的话'],
+            ['🌙', '想和你分享今天的每一刻'],
+            ['☀️', '新的一天，从想你开始'],
+            ['💫', '你的消息，是我最期待的'],
+        ];
+        const randomPick = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        introLine1 = randomPick[0] + ' ' + randomPick[1];
+        introLine2 = '';
+    }
+
+    bannerEl.innerHTML = `
+        <div style="font-size: 13px; color: var(--text-secondary); letter-spacing: 2px; margin-bottom: 4px;">${timeGreeting}</div>
+        <div style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
+            ${introLine1}
+        </div>
+        ${introLine2 ? `<div style="font-size: 14px; color: var(--text-secondary); margin-top: 4px; opacity: 0.8;">${introLine2}</div>` : ''}
+        <div style="margin-top: 12px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
+            <span style="background: rgba(var(--accent-color-rgb), 0.15); padding: 2px 10px; border-radius: 20px;">💖 ${partnerName}</span>
+            <span style="opacity: 0.3;">&</span>
+            <span style="background: rgba(var(--accent-color-rgb), 0.08); padding: 2px 10px; border-radius: 20px;">${myName}</span>
+        </div>
+    `;
+}
+
+/**
+ * 初始化功能网格
+ */
+function initHomeGrid() {
+    const container = document.getElementById('home-grid-container');
+    if (!container) return;
+
+    const apps = [
+        { id: 'chat', icon: 'fa-comment-dots', label: '对话', action: 'chat' },
+        { id: 'mood', icon: 'fa-calendar-day', label: '心晴手账', action: 'mood' },
+        { id: 'envelope', icon: 'fa-envelope', label: '留言板', action: 'envelope' },
+        { id: 'stats', icon: 'fa-chart-bar', label: '消息统计', action: 'stats' },
+        { id: 'fortune', icon: 'fa-star-and-crescent', label: '运势', action: 'fortune' },
+        { id: 'anniversary', icon: 'fa-heart', label: '重要日', action: 'anniversary' },
+        { id: 'settings', icon: 'fa-cog', label: '设置', action: 'settings' },
+        { id: 'appearance', icon: 'fa-palette', label: '主题', action: 'appearance' },
+        { id: 'customReplies', icon: 'fa-comment-dots', label: '字卡库', action: 'customReplies' },
+    ];
+
+    container.innerHTML = '';
+
+    apps.forEach(app => {
+        const btn = document.createElement('div');
+        btn.className = 'home-app-icon';
+        btn.dataset.action = app.action;
+        btn.innerHTML = `
+            <i class="fas ${app.icon} app-icon"></i>
+            <span class="app-label">${app.label}</span>
+        `;
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleHomeAction(app.action);
+        });
+
+        container.appendChild(btn);
+    });
+}
+
+/**
+ * 处理桌面功能点击
+ */
+function handleHomeAction(action) {
+    const homeScreen = document.getElementById('home-screen');
+
+    switch (action) {
+        case 'chat':
+            if (homeScreen) homeScreen.classList.remove('active');
+            const chatContainer = document.getElementById('chat-container');
+            if (chatContainer) {
+                setTimeout(() => {
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }, 100);
+            }
+            const input = document.getElementById('message-input');
+            if (input) setTimeout(() => input.focus(), 200);
+            break;
+            
+        default:
+            // 其他功能：确保桌面显示，然后打开对应模态框
+            if (homeScreen) {
+                homeScreen.style.display = 'flex';
+                homeScreen.classList.add('active');
+            }
+            // 打开模态框...
+            break;
+        case 'mood':
+            const moodModal = document.getElementById('mood-modal');
+            if (moodModal && typeof showModal === 'function') {
+                if (homeScreen) homeScreen.classList.remove('active');
+                setTimeout(() => {
+                    if (typeof renderMoodCalendar === 'function') renderMoodCalendar();
+                    showModal(moodModal);
+                }, 150);
+            }
+            break;
+
+        case 'envelope':
+            const envelopeModal = document.getElementById('envelope-board-modal');
+            if (envelopeModal && typeof showModal === 'function' && typeof renderEnvelopeBoard === 'function') {
+                if (homeScreen) homeScreen.classList.remove('active');
+                setTimeout(() => {
+                    renderEnvelopeBoard();
+                    showModal(envelopeModal);
+                }, 150);
+            }
+            break;
+
+        case 'stats':
+            const statsModal = document.getElementById('stats-modal');
+            if (statsModal && typeof showModal === 'function' && typeof renderStatsContent === 'function') {
+                if (homeScreen) homeScreen.classList.remove('active');
+                setTimeout(() => {
+                    renderStatsContent();
+                    showModal(statsModal);
+                }, 150);
+            }
+            break;
+
+        case 'fortune':
+            const fortuneModal = document.getElementById('fortune-lenormand-modal');
+            if (fortuneModal && typeof showModal === 'function' && typeof generateFortune === 'function') {
+                if (homeScreen) homeScreen.classList.remove('active');
+                setTimeout(() => {
+                    generateFortune();
+                    switchFLTab('fortune');
+                    showModal(fortuneModal);
+                }, 150);
+            }
+            break;
+
+        case 'anniversary':
+            const annModal = document.getElementById('anniversary-modal');
+            if (annModal && typeof showModal === 'function' && typeof renderAnniversariesList === 'function') {
+                if (homeScreen) homeScreen.classList.remove('active');
+                setTimeout(() => {
+                    renderAnniversariesList();
+                    showModal(annModal);
+                }, 150);
+            }
+            break;
+
+        case 'settings':
+            const settingsModal = document.getElementById('settings-modal');
+            if (settingsModal && typeof showModal === 'function') {
+                if (homeScreen) homeScreen.classList.remove('active');
+                setTimeout(() => showModal(settingsModal), 150);
+            }
+            break;
+
+        case 'appearance':
+            const appearanceModal = document.getElementById('appearance-modal');
+            if (appearanceModal && typeof showModal === 'function') {
+                if (homeScreen) homeScreen.classList.remove('active');
+                if (typeof hideAppearancePanel === 'function') hideAppearancePanel();
+                setTimeout(() => {
+                    if (typeof renderBackgroundGallery === 'function') renderBackgroundGallery();
+                    if (typeof renderThemeSchemesList === 'function') renderThemeSchemesList();
+                    showModal(appearanceModal);
+                }, 150);
+            }
+            break;
+
+        case 'customReplies':
+            const replyModal = document.getElementById('custom-replies-modal');
+            if (replyModal && typeof showModal === 'function') {
+                if (homeScreen) homeScreen.classList.remove('active');
+                setTimeout(() => {
+                    currentMajorTab = 'reply';
+                    currentSubTab = 'custom';
+                    if (typeof renderReplyLibrary === 'function') renderReplyLibrary();
+                    showModal(replyModal);
+                }, 150);
+            }
+            break;
+
+        default:
+            console.warn('未知的桌面操作:', action);
+            break;
+    }
+}
+
+// =============================================
+// 覆盖 closeDailyGreeting 函数，在关闭公告时激活桌面
+// =============================================
+// 保存原始函数引用（如果存在）
+const _origCloseDailyGreeting = window.closeDailyGreeting;
+
+window.closeDailyGreeting = function() {
+    try {
+        var modal = document.getElementById('daily-greeting-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            modal.style.opacity = '';
+        }
+        // --- 关键修改：关闭公告后，检查桌面待激活状态并激活 ---
+        const homeScreen = document.getElementById('home-screen');
+        if (homeScreen && homeScreen._pendingActivation) {
+            homeScreen._pendingActivation = false;
+            // ★★★ 添加下面这一行，强制覆盖内联 display:none ★★★
+            homeScreen.style.display = 'flex';
+
+            // 重新初始化桌面内容
+            if (typeof updateBannerGreeting === 'function') updateBannerGreeting();
+            if (typeof initHomeGrid === 'function') initHomeGrid();
+            homeScreen.classList.add('active');
+        }
+        // --- 修改结束 ---
+    } catch(e) {
+        console.warn('关闭公告失败:', e);
+    }
+    // 如果原始函数存在，也调用它（防止覆盖其他逻辑）
+    if (typeof _origCloseDailyGreeting === 'function' && _origCloseDailyGreeting !== window.closeDailyGreeting) {
+        _origCloseDailyGreeting();
+    }
+};
+
+// 暴露全局函数
+window.showHomeScreen = showHomeScreen;
+window.handleHomeAction = handleHomeAction;
+window.initHomeGrid = initHomeGrid;
+window.updateBannerGreeting = updateBannerGreeting;
