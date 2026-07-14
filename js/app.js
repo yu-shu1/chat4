@@ -363,15 +363,31 @@ function handleHomeAction(action) {
             console.warn(`[桌面] 未找到模态框 #${modalId}`);
             return;
         }
-
-        // 优先使用 showModal（如果存在），否则手动显示
-        if (typeof showModal === 'function') {
-            showModal(modal);
-        } else {
-            modal.style.display = 'flex';
+    
+        // ★ 关键：移除可能残留的 hidden 类
+        modal.classList.remove('hidden');
+        
+        // 清除可能的隐藏计时器（防止 hideModal 残留）
+        if (modal._hideTimeout) {
+            clearTimeout(modal._hideTimeout);
+            modal._hideTimeout = null;
         }
-
-        // 延迟执行内容填充（如果有）
+    
+        // 直接显示模态框（不依赖外部 showModal）
+        modal.style.display = 'flex';
+        modal.style.opacity = '1';
+        modal.style.pointerEvents = 'auto';
+    
+        // 触发内容入场动画
+        requestAnimationFrame(() => {
+            const content = modal.querySelector('.modal-content');
+            if (content) {
+                content.style.opacity = '1';
+                content.style.transform = 'translateY(0) scale(1)';
+            }
+        });
+    
+        // 执行内容填充（若提供）
         if (typeof contentFn === 'function') {
             setTimeout(() => {
                 try {
