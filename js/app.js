@@ -356,6 +356,33 @@ function initHomeGrid() {
 function handleHomeAction(action) {
     const homeScreen = document.getElementById('home-screen');
 
+    // 辅助函数：安全显示模态框
+    function safeShowModal(modalId, contentFn, delay = 150) {
+        const modal = document.getElementById(modalId);
+        if (!modal) {
+            console.warn(`[桌面] 未找到模态框 #${modalId}`);
+            return;
+        }
+
+        // 优先使用 showModal（如果存在），否则手动显示
+        if (typeof showModal === 'function') {
+            showModal(modal);
+        } else {
+            modal.style.display = 'flex';
+        }
+
+        // 延迟执行内容填充（如果有）
+        if (typeof contentFn === 'function') {
+            setTimeout(() => {
+                try {
+                    contentFn();
+                } catch (e) {
+                    console.error(`[桌面] 填充 ${modalId} 内容失败:`, e);
+                }
+            }, delay);
+        }
+    }
+
     switch (action) {
         case 'chat':
             if (homeScreen) homeScreen.classList.remove('active');
@@ -370,85 +397,46 @@ function handleHomeAction(action) {
             break;
 
         case 'mood':
-            const moodModal = document.getElementById('mood-modal');
-            if (moodModal && typeof showModal === 'function') {
-                setTimeout(() => {
-                    if (typeof renderMoodCalendar === 'function') renderMoodCalendar();
-                    showModal(moodModal);
-                }, 150);
-            }
+            safeShowModal('mood-modal', renderMoodCalendar);
             break;
 
         case 'envelope':
-            const envelopeModal = document.getElementById('envelope-board-modal');
-            if (envelopeModal && typeof showModal === 'function' && typeof renderEnvelopeBoard === 'function') {
-                setTimeout(() => {
-                    renderEnvelopeBoard();
-                    showModal(envelopeModal);
-                }, 150);
-            }
+            safeShowModal('envelope-board-modal', renderEnvelopeBoard);
             break;
 
         case 'stats':
-            const statsModal = document.getElementById('stats-modal');
-            if (statsModal && typeof showModal === 'function' && typeof renderStatsContent === 'function') {
-                setTimeout(() => {
-                    renderStatsContent();
-                    showModal(statsModal);
-                }, 150);
-            }
+            safeShowModal('stats-modal', renderStatsContent);
             break;
 
         case 'fortune':
-            const fortuneModal = document.getElementById('fortune-lenormand-modal');
-            if (fortuneModal && typeof showModal === 'function' && typeof generateFortune === 'function') {
-                setTimeout(() => {
-                    generateFortune();
-                    switchFLTab('fortune');
-                    showModal(fortuneModal);
-                }, 150);
-            }
+            safeShowModal('fortune-lenormand-modal', () => {
+                generateFortune();
+                switchFLTab('fortune');
+            });
             break;
 
         case 'anniversary':
-            const annModal = document.getElementById('anniversary-modal');
-            if (annModal && typeof showModal === 'function' && typeof renderAnniversariesList === 'function') {
-                setTimeout(() => {
-                    renderAnniversariesList();
-                    showModal(annModal);
-                }, 150);
-            }
+            safeShowModal('anniversary-modal', renderAnniversariesList);
             break;
 
         case 'settings':
-            const settingsModal = document.getElementById('settings-modal');
-            if (settingsModal && typeof showModal === 'function') {
-                setTimeout(() => showModal(settingsModal), 150);
-            }
+            safeShowModal('settings-modal');
             break;
 
         case 'appearance':
-            const appearanceModal = document.getElementById('appearance-modal');
-            if (appearanceModal && typeof showModal === 'function') {
+            safeShowModal('appearance-modal', () => {
                 if (typeof hideAppearancePanel === 'function') hideAppearancePanel();
-                setTimeout(() => {
-                    if (typeof renderBackgroundGallery === 'function') renderBackgroundGallery();
-                    if (typeof renderThemeSchemesList === 'function') renderThemeSchemesList();
-                    showModal(appearanceModal);
-                }, 150);
-            }
+                if (typeof renderBackgroundGallery === 'function') renderBackgroundGallery();
+                if (typeof renderThemeSchemesList === 'function') renderThemeSchemesList();
+            });
             break;
 
         case 'customReplies':
-            const replyModal = document.getElementById('custom-replies-modal');
-            if (replyModal && typeof showModal === 'function') {
-                setTimeout(() => {
-                    currentMajorTab = 'reply';
-                    currentSubTab = 'custom';
-                    if (typeof renderReplyLibrary === 'function') renderReplyLibrary();
-                    showModal(replyModal);
-                }, 150);
-            }
+            safeShowModal('custom-replies-modal', () => {
+                currentMajorTab = 'reply';
+                currentSubTab = 'custom';
+                if (typeof renderReplyLibrary === 'function') renderReplyLibrary();
+            });
             break;
 
         default:
@@ -456,6 +444,7 @@ function handleHomeAction(action) {
             break;
     }
 }
+
 
 // =============================================
 // 覆盖 closeDailyGreeting 函数，在关闭公告时激活桌面
