@@ -11046,7 +11046,7 @@
     height: 100vh;
     z-index: 9997; /* 位于欢迎动画(9999)之下，但在所有其他内容之上 */
     display: flex;
-    flex-direction: column;
+    flex-direction: column;      /* 纵向排列三块 */
     background-color: var(--primary-bg);
     transition: opacity 0.8s ease;
     opacity: 0;
@@ -11069,9 +11069,9 @@
     z-index: 0;
 }
 
-/* ---- 顶部横幅 (占2行) ---- */
+/* ---- 顶部横幅 (占 2 行) ---- */
 .home-banner {
-    flex: 2; /* 占据网格系统2/7的空间 */
+    flex: 2; /* 占据 2/7 空间 */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -11105,14 +11105,15 @@
     line-height: 1.6;
 }
 
-.banner-greeting .highlight {
-    color: var(--accent-color);
-    font-weight: 700;
+/* ★ 新增：留白区域 (占 2 行) */
+.home-spacer {
+    flex: 2;
+    /* 完全透明，只占空间 */
 }
 
-/* ---- 底部功能网格 (占3行) ---- */
+/* ---- 底部功能网格 (占 3 行) ---- */
 .home-grid {
-    flex: 3; /* 占据网格系统3/7的空间 */
+    flex: 3; /* 占据 3/7 空间 */
     display: flex;
     align-items: center;
     justify-content: center;
