@@ -243,7 +243,7 @@ function showHomeScreen() {
     const homeScreen = document.getElementById('home-screen');
     if (!homeScreen) return;
 
-    // ★ 关键：覆盖内联 display:none
+    // ★ 覆盖内联 display:none
     homeScreen.style.display = 'flex';
 
     const modal = document.getElementById('daily-greeting-modal');
@@ -372,7 +372,6 @@ function handleHomeAction(action) {
         case 'mood':
             const moodModal = document.getElementById('mood-modal');
             if (moodModal && typeof showModal === 'function') {
-                if (homeScreen) homeScreen.classList.remove('active');
                 setTimeout(() => {
                     if (typeof renderMoodCalendar === 'function') renderMoodCalendar();
                     showModal(moodModal);
@@ -383,7 +382,6 @@ function handleHomeAction(action) {
         case 'envelope':
             const envelopeModal = document.getElementById('envelope-board-modal');
             if (envelopeModal && typeof showModal === 'function' && typeof renderEnvelopeBoard === 'function') {
-                if (homeScreen) homeScreen.classList.remove('active');
                 setTimeout(() => {
                     renderEnvelopeBoard();
                     showModal(envelopeModal);
@@ -394,7 +392,6 @@ function handleHomeAction(action) {
         case 'stats':
             const statsModal = document.getElementById('stats-modal');
             if (statsModal && typeof showModal === 'function' && typeof renderStatsContent === 'function') {
-                if (homeScreen) homeScreen.classList.remove('active');
                 setTimeout(() => {
                     renderStatsContent();
                     showModal(statsModal);
@@ -405,7 +402,6 @@ function handleHomeAction(action) {
         case 'fortune':
             const fortuneModal = document.getElementById('fortune-lenormand-modal');
             if (fortuneModal && typeof showModal === 'function' && typeof generateFortune === 'function') {
-                if (homeScreen) homeScreen.classList.remove('active');
                 setTimeout(() => {
                     generateFortune();
                     switchFLTab('fortune');
@@ -417,7 +413,6 @@ function handleHomeAction(action) {
         case 'anniversary':
             const annModal = document.getElementById('anniversary-modal');
             if (annModal && typeof showModal === 'function' && typeof renderAnniversariesList === 'function') {
-                if (homeScreen) homeScreen.classList.remove('active');
                 setTimeout(() => {
                     renderAnniversariesList();
                     showModal(annModal);
@@ -428,7 +423,6 @@ function handleHomeAction(action) {
         case 'settings':
             const settingsModal = document.getElementById('settings-modal');
             if (settingsModal && typeof showModal === 'function') {
-                if (homeScreen) homeScreen.classList.remove('active');
                 setTimeout(() => showModal(settingsModal), 150);
             }
             break;
@@ -436,7 +430,6 @@ function handleHomeAction(action) {
         case 'appearance':
             const appearanceModal = document.getElementById('appearance-modal');
             if (appearanceModal && typeof showModal === 'function') {
-                if (homeScreen) homeScreen.classList.remove('active');
                 if (typeof hideAppearancePanel === 'function') hideAppearancePanel();
                 setTimeout(() => {
                     if (typeof renderBackgroundGallery === 'function') renderBackgroundGallery();
@@ -449,7 +442,6 @@ function handleHomeAction(action) {
         case 'customReplies':
             const replyModal = document.getElementById('custom-replies-modal');
             if (replyModal && typeof showModal === 'function') {
-                if (homeScreen) homeScreen.classList.remove('active');
                 setTimeout(() => {
                     currentMajorTab = 'reply';
                     currentSubTab = 'custom';
@@ -470,6 +462,7 @@ function handleHomeAction(action) {
 // =============================================
 // 保存原始函数引用（如果存在）
 const _origCloseDailyGreeting = window.closeDailyGreeting;
+
 
 window.closeDailyGreeting = function() {
     try {
@@ -500,7 +493,6 @@ window.closeDailyGreeting = function() {
         _origCloseDailyGreeting();
     }
 };
-
 
 // 暴露全局函数
 window.showHomeScreen = showHomeScreen;
