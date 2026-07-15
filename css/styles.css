@@ -11152,6 +11152,11 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+.home-app-icon {
+    padding: 8px 4px;  /* 缩小内边距 */
+    min-height: 70px;
+}
+
 .home-app-icon:hover {
     transform: translateY(-4px) scale(1.04);
     border-color: var(--accent-color);
