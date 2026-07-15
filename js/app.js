@@ -318,36 +318,112 @@ function initHomeGrid() {
     const container = document.getElementById('home-grid-container');
     if (!container) return;
 
-    const apps = [
+    // 定义所有功能（按顺序：对话排第一，其他按常用度，最后三个是设置）
+    const allApps = [
         { id: 'chat', icon: 'fa-comment-dots', label: '对话', action: 'chat' },
         { id: 'mood', icon: 'fa-calendar-day', label: '心晴手账', action: 'mood' },
         { id: 'envelope', icon: 'fa-envelope', label: '留言板', action: 'envelope' },
         { id: 'stats', icon: 'fa-chart-bar', label: '消息统计', action: 'stats' },
-        { id: 'fortune', icon: 'fa-star-and-crescent', label: '运势', action: 'fortune' },
+        { id: 'fortune', icon: 'fa-star-and-crescent', label: '运势·占卜', action: 'fortune' },
         { id: 'anniversary', icon: 'fa-heart', label: '重要日', action: 'anniversary' },
-        { id: 'settings', icon: 'fa-cog', label: '设置', action: 'settings' },
-        { id: 'appearance', icon: 'fa-palette', label: '主题', action: 'appearance' },
         { id: 'customReplies', icon: 'fa-comment-dots', label: '字卡库', action: 'customReplies' },
+        { id: 'decision', icon: 'fa-balance-scale', label: '抉择', action: 'decision' },
+        // 以下三个为设置类，单独框起来
+        { id: 'appearance', icon: 'fa-palette', label: '外观', action: 'appearance' },
+        { id: 'chatSettings', icon: 'fa-sliders-h', label: '聊天设置', action: 'chatSettings' },
+        { id: 'data', icon: 'fa-database', label: '数据管理', action: 'data' },
     ];
 
+    // 分离主功能（前8个）和设置（后3个）
+    const mainApps = allApps.slice(0, 8);
+    const settingsApps = allApps.slice(8);
+
+    // 清空容器
     container.innerHTML = '';
 
-    apps.forEach(app => {
-        const btn = document.createElement('div');
-        btn.className = 'home-app-icon';
-        btn.dataset.action = app.action;
-        btn.innerHTML = `
-            <i class="fas ${app.icon} app-icon"></i>
-            <span class="app-label">${app.label}</span>
-        `;
+    // 1️⃣ 主功能网格（4列）
+    const mainGrid = document.createElement('div');
+    mainGrid.className = 'main-app-grid';
+    mainGrid.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    `;
 
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            handleHomeAction(app.action);
-        });
-
-        container.appendChild(btn);
+    mainApps.forEach(app => {
+        const btn = createAppButton(app);
+        mainGrid.appendChild(btn);
     });
+    container.appendChild(mainGrid);
+
+    // 2️⃣ 设置功能组（单独框起来，占一整行）
+    const settingsGroup = document.createElement('div');
+    settingsGroup.className = 'settings-group';
+    settingsGroup.style.cssText = `
+        grid-column: 1 / -1;
+        background: var(--primary-bg);
+        border: 1.5px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 12px 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    `;
+
+    // 标题（可选）
+    const groupTitle = document.createElement('div');
+    groupTitle.style.cssText = `
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 0 6px 4px;
+        border-bottom: 1px solid var(--border-color);
+    `;
+    groupTitle.textContent = '⚙️ 设置';
+    settingsGroup.appendChild(groupTitle);
+
+    // 三个设置按钮用flex均匀分布
+    const settingsRow = document.createElement('div');
+    settingsRow.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    `;
+
+    settingsApps.forEach(app => {
+        const btn = createAppButton(app);
+        // 调整样式使其在设置组内更紧凑
+        btn.style.padding = '8px 4px';
+        btn.style.gap = '4px';
+        const icon = btn.querySelector('.app-icon');
+        if (icon) icon.style.fontSize = '20px';
+        const label = btn.querySelector('.app-label');
+        if (label) label.style.fontSize = '10px';
+        settingsRow.appendChild(btn);
+    });
+
+    settingsGroup.appendChild(settingsRow);
+    container.appendChild(settingsGroup);
+}
+
+// 辅助函数：创建单个按钮
+function createAppButton(app) {
+    const btn = document.createElement('div');
+    btn.className = 'home-app-icon';
+    btn.dataset.action = app.action;
+    btn.innerHTML = `
+        <i class="fas ${app.icon} app-icon"></i>
+        <span class="app-label">${app.label}</span>
+    `;
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleHomeAction(app.action);
+    });
+    return btn;
 }
 
 /**
@@ -363,15 +439,31 @@ function handleHomeAction(action) {
             console.warn(`[桌面] 未找到模态框 #${modalId}`);
             return;
         }
-
-        // 优先使用 showModal（如果存在），否则手动显示
-        if (typeof showModal === 'function') {
-            showModal(modal);
-        } else {
-            modal.style.display = 'flex';
+    
+        // ★ 关键：移除可能残留的 hidden 类
+        modal.classList.remove('hidden');
+        
+        // 清除可能的隐藏计时器（防止 hideModal 残留）
+        if (modal._hideTimeout) {
+            clearTimeout(modal._hideTimeout);
+            modal._hideTimeout = null;
         }
-
-        // 延迟执行内容填充（如果有）
+    
+        // 直接显示模态框（不依赖外部 showModal）
+        modal.style.display = 'flex';
+        modal.style.opacity = '1';
+        modal.style.pointerEvents = 'auto';
+    
+        // 触发内容入场动画
+        requestAnimationFrame(() => {
+            const content = modal.querySelector('.modal-content');
+            if (content) {
+                content.style.opacity = '1';
+                content.style.transform = 'translateY(0) scale(1)';
+            }
+        });
+    
+        // 执行内容填充（若提供）
         if (typeof contentFn === 'function') {
             setTimeout(() => {
                 try {
