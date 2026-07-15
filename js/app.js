@@ -234,9 +234,22 @@ window.addEventListener('load', function() {
 // =============================================
 // 新增：桌面层逻辑
 // =============================================
+// 新增辅助：获取每日寄语文本（不包含标签）
+function getDailyNote() {
+    try {
+        const customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}');
+        if (customData.notes && customData.notes.length > 0) {
+            const now = new Date();
+            const seed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
+            const idx = Math.floor(Math.abs(Math.sin((seed + 1) * 9301 + 49297) * 233280) % 233280 / 233280 * customData.notes.length);
+            return customData.notes[idx];
+        }
+    } catch (e) {}
+    return '今天也要元气满满，我在这里陪着你 ✦';
+}
 
 /**
- * 更新横幅上的问候语（包含双方头像+昵称，无重复时间戳）
+ * 更新横幅上的问候语（包含双方头像+昵称，底部显示日期与每日寄语）
  */
 function updateBannerGreeting() {
     const bannerEl = document.getElementById('banner-greeting');
@@ -246,16 +259,21 @@ function updateBannerGreeting() {
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    // 获取公告栏数据
+    // 获取公告数据（仅用于节日）
     const dgData = _getDailyGreetingData();
     const festival = dgData.festival;
 
-    // 获取双方头像
+    // 获取每日寄语
+    const dailyNote = getDailyNote();
+
+    // 双方头像
     const partnerImg = document.querySelector('#partner-avatar img')?.src || '';
     const myImg = document.querySelector('#my-avatar img')?.src || '';
 
-    // 节日 emoji
+    // 节日 emoji（若没有则用 ✦）
     const festEmoji = festival ? festival.emoji : '✦';
+    const festName = festival ? festival.name + '快乐' : '今天也要开心哦';
+    const festLabel = festival ? festival.label : '✦ 每日寄语 ✦';
 
     bannerEl.innerHTML = `
         <div style="display:flex; align-items:flex-start; justify-content:space-between; width:100%;">
@@ -271,10 +289,10 @@ function updateBannerGreeting() {
             <div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1.5;">
                 <span style="font-size:28px; line-height:1;">${festEmoji}</span>
                 <span style="font-size:16px; font-weight:700; color:var(--accent-color); letter-spacing:1px;">
-                    ${festival ? festival.name + '快乐' : '今天也要开心哦'}
+                    ${festName}
                 </span>
                 <span style="font-size:9px; color:var(--text-secondary); opacity:0.5; letter-spacing:2px; text-transform:uppercase;">
-                    ${festival ? festival.label : '✦ 每日寄语 ✦'}
+                    ${festLabel}
                 </span>
             </div>
 
@@ -286,14 +304,18 @@ function updateBannerGreeting() {
                 <span style="font-size:11px; font-weight:600; color:var(--text-primary); letter-spacing:0.3px;">${myName}</span>
             </div>
         </div>
-        <div style="font-size:9px; color:var(--text-secondary); opacity:0.3; margin-top:4px; letter-spacing:2px;">
+        <!-- 每日寄语（位于日期上方，不显示“每日寄语”标签） -->
+        <div style="font-size:10px; color:var(--text-secondary); opacity:0.6; margin-top:4px; font-style:italic; letter-spacing:0.5px;">
+            “${dailyNote}”
+        </div>
+        <div style="font-size:9px; color:var(--text-secondary); opacity:0.3; margin-top:2px; letter-spacing:2px;">
             ${now.getFullYear()} · ${now.getMonth()+1}月${now.getDate()}日
         </div>
     `;
 }
 
 /**
- * 填充桌面中间空白区域（显示公告栏顶部栏内容）
+ * 填充桌面中间空白区域（仅显示心情、天气、状态、装饰图）
  */
 function populateHomeSpacer() {
     const spacer = document.getElementById('home-spacer');
@@ -304,62 +326,42 @@ function populateHomeSpacer() {
 
     try {
         const now = new Date();
-        
-        // 1️⃣ 安全获取公告数据（若函数不存在则使用默认值）
-        let dgData = { festival: null, weather: '晴', status: '一切都好' };
-        try {
-            if (typeof _getDailyGreetingData === 'function') {
-                dgData = _getDailyGreetingData();
-            } else {
-                console.warn('[populateHomeSpacer] _getDailyGreetingData 未定义，使用默认值');
-            }
-        } catch (e) {
-            console.warn('[populateHomeSpacer] 获取公告数据失败:', e);
-        }
-
-        const festival = dgData.festival;
-        const weather = dgData.weather || '晴';
-        const status = dgData.status || '一切都好';
         const partnerName = settings?.partnerName || '梦角';
         const myName = settings?.myName || '我';
 
-        // 2️⃣ 安全获取心情数据
+        // 获取公告数据（仅用于天气/状态，无需节日）
+        let dgData = { weather: '晴', status: '一切都好' };
+        try {
+            if (typeof _getDailyGreetingData === 'function') {
+                dgData = _getDailyGreetingData();
+            }
+        } catch (e) { /* ignore */ }
+
+        const weather = dgData.weather || '晴';
+        const status = dgData.status || '一切都好';
+
+        // 获取双方心情数据
         let partnerMoodObj = null;
         let myMoodObj = null;
         let todayMood = {};
-        let noteText = '今天也要元气满满，我在这里陪着你 ✦';
-
         try {
             const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
             const moodDataRaw = window.moodData || {};
             todayMood = moodDataRaw[todayStr] || {};
-            
             if (typeof getAllMoodOptions === 'function') {
                 const allMoods = getAllMoodOptions();
                 partnerMoodObj = todayMood.partner ? allMoods.find(m => m.key === todayMood.partner) : null;
                 myMoodObj = todayMood.user ? allMoods.find(m => m.key === todayMood.user) : null;
             }
-        } catch (e) {
-            console.warn('[populateHomeSpacer] 获取心情数据失败:', e);
-        }
+        } catch (e) { /* ignore */ }
 
-        // 3️⃣ 安全获取自定义寄语
-        try {
-            const customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}');
-            if (customData.notes && customData.notes.length > 0) {
-                const todaySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
-                noteText = customData.notes[Math.floor(Math.abs(Math.sin((todaySeed + 1) * 9301 + 49297) * 233280) % 233280 / 233280 * customData.notes.length)] || noteText;
-            }
-        } catch (e) {}
-
-        // 4️⃣ 安全获取装饰图
+        // 获取装饰图
         let decoImg = '';
         try {
             const customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}');
             decoImg = customData.decoImg || '';
-        } catch (e) {}
+        } catch (e) { /* ignore */ }
 
-        // 5️⃣ 构建 HTML（确保始终有内容）
         spacer.style.cssText = `
             flex: 2;
             display: flex;
@@ -371,17 +373,6 @@ function populateHomeSpacer() {
         `;
 
         spacer.innerHTML = `
-            <!-- 顶部栏内容（节日/问候语） -->
-            <div style="text-align:center; margin-bottom:10px;">
-                <div style="font-size:32px; line-height:1.2;">${festival ? festival.emoji : '✨'}</div>
-                <div style="font-size:20px; font-weight:700; color:var(--text-primary); letter-spacing:1px; margin-top:2px;">
-                    ${festival ? festival.name + '快乐' : '今天也要开心哦'}
-                </div>
-                <div style="font-size:10px; color:var(--text-secondary); opacity:0.5; letter-spacing:3px; text-transform:uppercase; margin-top:2px;">
-                    ${festival ? festival.label : '✦ 每日寄语 ✦'}
-                </div>
-            </div>
-
             <!-- 双方心情 -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:360px; margin:0 auto; width:100%;">
                 <div style="background:rgba(var(--accent-color-rgb),0.06); border-radius:12px; padding:8px 10px; border:1px solid rgba(var(--accent-color-rgb),0.1); text-align:center;">
@@ -400,19 +391,15 @@ function populateHomeSpacer() {
 
             ${decoImg ? `<div style="max-width:360px; margin:8px auto 0; border-radius:10px; overflow:hidden; max-height:50px;"><img src="${decoImg}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;" onerror="this.style.display='none'"></div>` : ''}
 
-            <div style="max-width:360px; margin:6px auto 0; text-align:center; font-size:12px; color:var(--text-secondary); opacity:0.5; line-height:1.5; padding:0 8px; font-style:italic;">
-                “${noteText}”
-            </div>
-            <div style="max-width:360px; margin:3px auto 0; display:flex; justify-content:center; gap:14px; font-size:9px; color:var(--text-secondary); opacity:0.3; letter-spacing:1px;">
+            <div style="max-width:360px; margin:6px auto 0; display:flex; justify-content:center; gap:14px; font-size:9px; color:var(--text-secondary); opacity:0.3; letter-spacing:1px;">
                 <span>🌤 ${weather}</span>
                 <span>✦ ${status}</span>
             </div>
         `;
-        
-        console.log('[populateHomeSpacer] 中间区域已填充完成');
+
+        console.log('[populateHomeSpacer] 中间区域已填充（不含节日和每日寄语）');
     } catch (error) {
         console.error('[populateHomeSpacer] 渲染失败:', error);
-        // 出错时显示兜底内容
         spacer.innerHTML = `
             <div style="text-align:center; color:var(--text-secondary); opacity:0.4; padding:20px;">
                 <div style="font-size:28px; margin-bottom:8px;">💫</div>
