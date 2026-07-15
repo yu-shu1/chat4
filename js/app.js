@@ -372,19 +372,6 @@ function initHomeGrid() {
         box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     `;
 
-    // 标题（可选）
-    const groupTitle = document.createElement('div');
-    groupTitle.style.cssText = `
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--text-secondary);
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        padding: 0 6px 4px;
-        border-bottom: 1px solid var(--border-color);
-    `;
-    groupTitle.textContent = '⚙️ 设置';
-    settingsGroup.appendChild(groupTitle);
 
     // 三个设置按钮用网格均匀分布，间距与主网格保持一致
     const settingsRow = document.createElement('div');
