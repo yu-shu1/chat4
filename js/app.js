@@ -352,30 +352,35 @@ function initHomeGrid() {
     });
     container.appendChild(mainGrid);
 
-    // 2️⃣ 设置功能组（占满整行，边框与主网格左右对齐）
+    // 2️⃣ 设置功能组（单独框起来，占一整行）
     const settingsGroup = document.createElement('div');
     settingsGroup.style.cssText = `
-        grid-column: 1 / -1;          /* ★ 关键：占满全部4列 */
+        grid-column: 1 / -1;
         background: var(--primary-bg);
         border: 1.5px solid var(--border-color);
         border-radius: var(--radius);
-        padding: 12px 0;              /* 左右无内边距，边框与主网格齐平 */
+        padding: 12px 0;        /* 左右无内边距，与主网格对齐 */
         box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     `;
-
-    // 设置组内部使用 4 列网格，保证按钮大小与上面一致
+    
+    // 设置行使用 flex，按钮宽度固定为列宽，均匀分布
     const settingsRow = document.createElement('div');
     settingsRow.style.cssText = `
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
+        display: flex;
+        justify-content: space-evenly;
+        align-items: center;
+        width: 100%;
     `;
-
+    
+    // 计算列宽：与主网格的列宽完全相同（4列，gap 12px）
+    const colWidth = `calc((100% - 3 * 12px) / 4)`;
+    
     settingsApps.forEach(app => {
         const btn = createAppButton(app);
+        btn.style.flex = `0 0 ${colWidth}`;   // 固定宽度，不拉伸
         settingsRow.appendChild(btn);
     });
-
+    
     settingsGroup.appendChild(settingsRow);
     container.appendChild(settingsGroup);
 }
