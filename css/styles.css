@@ -1325,7 +1325,7 @@
         }
 
         .modal {
-            z-index: 2000 !important;
+            z-index: 10000 !important;
         }
 
         .modal-content {
