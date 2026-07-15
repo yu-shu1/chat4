@@ -318,7 +318,6 @@ function initHomeGrid() {
     const container = document.getElementById('home-grid-container');
     if (!container) return;
 
-    // 定义所有功能（按顺序：对话排第一，其他按常用度，最后三个是设置）
     const allApps = [
         { id: 'chat', icon: 'fa-comment-dots', label: '对话', action: 'chat' },
         { id: 'mood', icon: 'fa-calendar-day', label: '心晴手账', action: 'mood' },
@@ -328,29 +327,24 @@ function initHomeGrid() {
         { id: 'anniversary', icon: 'fa-heart', label: '重要日', action: 'anniversary' },
         { id: 'customReplies', icon: 'fa-comment-dots', label: '字卡库', action: 'customReplies' },
         { id: 'decision', icon: 'fa-balance-scale', label: '抉择', action: 'decision' },
-        // 以下三个为设置类，单独框起来
         { id: 'appearance', icon: 'fa-palette', label: '外观', action: 'appearance' },
         { id: 'chatSettings', icon: 'fa-sliders-h', label: '聊天设置', action: 'chatSettings' },
         { id: 'data', icon: 'fa-database', label: '数据管理', action: 'data' },
     ];
 
-    // 分离主功能（前8个）和设置（后3个）
     const mainApps = allApps.slice(0, 8);
     const settingsApps = allApps.slice(8);
 
-    // 清空容器
     container.innerHTML = '';
 
     // 1️⃣ 主功能网格（4列）
     const mainGrid = document.createElement('div');
-    mainGrid.className = 'main-app-grid';
     mainGrid.style.cssText = `
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 12px;
         margin-bottom: 16px;
     `;
-
     mainApps.forEach(app => {
         const btn = createAppButton(app);
         mainGrid.appendChild(btn);
@@ -359,31 +353,29 @@ function initHomeGrid() {
 
     // 2️⃣ 设置功能组（单独框起来，占一整行）
     const settingsGroup = document.createElement('div');
-    settingsGroup.className = 'settings-group';
     settingsGroup.style.cssText = `
         grid-column: 1 / -1;
         background: var(--primary-bg);
         border: 1.5px solid var(--border-color);
         border-radius: var(--radius);
-        padding: 12px;
+        padding: 12px 0;  /* 去掉左右内边距，使边框与主网格对齐 */
         display: flex;
         flex-direction: column;
         gap: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     `;
 
-
-    // 三个设置按钮用网格均匀分布，间距与主网格保持一致
+    // 设置行同样使用4列，保证列宽与主网格完全一致
     const settingsRow = document.createElement('div');
     settingsRow.style.cssText = `
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px; /* 与主网格间距一致 */
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        justify-items: center;  /* 让按钮在列内居中，不会拉伸变形 */
     `;
 
     settingsApps.forEach(app => {
         const btn = createAppButton(app);
-        // 不再添加任何覆盖样式，与主按钮完全一致
         settingsRow.appendChild(btn);
     });
 
@@ -406,7 +398,6 @@ function createAppButton(app) {
     });
     return btn;
 }
-
 
 /**
  * 处理桌面功能点击
