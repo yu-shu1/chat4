@@ -11075,7 +11075,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px 24px 10px;
+    padding: 12px 16px 6px;
     z-index: 1;
     min-height: 0; /* 允许flex收缩 */
 }
@@ -11092,7 +11092,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 12px 16px;
     text-align: center;
     transition: all 0.3s ease;
 }
@@ -11106,9 +11106,15 @@
 }
 
 /* ★ 新增：留白区域 (占 2 行) */
+/* 修改 home-spacer 样式，允许内容显示 */
 .home-spacer {
     flex: 2;
-    /* 完全透明，只占空间 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 16px;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* ---- 底部功能网格 (占 3 行) ---- */
@@ -11222,7 +11228,7 @@
     .home-app-icon .app-label {
         font-size: 10px;
     }
-    .banner-greeting {
+    . -greeting {
         font-size: 18px;
     }
 }
@@ -11239,7 +11245,4 @@
     }
 }
 
-.message-input {
-    min-height: 38px !important;    /* 可选，降低输入框高度 */
-}
 
