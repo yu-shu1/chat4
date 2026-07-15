@@ -365,7 +365,7 @@ function initHomeGrid() {
         background: var(--primary-bg);
         border: 1.5px solid var(--border-color);
         border-radius: var(--radius);
-        padding: 12px 8px 10px;
+        padding: 12px;
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -386,23 +386,17 @@ function initHomeGrid() {
     groupTitle.textContent = '⚙️ 设置';
     settingsGroup.appendChild(groupTitle);
 
-    // 三个设置按钮用flex均匀分布
+    // 三个设置按钮用网格均匀分布，间距与主网格保持一致
     const settingsRow = document.createElement('div');
     settingsRow.style.cssText = `
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
+        gap: 12px; /* 与主网格间距一致 */
     `;
 
     settingsApps.forEach(app => {
         const btn = createAppButton(app);
-        // 调整样式使其在设置组内更紧凑
-        btn.style.padding = '8px 4px';
-        btn.style.gap = '4px';
-        const icon = btn.querySelector('.app-icon');
-        if (icon) icon.style.fontSize = '20px';
-        const label = btn.querySelector('.app-label');
-        if (label) label.style.fontSize = '10px';
+        // 不再添加任何覆盖样式，与主按钮完全一致
         settingsRow.appendChild(btn);
     });
 
@@ -410,7 +404,7 @@ function initHomeGrid() {
     container.appendChild(settingsGroup);
 }
 
-// 辅助函数：创建单个按钮
+// 辅助函数：创建单个按钮（保持不变）
 function createAppButton(app) {
     const btn = document.createElement('div');
     btn.className = 'home-app-icon';
@@ -425,6 +419,7 @@ function createAppButton(app) {
     });
     return btn;
 }
+
 
 /**
  * 处理桌面功能点击
