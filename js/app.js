@@ -337,9 +337,10 @@ function initHomeGrid() {
 
     container.innerHTML = '';
 
-    // 1️⃣ 主功能网格（4列）
+    // 1️⃣ 主功能网格（占满整行）
     const mainGrid = document.createElement('div');
     mainGrid.style.cssText = `
+        grid-column: 1 / -1;          /* ★ 关键：占满全部4列 */
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 12px;
@@ -351,18 +352,18 @@ function initHomeGrid() {
     });
     container.appendChild(mainGrid);
 
-    // 2️⃣ 设置功能组（单独框起来，占一整行）
+    // 2️⃣ 设置功能组（占满整行，边框与主网格左右对齐）
     const settingsGroup = document.createElement('div');
     settingsGroup.style.cssText = `
-        grid-column: 1 / -1;
+        grid-column: 1 / -1;          /* ★ 关键：占满全部4列 */
         background: var(--primary-bg);
         border: 1.5px solid var(--border-color);
         border-radius: var(--radius);
-        padding: 12px 0;   /* 左右内边距为0，与主网格对齐 */
+        padding: 12px 0;              /* 左右无内边距，边框与主网格齐平 */
         box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     `;
 
-    // ★ 关键：设置组内部也使用4列网格，列宽与主网格完全一致
+    // 设置组内部使用 4 列网格，保证按钮大小与上面一致
     const settingsRow = document.createElement('div');
     settingsRow.style.cssText = `
         display: grid;
@@ -374,7 +375,6 @@ function initHomeGrid() {
         const btn = createAppButton(app);
         settingsRow.appendChild(btn);
     });
-    // 此时只有3个按钮，占据前3列，第4列留空，按钮大小自然与主网格一致
 
     settingsGroup.appendChild(settingsRow);
     container.appendChild(settingsGroup);
@@ -395,6 +395,7 @@ function createAppButton(app) {
     });
     return btn;
 }
+
 
 /**
  * 处理桌面功能点击
