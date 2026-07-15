@@ -11146,7 +11146,7 @@
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
-    padding: 6px;
+    padding: 4px;
     gap: 6px;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -11164,7 +11164,7 @@
 }
 
 .home-app-icon .app-icon {
-    font-size: 26px;
+    font-size: 22px;
     color: var(--accent-color);
     transition: transform 0.3s ease;
 }
@@ -11174,7 +11174,7 @@
 }
 
 .home-app-icon .app-label {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
     color: var(--text-secondary);
     letter-spacing: 0.3px;
