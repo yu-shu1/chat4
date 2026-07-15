@@ -11133,6 +11133,7 @@
 }
 
 /* 每个功能按钮卡片 */
+/* 每个功能按钮卡片 */
 .home-app-icon {
     aspect-ratio: 1 / 1;
     display: flex;
@@ -11146,12 +11147,28 @@
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
-    padding: 4px;
-    gap: 6px;
+    padding: 4px;          /* 从 6px 缩小 */
+    gap: 4px;              /* 从 6px 缩小 */
     user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
 
+.home-app-icon .app-icon {
+    font-size: 22px;       /* 从 26px 缩小 */
+    color: var(--accent-color);
+    transition: transform 0.3s ease;
+}
+
+.home-app-icon .app-label {
+    font-size: 10px;       /* 从 11px 缩小 */
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+    text-align: center;
+    word-break: break-word;
+    max-width: 100%;
+}
 
 .home-app-icon:hover {
     transform: translateY(-4px) scale(1.04);
@@ -11163,26 +11180,11 @@
     transform: scale(0.94);
 }
 
-.home-app-icon .app-icon {
-    font-size: 22px;
-    color: var(--accent-color);
-    transition: transform 0.3s ease;
-}
 
 .home-app-icon:hover .app-icon {
     transform: scale(1.1);
 }
 
-.home-app-icon .app-label {
-    font-size: 10px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    letter-spacing: 0.3px;
-    line-height: 1.2;
-    text-align: center;
-    word-break: break-word;
-    max-width: 100%;
-}
 
 /* 给"对话"按钮一个特殊样式，使其更突出 */
 .home-app-icon[data-action="chat"] {
