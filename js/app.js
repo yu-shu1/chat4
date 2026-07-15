@@ -327,7 +327,6 @@ function initHomeGrid() {
         { id: 'anniversary', icon: 'fa-heart', label: '重要日', action: 'anniversary' },
         { id: 'customReplies', icon: 'fa-comment-dots', label: '字卡库', action: 'customReplies' },
         { id: 'decision', icon: 'fa-balance-scale', label: '抉择', action: 'decision' },
-        // 三个设置按钮
         { id: 'appearance', icon: 'fa-palette', label: '外观', action: 'appearance' },
         { id: 'chatSettings', icon: 'fa-sliders-h', label: '聊天设置', action: 'chatSettings' },
         { id: 'data', icon: 'fa-database', label: '数据管理', action: 'data' },
@@ -352,31 +351,30 @@ function initHomeGrid() {
     });
     container.appendChild(mainGrid);
 
-    // 2️⃣ 设置功能组（单独框出来，占一整行，左右无内边距）
+    // 2️⃣ 设置功能组（单独框起来，占一整行）
     const settingsGroup = document.createElement('div');
     settingsGroup.style.cssText = `
         grid-column: 1 / -1;
         background: var(--primary-bg);
         border: 1.5px solid var(--border-color);
         border-radius: var(--radius);
-        padding: 12px 0;        /* 左右无内边距，与主网格对齐 */
+        padding: 12px 0;   /* 左右内边距为0，与主网格对齐 */
         box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     `;
 
-    // 使用 flex 三列均匀分布，按钮不拉伸
+    // ★ 关键：设置组内部也使用4列网格，列宽与主网格完全一致
     const settingsRow = document.createElement('div');
     settingsRow.style.cssText = `
-        display: flex;
-        justify-content: space-evenly;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
         gap: 12px;
-        width: 100%;
     `;
 
     settingsApps.forEach(app => {
         const btn = createAppButton(app);
-        // 按钮本身尺寸由 .home-app-icon 决定，不额外拉伸
         settingsRow.appendChild(btn);
     });
+    // 此时只有3个按钮，占据前3列，第4列留空，按钮大小自然与主网格一致
 
     settingsGroup.appendChild(settingsRow);
     container.appendChild(settingsGroup);
@@ -397,7 +395,6 @@ function createAppButton(app) {
     });
     return btn;
 }
-
 
 /**
  * 处理桌面功能点击
