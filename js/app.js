@@ -460,8 +460,6 @@ function handleHomeAction(action) {
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }, 100);
             }
-            const input = document.getElementById('message-input');
-            if (input) setTimeout(() => input.focus(), 200);
             break;
 
         case 'mood':
