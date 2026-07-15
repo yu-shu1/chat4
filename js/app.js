@@ -236,151 +236,192 @@ window.addEventListener('load', function() {
 // =============================================
 
 /**
- * 更新横幅上的问候语（包含公告栏内容）
+ * 更新横幅上的问候语（包含双方头像+昵称，无重复时间戳）
  */
 function updateBannerGreeting() {
     const bannerEl = document.getElementById('banner-greeting');
     if (!bannerEl) return;
 
-    // 获取公告栏数据
-    const dgData = _getDailyGreetingData();
     const now = new Date();
-    const hour = now.getHours();
-    let timeGreeting = '下午好';
-    if (hour < 6) timeGreeting = '夜深了';
-    else if (hour < 12) timeGreeting = '早上好';
-    else if (hour < 18) timeGreeting = '下午好';
-    else timeGreeting = '晚上好';
-
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    // 获取节日信息
+    // 获取公告栏数据
+    const dgData = _getDailyGreetingData();
     const festival = dgData.festival;
-    const mainTitle = festival ? festival.name + '快乐' : timeGreeting;
-    const festEmoji = festival ? festival.emoji : '✦';
-
-    // 获取自定义标题（如果有）
-    let customTitle = mainTitle;
-    try {
-        const customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}');
-        if (customData.titles && customData.titles.length > 0) {
-            const todaySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
-            customTitle = customData.titles[Math.floor(Math.abs(Math.sin(todaySeed * 9301 + 49297) * 233280) % 233280 / 233280 * customData.titles.length)] || mainTitle;
-        }
-    } catch(e) {}
 
     // 获取双方头像
     const partnerImg = document.querySelector('#partner-avatar img')?.src || '';
     const myImg = document.querySelector('#my-avatar img')?.src || '';
 
+    // 节日 emoji
+    const festEmoji = festival ? festival.emoji : '✦';
+
     bannerEl.innerHTML = `
-        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:8px;">
-            <div style="display:flex; align-items:center; gap:6px;">
-                <div style="width:32px; height:32px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color); flex-shrink:0;">
-                    ${partnerImg ? `<img src="${partnerImg}" style="width:100%;height:100%;object-fit:cover;">` : `<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-secondary);font-size:14px;"></i>`}
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; width:100%;">
+            <!-- 左侧：对方头像 + 昵称 -->
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
+                <div style="width:44px; height:44px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2.5px solid var(--accent-color); flex-shrink:0;">
+                    ${partnerImg ? `<img src="${partnerImg}" style="width:100%;height:100%;object-fit:cover;">` : `<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-secondary);font-size:18px;"></i>`}
                 </div>
-                <span style="font-size:12px; font-weight:600; color:var(--text-primary);">${partnerName}</span>
+                <span style="font-size:11px; font-weight:600; color:var(--text-primary); letter-spacing:0.3px;">${partnerName}</span>
             </div>
-            <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-secondary);">
-                <span style="font-size:13px;">${festEmoji}</span>
-                <span style="font-weight:500; color:var(--accent-color);">${customTitle}</span>
-                <span style="opacity:0.4;">·</span>
-                <span style="font-size:10px; opacity:0.6;">${now.toLocaleDateString('zh-CN', {month:'2-digit', day:'2-digit'})}</span>
+
+            <!-- 中间：节日/问候语（无时间戳） -->
+            <div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1.5;">
+                <span style="font-size:28px; line-height:1;">${festEmoji}</span>
+                <span style="font-size:16px; font-weight:700; color:var(--accent-color); letter-spacing:1px;">
+                    ${festival ? festival.name + '快乐' : '今天也要开心哦'}
+                </span>
+                <span style="font-size:9px; color:var(--text-secondary); opacity:0.5; letter-spacing:2px; text-transform:uppercase;">
+                    ${festival ? festival.label : '✦ 每日寄语 ✦'}
+                </span>
             </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-                <span style="font-size:12px; font-weight:600; color:var(--text-primary);">${myName}</span>
-                <div style="width:32px; height:32px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--border-color); flex-shrink:0;">
-                    ${myImg ? `<img src="${myImg}" style="width:100%;height:100%;object-fit:cover;">` : `<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-secondary);font-size:14px;"></i>`}
+
+            <!-- 右侧：我的头像 + 昵称 -->
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
+                <div style="width:44px; height:44px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2.5px solid var(--border-color); flex-shrink:0;">
+                    ${myImg ? `<img src="${myImg}" style="width:100%;height:100%;object-fit:cover;">` : `<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-secondary);font-size:18px;"></i>`}
                 </div>
+                <span style="font-size:11px; font-weight:600; color:var(--text-primary); letter-spacing:0.3px;">${myName}</span>
             </div>
         </div>
-        <div style="font-size:13px; color:var(--text-secondary); letter-spacing:2px; margin-bottom:2px; opacity:0.7;">${timeGreeting}</div>
-        <div style="font-size:18px; font-weight:700; color:var(--text-primary); line-height:1.3;">
-            ${festival ? festival.emoji + ' ' + festival.name + '快乐' : '今天也要开心哦 ✦'}
-        </div>
-        <div style="font-size:11px; color:var(--text-secondary); margin-top:4px; opacity:0.5; letter-spacing:1px;">
+        <div style="font-size:9px; color:var(--text-secondary); opacity:0.3; margin-top:4px; letter-spacing:2px;">
             ${now.getFullYear()} · ${now.getMonth()+1}月${now.getDate()}日
         </div>
     `;
 }
 
 /**
- * 填充桌面中间空白区域（使用公告栏内容）
+ * 填充桌面中间空白区域（显示公告栏顶部栏内容）
  */
 function populateHomeSpacer() {
     const spacer = document.getElementById('home-spacer');
-    if (!spacer) return;
+    if (!spacer) {
+        console.warn('[populateHomeSpacer] #home-spacer 元素不存在');
+        return;
+    }
 
-    // 获取公告栏数据
-    const dgData = _getDailyGreetingData();
-    const now = new Date();
-    const partnerName = settings?.partnerName || '梦角';
-    const myName = settings?.myName || '我';
-
-    // 获取心情数据
-    const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-    const moodDataRaw = window.moodData || {};
-    const todayMood = moodDataRaw[todayStr] || {};
-    
-    const allMoods = (typeof getAllMoodOptions === 'function') ? getAllMoodOptions() : [];
-    const partnerMoodObj = todayMood.partner ? allMoods.find(m => m.key === todayMood.partner) : null;
-    const myMoodObj = todayMood.user ? allMoods.find(m => m.key === todayMood.user) : null;
-
-    // 获取自定义寄语
-    let noteText = '今天也要元气满满，我在这里陪着你 ✦';
     try {
-        const customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}');
-        if (customData.notes && customData.notes.length > 0) {
-            const todaySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
-            noteText = customData.notes[Math.floor(Math.abs(Math.sin((todaySeed + 1) * 9301 + 49297) * 233280) % 233280 / 233280 * customData.notes.length)] || noteText;
+        const now = new Date();
+        
+        // 1️⃣ 安全获取公告数据（若函数不存在则使用默认值）
+        let dgData = { festival: null, weather: '晴', status: '一切都好' };
+        try {
+            if (typeof _getDailyGreetingData === 'function') {
+                dgData = _getDailyGreetingData();
+            } else {
+                console.warn('[populateHomeSpacer] _getDailyGreetingData 未定义，使用默认值');
+            }
+        } catch (e) {
+            console.warn('[populateHomeSpacer] 获取公告数据失败:', e);
         }
-    } catch(e) {}
 
-    // 获取装饰图
-    let decoImg = '';
-    try {
-        const customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}');
-        decoImg = customData.decoImg || '';
-    } catch(e) {}
+        const festival = dgData.festival;
+        const weather = dgData.weather || '晴';
+        const status = dgData.status || '一切都好';
+        const partnerName = settings?.partnerName || '梦角';
+        const myName = settings?.myName || '我';
 
-    spacer.style.cssText = `
-        flex: 2;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 0 24px 8px;
-        overflow: hidden;
-        min-height: 0;
-    `;
+        // 2️⃣ 安全获取心情数据
+        let partnerMoodObj = null;
+        let myMoodObj = null;
+        let todayMood = {};
+        let noteText = '今天也要元气满满，我在这里陪着你 ✦';
 
-    spacer.innerHTML = `
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:400px; margin:0 auto; width:100%;">
-            <!-- 我的心情 -->
-            <div style="background:rgba(var(--accent-color-rgb),0.06); border-radius:12px; padding:10px 12px; border:1px solid rgba(var(--accent-color-rgb),0.1); text-align:center;">
-                <div style="font-size:10px; color:var(--text-secondary); opacity:0.5; letter-spacing:1px; text-transform:uppercase;">${myName}</div>
-                <div style="font-size:24px; margin:2px 0;">${myMoodObj ? myMoodObj.kaomoji : '😊'}</div>
-                <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${myMoodObj ? myMoodObj.label : '今天心情不错'}</div>
-                ${todayMood.note ? `<div style="font-size:10px; color:var(--text-secondary); margin-top:2px; opacity:0.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${todayMood.note}</div>` : ''}
+        try {
+            const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+            const moodDataRaw = window.moodData || {};
+            todayMood = moodDataRaw[todayStr] || {};
+            
+            if (typeof getAllMoodOptions === 'function') {
+                const allMoods = getAllMoodOptions();
+                partnerMoodObj = todayMood.partner ? allMoods.find(m => m.key === todayMood.partner) : null;
+                myMoodObj = todayMood.user ? allMoods.find(m => m.key === todayMood.user) : null;
+            }
+        } catch (e) {
+            console.warn('[populateHomeSpacer] 获取心情数据失败:', e);
+        }
+
+        // 3️⃣ 安全获取自定义寄语
+        try {
+            const customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}');
+            if (customData.notes && customData.notes.length > 0) {
+                const todaySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
+                noteText = customData.notes[Math.floor(Math.abs(Math.sin((todaySeed + 1) * 9301 + 49297) * 233280) % 233280 / 233280 * customData.notes.length)] || noteText;
+            }
+        } catch (e) {}
+
+        // 4️⃣ 安全获取装饰图
+        let decoImg = '';
+        try {
+            const customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}');
+            decoImg = customData.decoImg || '';
+        } catch (e) {}
+
+        // 5️⃣ 构建 HTML（确保始终有内容）
+        spacer.style.cssText = `
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 24px 8px;
+            overflow: hidden;
+            min-height: 0;
+        `;
+
+        spacer.innerHTML = `
+            <!-- 顶部栏内容（节日/问候语） -->
+            <div style="text-align:center; margin-bottom:10px;">
+                <div style="font-size:32px; line-height:1.2;">${festival ? festival.emoji : '✨'}</div>
+                <div style="font-size:20px; font-weight:700; color:var(--text-primary); letter-spacing:1px; margin-top:2px;">
+                    ${festival ? festival.name + '快乐' : '今天也要开心哦'}
+                </div>
+                <div style="font-size:10px; color:var(--text-secondary); opacity:0.5; letter-spacing:3px; text-transform:uppercase; margin-top:2px;">
+                    ${festival ? festival.label : '✦ 每日寄语 ✦'}
+                </div>
             </div>
-            <!-- 对方心情 -->
-            <div style="background:rgba(var(--accent-color-rgb),0.06); border-radius:12px; padding:10px 12px; border:1px solid rgba(var(--accent-color-rgb),0.1); text-align:center;">
-                <div style="font-size:10px; color:var(--text-secondary); opacity:0.5; letter-spacing:1px; text-transform:uppercase;">${partnerName}</div>
-                <div style="font-size:24px; margin:2px 0;">${partnerMoodObj ? partnerMoodObj.kaomoji : '💭'}</div>
-                <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${partnerMoodObj ? partnerMoodObj.label : '还没有记录'}</div>
-                ${todayMood.partnerNote ? `<div style="font-size:10px; color:var(--text-secondary); margin-top:2px; opacity:0.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${todayMood.partnerNote}</div>` : ''}
+
+            <!-- 双方心情 -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:360px; margin:0 auto; width:100%;">
+                <div style="background:rgba(var(--accent-color-rgb),0.06); border-radius:12px; padding:8px 10px; border:1px solid rgba(var(--accent-color-rgb),0.1); text-align:center;">
+                    <div style="font-size:9px; color:var(--text-secondary); opacity:0.4; letter-spacing:1px; text-transform:uppercase;">${myName}</div>
+                    <div style="font-size:22px; margin:1px 0;">${myMoodObj ? myMoodObj.kaomoji : '😊'}</div>
+                    <div style="font-size:11px; font-weight:600; color:var(--text-primary);">${myMoodObj ? myMoodObj.label : '心情不错'}</div>
+                    ${todayMood.note ? `<div style="font-size:9px; color:var(--text-secondary); margin-top:1px; opacity:0.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${todayMood.note}</div>` : ''}
+                </div>
+                <div style="background:rgba(var(--accent-color-rgb),0.06); border-radius:12px; padding:8px 10px; border:1px solid rgba(var(--accent-color-rgb),0.1); text-align:center;">
+                    <div style="font-size:9px; color:var(--text-secondary); opacity:0.4; letter-spacing:1px; text-transform:uppercase;">${partnerName}</div>
+                    <div style="font-size:22px; margin:1px 0;">${partnerMoodObj ? partnerMoodObj.kaomoji : '💭'}</div>
+                    <div style="font-size:11px; font-weight:600; color:var(--text-primary);">${partnerMoodObj ? partnerMoodObj.label : '未记录'}</div>
+                    ${todayMood.partnerNote ? `<div style="font-size:9px; color:var(--text-secondary); margin-top:1px; opacity:0.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${todayMood.partnerNote}</div>` : ''}
+                </div>
             </div>
-        </div>
-        ${decoImg ? `<div style="max-width:400px; margin:6px auto 0; border-radius:12px; overflow:hidden; max-height:60px;"><img src="${decoImg}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;"></div>` : ''}
-        <div style="max-width:400px; margin:6px auto 0; text-align:center; font-size:12px; color:var(--text-secondary); opacity:0.6; line-height:1.5; padding:0 10px; font-style:italic;">
-            “${noteText}”
-        </div>
-        <div style="max-width:400px; margin:4px auto 0; display:flex; justify-content:center; gap:12px; font-size:10px; color:var(--text-secondary); opacity:0.4;">
-            <span>🌤 ${dgData.weather || '晴'}</span>
-            <span>✦ ${dgData.status || '一切都好'}</span>
-        </div>
-    `;
+
+            ${decoImg ? `<div style="max-width:360px; margin:8px auto 0; border-radius:10px; overflow:hidden; max-height:50px;"><img src="${decoImg}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;" onerror="this.style.display='none'"></div>` : ''}
+
+            <div style="max-width:360px; margin:6px auto 0; text-align:center; font-size:12px; color:var(--text-secondary); opacity:0.5; line-height:1.5; padding:0 8px; font-style:italic;">
+                “${noteText}”
+            </div>
+            <div style="max-width:360px; margin:3px auto 0; display:flex; justify-content:center; gap:14px; font-size:9px; color:var(--text-secondary); opacity:0.3; letter-spacing:1px;">
+                <span>🌤 ${weather}</span>
+                <span>✦ ${status}</span>
+            </div>
+        `;
+        
+        console.log('[populateHomeSpacer] 中间区域已填充完成');
+    } catch (error) {
+        console.error('[populateHomeSpacer] 渲染失败:', error);
+        // 出错时显示兜底内容
+        spacer.innerHTML = `
+            <div style="text-align:center; color:var(--text-secondary); opacity:0.4; padding:20px;">
+                <div style="font-size:28px; margin-bottom:8px;">💫</div>
+                <div style="font-size:14px;">今天也要开心哦</div>
+            </div>
+        `;
+    }
 }
+
 
 /**
  * 显示桌面并初始化网格
