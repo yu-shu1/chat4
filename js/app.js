@@ -255,9 +255,11 @@ function showHomeScreen() {
 
     updateBannerGreeting();
     initHomeGrid();
+    updateHomeSpacer();   // ← 新增
     homeScreen.classList.add('active');
     homeScreen._pendingActivation = false;
 }
+
 
 /**
  * 更新横幅上的问候语
@@ -351,6 +353,89 @@ function updateBannerGreeting() {
             <div style="width:32px; height:1.5px; background:var(--accent-color); opacity:0.25; border-radius:2px; margin:4px 0 2px;"></div>
 
             <div style="font-size:9px; color:var(--text-secondary); opacity:0.45; letter-spacing:0.3px;">${dateStr}</div>
+        </div>
+    `;
+}
+
+/**
+ * 更新桌面中间的公告栏剩余内容（天气、状态、心情、寄语）
+ * 数据源与公告栏完全一致，随主题变化
+ */
+function updateHomeSpacer() {
+    const container = document.getElementById('home-spacer-content');
+    if (!container) return;
+
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    const data = _getDailyGreetingData();
+    const weather = data.weather;
+    const status = data.status;
+    const partnerName = settings?.partnerName || '梦角';
+
+    // ---- 获取今日心情 ----
+    let partnerMood = null;
+    let partnerNote = '';
+    const moodData = window.moodData || {};
+    const todayMood = moodData[dateStr];
+    if (todayMood && todayMood.partner) {
+        const allMoods = getAllMoodOptions();
+        const moodObj = allMoods.find(m => m.key === todayMood.partner);
+        if (moodObj) {
+            partnerMood = { kaomoji: moodObj.kaomoji, label: moodObj.label };
+            partnerNote = todayMood.partnerNote || '';
+        }
+    }
+
+    // ---- 获取每日寄语（与公告栏一致） ----
+    let customData = {};
+    try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e) {}
+    let notes = customData.notes || [];
+    if (notes.length === 0) notes = ['今天也要元气满满，我在这里陪着你 ✦'];
+    const dailySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
+    function seededRandom(seed) { return (Math.abs(Math.sin(seed * 9301 + 49297) * 233280) % 233280) / 233280; }
+    const noteIndex = Math.floor(seededRandom(dailySeed + 1) * notes.length);
+    const noteText = notes[noteIndex] || '今天也要元气满满 ✦';
+
+    // ---- 构建卡片 HTML ----
+    container.innerHTML = `
+        <div class="home-spacer-card" style="
+            background: rgba(var(--accent-color-rgb), 0.08);
+            border: 1px solid rgba(var(--accent-color-rgb), 0.2);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            margin: 0 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        ">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <div style="font-size: 14px; font-weight: 600; color: var(--accent-color);">${partnerName} 今日</div>
+                <div style="flex: 1; height: 1px; background: linear-gradient(90deg, var(--accent-color), transparent);"></div>
+                <div style="font-size: 11px; color: var(--text-secondary);">${now.toLocaleDateString('zh-CN', {month:'short', day:'numeric'})}</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <div style="background: var(--primary-bg); border-radius: 10px; padding: 8px 10px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--text-secondary);">状态</div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${status || '—'}</div>
+                </div>
+                <div style="background: var(--primary-bg); border-radius: 10px; padding: 8px 10px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--text-secondary);">天气</div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${weather || '—'}</div>
+                </div>
+            </div>
+            ${partnerMood ? `
+            <div style="background: var(--primary-bg); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">${partnerMood.kaomoji}</span>
+                <span style="font-size: 13px; color: var(--text-primary);">${partnerMood.label}</span>
+                ${partnerNote ? `<span style="font-size: 12px; color: var(--text-secondary); margin-left: auto; font-style: italic; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">“${partnerNote}”</span>` : ''}
+            </div>
+            ` : ''}
+            <div style="font-size: 13px; color: var(--text-secondary); text-align: center; font-style: italic; border-top: 1px dashed rgba(var(--accent-color-rgb), 0.2); padding-top: 8px;">
+                “${noteText}”
+            </div>
         </div>
     `;
 }
@@ -564,7 +649,6 @@ function handleHomeAction(action) {
 // 保存原始函数引用（如果存在）
 const _origCloseDailyGreeting = window.closeDailyGreeting;
 
-
 window.closeDailyGreeting = function() {
     try {
         var modal = document.getElementById('daily-greeting-modal');
@@ -583,6 +667,7 @@ window.closeDailyGreeting = function() {
             // 重新初始化桌面内容
             if (typeof updateBannerGreeting === 'function') updateBannerGreeting();
             if (typeof initHomeGrid === 'function') initHomeGrid();
+            updateHomeSpacer();   // ← 新增
             homeScreen.classList.add('active');
         }
         // --- 修改结束 ---
