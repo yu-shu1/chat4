@@ -551,7 +551,6 @@ function updateBannerGreeting() {
 
 
 
-
 /**
  * 初始化功能网格
  */
