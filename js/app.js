@@ -281,33 +281,6 @@ function updateBannerGreeting() {
     const now = new Date();
     const hour = now.getHours();
 
-    // ---- 1. 我的时间（实时） ----
-    const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-
-    // ---- 2. 对方时间（按间隔更新，带随机流速） ----
-    if (!settings.partnerTime) settings.partnerTime = Date.now();
-    if (!settings.partnerNextInterval) {
-        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
-    }
-    const currentTs = Date.now();
-    if (currentTs - settings.partnerTime > settings.partnerNextInterval) {
-        // 更新时间戳
-        let newTime = currentTs;
-        // 0.01 概率触发不规律流速（随机偏移 ±4 小时）
-        if (Math.random() < 0.01) {
-            const offset = (Math.random() - 0.5) * 8 * 3600000;
-            newTime = currentTs + offset;
-            if (newTime < 0) newTime = 0;
-        }
-        settings.partnerTime = newTime;
-        // 重新生成 6~30 小时间隔
-        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
-        throttledSaveData();
-    }
-    const partnerDate = new Date(settings.partnerTime);
-    const partnerTimeStr = partnerDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-
-    // ---- 3. 原有的节庆、标题、格言数据 ----
     let data = {};
     if (typeof _getDailyGreetingData === 'function') {
         data = _getDailyGreetingData();
@@ -339,18 +312,10 @@ function updateBannerGreeting() {
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    // ---- 4. 构建头像 + 名字 + 时间的 HTML ----
-    const avatarHtml = (src, name, timeStr) => `
-        <div style="display:flex; flex-direction:column; align-items:center;">
-            <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
-                ${src ? `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
-            </div>
-            <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${name}</span>
-            <span style="font-size:10px; color:var(--text-secondary); margin-top:1px;">${timeStr}</span>
-        </div>
-    `;
+    // 生成时间戳，格式同公告栏
+    const months = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+    const dateStampHtml = now.getFullYear() + ' · ' + months[now.getMonth()] + '月' + now.getDate() + '日';
 
-    // 节庆表情（保持与原来一致）
     let emojiHtml = '';
     if (festival?.emoji) {
         emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${festival.emoji}</span>`;
@@ -365,33 +330,43 @@ function updateBannerGreeting() {
         </span>`;
     }
 
-    // ---- 5. 填充 banner 内容（已删除日期行） ----
     bannerEl.innerHTML = `
-        <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
+        <div style="width:100%; display:flex; flex-direction:column; align-items:flex-start; gap:2px; max-width:100%; overflow:hidden;">
             <div style="width:100%; text-align:left; padding-left:10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
                 ${englishLabel}
             </div>
 
-            <div style="display:flex; gap:24px; margin:2px 0 4px;">
-                ${avatarHtml(myAvatar, myName, myTimeStr)}
-                ${avatarHtml(partnerAvatar, partnerName, partnerTimeStr)}
+            <div style="display:flex; gap:24px; margin:2px 0 4px; justify-content:center; width:100%;">
+                <div style="display:flex; flex-direction:column; align-items:center;">
+                    <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
+                        ${myAvatar ? `<img src="${myAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
+                    </div>
+                    <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${myName}</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center;">
+                    <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
+                        ${partnerAvatar ? `<img src="${partnerAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
+                    </div>
+                    <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${partnerName}</span>
+                </div>
             </div>
 
-            <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
-                ${emojiHtml}
-                <span>${selectedTitle}</span>
+            <!-- 主标题 + 时间戳 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-top:2px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    ${emojiHtml}
+                    <span style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px;">${selectedTitle}</span>
+                </div>
+                <div style="font-size:11px; color:var(--text-secondary); opacity:0.7; font-family:monospace; letter-spacing:0.5px;">${dateStampHtml}</div>
             </div>
 
-            <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;" title="${selectedNote}">
+            <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px; width:100%;" title="${selectedNote}">
                 ${selectedNote}
             </div>
 
-
-            <!-- 原本的日期行已移除，符合需求 -->
         </div>
     `;
 }
-
 
 /**
  * 更新桌面中间的公告栏剩余内容（天气、状态、心情）
