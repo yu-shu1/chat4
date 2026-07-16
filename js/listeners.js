@@ -254,9 +254,9 @@ if (target.classList.contains('delete-btn')) {
                 };
             };
 
-            const openAvatarModal = (isPartner) => {
-                const modal = DOMElements.avatarModal;
-
+            const openAvatarModal = (isPartnerParam) => {
+                const isPartner = isPartnerParam === 1;   // 只有传入数字1才表示对方
+                
                 modal.modal.querySelector('.modal-content').innerHTML = `
             <div class="modal-title"><i class="fas fa-portrait"></i><span>上传${isPartner ? '对方': '我'}的头像</span></div>
             <div style="margin-bottom: 16px;">
