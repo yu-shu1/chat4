@@ -1868,8 +1868,8 @@
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
         }
         @keyframes floatEmoji {
-            0%,100% { transform: translateY(0) rotate(-4deg) scale(1); }
-            50% { transform: translateY(-8px) rotate(4deg) scale(1.05); }
+            0%, 100% { transform: translateY(0) rotate(-4deg) scale(1); }
+            50% { transform: translateY(-12px) rotate(6deg) scale(1.10); }
         }
         .dg-header-text { flex: 1; }
         .dg-festival-label {
@@ -11073,20 +11073,20 @@
 
 /* ---- 顶部横幅 (占 2 行) ---- */
 .home-banner {
-    flex: 2; /* 占据 2/7 空间 */
+    flex: 2;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px 24px 10px;
     z-index: 1;
-    min-height: 0; /* 允许flex收缩 */
+    min-height: 0;
 }
 
 .banner-content {
     width: 100%;
     max-width: 400px;
     height: 100%;
-    background: var(--secondary-bg);          /* 跟随主题 */
+    background: rgba(var(--accent-color-rgb), 0.10);   /* ← 主题色半透明 */
     border-radius: var(--radius);
     border: 1px solid var(--border-color);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
