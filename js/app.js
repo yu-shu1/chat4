@@ -274,7 +274,7 @@ function updateBannerGreeting() {
         data = _getDailyGreetingData();
     }
     const festival = data.festival;
-    const emoji = festival?.emoji || '😊';
+    const emoji = festival?.emoji || '😊';   // 与公告栏默认图标一致
 
     let englishLabel = 'GOOD EVENING';
     if (hour < 6) englishLabel = 'GOOD NIGHT';
@@ -326,27 +326,27 @@ function updateBannerGreeting() {
                 </div>
             </div>
 
-            <!-- 主标题 + 晃动 emoji（居中，带圆形背景，与公告栏同款） -->
+            <!-- 主标题 + 晃动 emoji（与公告栏完全一致的圆形背景+浮动动画） -->
             <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:8px; margin-top:2px;">
                 <div style="
                     width:44px; 
                     height:44px; 
                     border-radius:16px; 
-                    background:rgba(var(--accent-color-rgb), 0.12); 
+                    background:rgba(255,255,255,0.12); 
                     display:flex; 
                     align-items:center; 
                     justify-content:center; 
                     animation: floatEmoji 3.6s ease-in-out infinite; 
                     font-size:22px;
                     flex-shrink:0;
-                    border:1.5px solid rgba(var(--accent-color-rgb), 0.15);
+                    border:1.5px solid rgba(255,255,255,0.18);
                 ">
                     ${emoji}
                 </div>
                 <span>${selectedTitle}</span>
             </div>
 
-            <!-- 每日寄语（单行，完整显示，带title提示） -->
+            <!-- 每日寄语（单行，完整显示） -->
             <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;" title="${selectedNote}">
                 ${selectedNote}
             </div>
@@ -359,7 +359,6 @@ function updateBannerGreeting() {
         </div>
     `;
 }
-
 
 /**
  * 初始化功能网格
