@@ -899,8 +899,6 @@ if (customIntros && customIntros.length > 0) {
                     el.classList.toggle('active', val);
                 }
             }
-            const _immToggle = document.getElementById('immersive-toggle');
-            if (_immToggle) _immToggle.classList.toggle('active', document.body.classList.contains('immersive-mode'));
 
             renderMessages();
 
@@ -921,7 +919,6 @@ if (customIntros && customIntros.length > 0) {
                     { selector: '#enter-to-send-toggle', prop: 'enterToSend', invert: false, default: true },
                     { selector: '#keep-keyboard-toggle', prop: 'keepKeyboardAfterSend', invert: false },
                     { selector: '#bottom-collapse-cs-toggle', prop: 'bottomCollapseMode', invert: false },
-                    { selector: '#immersive-toggle', prop: null, custom: () => document.body.classList.contains('immersive-mode') },
                     // 群聊相关（需全局 groupChatSettings）
                     { selector: '#group-mode-toggle', prop: null, custom: () => window.groupChatSettings && window.groupChatSettings.enabled },
                     { selector: '#group-show-name-toggle', prop: null, custom: () => window.groupChatSettings && window.groupChatSettings.showName },

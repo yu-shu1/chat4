@@ -19,6 +19,27 @@ function setupEventListeners() {
     } catch (e) {
         console.error("事件绑定过程中发生错误:", e);
     }
+    // 返回桌面按钮
+    const homeBackBtn = document.getElementById('home-back-btn');
+    if (homeBackBtn) {
+        homeBackBtn.addEventListener('click', function() {
+            // 调用全局的显示桌面函数
+            if (typeof showHomeScreen === 'function') {
+                showHomeScreen();
+            } else {
+                // 降级方案：直接激活桌面层
+                const home = document.getElementById('home-screen');
+                if (home) {
+                    home.style.display = 'flex';
+                    home.classList.add('active');
+                    home._pendingActivation = false;
+                    if (typeof updateBannerGreeting === 'function') updateBannerGreeting();
+                    if (typeof initHomeGrid === 'function') initHomeGrid();
+                    if (typeof updateHomeSpacer === 'function') updateHomeSpacer();
+                }
+            }
+        });
+    }
 }
 
 function initChatActionListeners() {
@@ -383,8 +404,6 @@ fileInput.addEventListener('change', function(e) {
 
             DOMElements.partner.name.addEventListener('click', () => openNameModal(true));
             DOMElements.me.name.addEventListener('click', () => openNameModal(false));
-            DOMElements.partner.avatar.addEventListener('click', () => openAvatarModal(true));
-            DOMElements.me.avatar.addEventListener('click', () => openAvatarModal(false));
 
             DOMElements.me.statusContainer.addEventListener('click', () => {
                 const statusTextElement = DOMElements.me.statusText; const statusContainer = DOMElements.me.statusContainer;
@@ -528,8 +547,6 @@ if (_chatSettingsEl) _chatSettingsEl.addEventListener('click', () => {
     if (autoToggle) autoToggle.classList.toggle('active', !!settings.autoSendEnabled);
     updateAutoSendUI();
     updateDelayUI();
-    const immToggle = document.getElementById('immersive-toggle');
-    if (immToggle) immToggle.classList.toggle('active', document.body.classList.contains('immersive-mode'));
     const rrStyle = settings.readReceiptStyle || 'icon';
     const rrIconBtn = document.getElementById('rr-style-icon');
     const rrTextBtn = document.getElementById('rr-style-text');
