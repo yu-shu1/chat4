@@ -245,20 +245,52 @@ function updateBannerGreeting() {
     const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
     // ---- 2. 对方时间（按间隔更新，带随机流速） ----
-// ---- 2. 对方时间（每分钟随机刷新一次，用于测试） ----
-// 每次调用 updateBannerGreeting 时生成全新的随机时间
-const randomHour = Math.floor(Math.random() * 24);
-const randomMinute = Math.floor(Math.random() * 60);
-const now = new Date();
-const partnerDate = new Date(now);
-partnerDate.setHours(randomHour, randomMinute, 0, 0);
-const partnerTimeStr = partnerDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    if (!settings.partnerTimeRef) {
+        settings.partnerTimeRef = Date.now();
+    }
+    if (!settings.partnerTime) {
+        const initH = Math.floor(Math.random() * 24);
+        const initM = Math.floor(Math.random() * 60);
+        const initDate = new Date();
+        initDate.setHours(initH, initM, 0, 0);
+        settings.partnerTime = initDate.getTime();
+    }
+    if (!settings.partnerSpeedFactor) {
+        settings.partnerSpeedFactor = 1;
+    }
+    if (!settings.partnerNextInterval) {
+        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000;
+    }
 
-// （可选）将当前随机时间存入 settings，供其他地方使用
-settings.partnerTime = partnerDate.getTime();
+    const nowReal = Date.now();
+    const elapsedReal = nowReal - settings.partnerTimeRef;
+    let displayTime;
+    let needSave = false;
 
-// 调试日志（可去掉）
-console.log(`[测试] 对方时间已刷新为 ${partnerTimeStr}`);
+    if (elapsedReal >= settings.partnerNextInterval) {
+        const newH = Math.floor(Math.random() * 24);
+        const newM = Math.floor(Math.random() * 60);
+        const newDate = new Date();
+        newDate.setHours(newH, newM, 0, 0);
+        settings.partnerTime = newDate.getTime();
+        settings.partnerTimeRef = nowReal;
+        if (Math.random() < 0.01) {
+            settings.partnerSpeedFactor = 0.75 + Math.random() * 0.5;
+        } else {
+            settings.partnerSpeedFactor = 1;
+        }
+        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000;
+        needSave = true;
+        displayTime = settings.partnerTime;
+    } else {
+        const offset = elapsedReal * settings.partnerSpeedFactor;
+        displayTime = settings.partnerTime + offset;
+    }
+
+    if (needSave) throttledSaveData();
+
+    const displayDate = new Date(displayTime);
+    const partnerTimeStr = displayDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
     // ---- 3. 原有的节庆、标题、格言数据 ----
     let data = {};
