@@ -453,29 +453,20 @@ function createAppButton(app) {
 function handleHomeAction(action) {
     const homeScreen = document.getElementById('home-screen');
 
-    // 辅助函数：安全显示模态框
     function safeShowModal(modalId, contentFn, delay = 150) {
         const modal = document.getElementById(modalId);
         if (!modal) {
             console.warn(`[桌面] 未找到模态框 #${modalId}`);
             return;
         }
-    
-        // ★ 关键：移除可能残留的 hidden 类
         modal.classList.remove('hidden');
-        
-        // 清除可能的隐藏计时器（防止 hideModal 残留）
         if (modal._hideTimeout) {
             clearTimeout(modal._hideTimeout);
             modal._hideTimeout = null;
         }
-    
-        // 直接显示模态框（不依赖外部 showModal）
         modal.style.display = 'flex';
         modal.style.opacity = '1';
         modal.style.pointerEvents = 'auto';
-    
-        // 触发内容入场动画
         requestAnimationFrame(() => {
             const content = modal.querySelector('.modal-content');
             if (content) {
@@ -483,8 +474,6 @@ function handleHomeAction(action) {
                 content.style.transform = 'translateY(0) scale(1)';
             }
         });
-    
-        // 执行内容填充（若提供）
         if (typeof contentFn === 'function') {
             setTimeout(() => {
                 try {
@@ -506,7 +495,7 @@ function handleHomeAction(action) {
                 }, 100);
             }
             break;
-            
+
         case 'mood':
             safeShowModal('mood-modal', renderMoodCalendar);
             break;
@@ -550,12 +539,24 @@ function handleHomeAction(action) {
             });
             break;
 
+        // ===== 新增以下三个 case =====
+        case 'decision':
+            safeShowModal('decision-menu-modal');
+            break;
+
+        case 'chatSettings':
+            safeShowModal('chat-modal');
+            break;
+
+        case 'data':
+            safeShowModal('data-modal');
+            break;
+
         default:
             console.warn('未知的桌面操作:', action);
             break;
     }
 }
-
 
 // =============================================
 // 覆盖 closeDailyGreeting 函数，在关闭公告时激活桌面
