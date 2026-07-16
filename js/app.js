@@ -281,21 +281,45 @@ function updateBannerGreeting() {
     const now = new Date();
     const hour = now.getHours();
 
-    // ----- 从 _getDailyGreetingData 获取节日/天气/状态等数据（沿用原逻辑） -----
+    // ---- 1. 我的时间（实时） ----
+    const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+    // ---- 2. 对方时间（按间隔更新，带随机流速） ----
+    if (!settings.partnerTime) settings.partnerTime = Date.now();
+    if (!settings.partnerNextInterval) {
+        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
+    }
+    const currentTs = Date.now();
+    if (currentTs - settings.partnerTime > settings.partnerNextInterval) {
+        // 更新时间戳
+        let newTime = currentTs;
+        // 0.01 概率触发不规律流速（随机偏移 ±4 小时）
+        if (Math.random() < 0.01) {
+            const offset = (Math.random() - 0.5) * 8 * 3600000;
+            newTime = currentTs + offset;
+            if (newTime < 0) newTime = 0;
+        }
+        settings.partnerTime = newTime;
+        // 重新生成 6~30 小时间隔
+        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
+        throttledSaveData();
+    }
+    const partnerDate = new Date(settings.partnerTime);
+    const partnerTimeStr = partnerDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+    // ---- 3. 原有的节庆、标题、格言数据 ----
     let data = {};
     if (typeof _getDailyGreetingData === 'function') {
         data = _getDailyGreetingData();
     }
     const festival = data.festival;
 
-    // 英文标签
     let englishLabel = 'GOOD EVENING';
     if (hour < 6) englishLabel = 'GOOD NIGHT';
     else if (hour < 12) englishLabel = 'GOOD MORNING';
     else if (hour < 18) englishLabel = 'GOOD AFTERNOON';
     if (festival?.label) englishLabel = festival.label;
 
-    // 自定义公告文案
     let customData = {};
     try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e) {}
     let titles = customData.titles || [];
@@ -303,7 +327,6 @@ function updateBannerGreeting() {
     if (titles.length === 0) titles = ['早上好', '今天也要开心哦', '你在我心里呀', '想你'];
     if (notes.length === 0) notes = ['今天也要元气满满，我在这里陪着你 ✦', '每一天都因为有你而特别 ✦', '想到你就觉得很安心 ✦', '你是我最喜欢的人 ✦'];
 
-    // 按今日种子取随机标题和副标题
     const dailySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
     function seededRandom(seed) { return (Math.abs(Math.sin(seed * 9301 + 49297) * 233280) % 233280) / 233280; }
     const titleIndex = Math.floor(seededRandom(dailySeed) * titles.length);
@@ -311,132 +334,60 @@ function updateBannerGreeting() {
     const selectedTitle = titles[titleIndex] || '早上好';
     const selectedNote = notes[noteIndex] || '今天也要元气满满 ✦';
 
-    // 头像
     const partnerAvatar = DOMElements?.partner?.avatar?.querySelector('img')?.src || '';
     const myAvatar = DOMElements?.me?.avatar?.querySelector('img')?.src || '';
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    // ---------- 时间处理 ----------
-    // 我的时间：当前时间
-    function getMyTime() {
-        const d = new Date();
-        return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-    }
-    // 对方时间：随机，6~30 小时更新一次，1% 概率强制刷新
-    function getPartnerTime() {
-        const key = 'partnerTimeData';
-        let data = null;
-        try {
-            const raw = localStorage.getItem(key);
-            if (raw) data = JSON.parse(raw);
-        } catch(e) {}
-        const now = Date.now();
-        let display, updateTime, interval;
-        if (data) {
-            display = data.display;
-            updateTime = data.updateTime;
-            interval = data.interval || 24 * 60 * 60 * 1000;
-        }
-        // 判断是否需要更新
-        const timePassed = now - (updateTime || 0);
-        const shouldUpdate = !data || timePassed > interval || (Math.random() < 0.01);
-        if (shouldUpdate) {
-            // 随机生成过去 0~3 天内的某个时间
-            const offset = Math.random() * 3 * 24 * 60 * 60 * 1000;
-            const randomDate = new Date(now - offset);
-            display = randomDate.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-            // 下一次更新间隔：6~30 小时
-            const hours = 6 + Math.random() * 24;
-            interval = hours * 60 * 60 * 1000;
-            updateTime = now;
-            localStorage.setItem(key, JSON.stringify({ display, updateTime, interval }));
-        }
-        return display;
-    }
-    const myTime = getMyTime();
-    const partnerTime = getPartnerTime();
+    // ---- 4. 构建头像 + 名字 + 时间的 HTML ----
+    const avatarHtml = (src, name, timeStr) => `
+        <div style="display:flex; flex-direction:column; align-items:center;">
+            <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
+                ${src ? `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
+            </div>
+            <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${name}</span>
+            <span style="font-size:10px; color:var(--text-secondary); margin-top:1px;">${timeStr}</span>
+        </div>
+    `;
 
-    // 时间戳（公告栏样式）
-    const dateStamp = now.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
-
-    // Emoji（取自节日或默认）
+    // 节庆表情（保持与原来一致）
     let emojiHtml = '';
     if (festival?.emoji) {
-        emojiHtml = festival.emoji;
+        emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${festival.emoji}</span>`;
     } else {
-        // 默认微笑 SVG（与公告栏一致）
-        emojiHtml = `<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="width:20px; height:20px; display:block;">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-            <line x1="9" y1="9" x2="9.01" y2="9"/>
-            <line x1="15" y1="9" x2="15.01" y2="9"/>
-        </svg>`;
+        emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; width:22px; height:22px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="width:100%; height:100%;">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+        </span>`;
     }
 
-    // ---------- 构建 HTML ----------
+    // ---- 5. 填充 banner 内容（已删除日期行） ----
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
-
-            <!-- 英文标签（左对齐） -->
             <div style="width:100%; text-align:left; padding-left:10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
                 ${englishLabel}
             </div>
 
-            <!-- 主标题行：问候语（左）+ 时间戳（右） -->
-            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 4px;">
-                <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
-                    <!-- Emoji 框（仿公告栏） -->
-                    <div style="
-                        width:32px; height:32px; border-radius:50%;
-                        background:rgba(var(--accent-color-rgb),0.12);
-                        border:1.5px solid rgba(var(--accent-color-rgb),0.3);
-                        display:flex; align-items:center; justify-content:center;
-                        font-size:18px; flex-shrink:0;
-                        animation: floatEmoji 3.6s ease-in-out infinite;
-                        box-shadow: 0 4px 12px rgba(var(--accent-color-rgb),0.15);
-                    ">
-                        ${emojiHtml}
-                    </div>
-                    <span style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                        ${selectedTitle}
-                    </span>
-                </div>
-                <!-- 时间戳（右对齐） -->
-                <div style="font-size:11px; color:var(--text-secondary); opacity:0.7; letter-spacing:1px; font-family:monospace; white-space:nowrap; flex-shrink:0; margin-left:8px;">
-                    ${dateStamp}
-                </div>
+            <div style="display:flex; gap:24px; margin:2px 0 4px;">
+                ${avatarHtml(myAvatar, myName, myTimeStr)}
+                ${avatarHtml(partnerAvatar, partnerName, partnerTimeStr)}
             </div>
 
-            <!-- 副标题 -->
+            <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
+                ${emojiHtml}
+                <span>${selectedTitle}</span>
+            </div>
+
             <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;" title="${selectedNote}">
                 ${selectedNote}
             </div>
 
-            <!-- 分隔线 -->
-            <div style="width:32px; height:1.5px; background:var(--accent-color); opacity:0.25; border-radius:2px; margin:4px 0 2px;"></div>
 
-            <!-- 头像行：双方头像 + 昵称 + 时间 -->
-            <div style="display:flex; gap:36px; margin:4px 0 2px; align-items:flex-start;">
-                <!-- 我的 -->
-                <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
-                    <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
-                        ${myAvatar ? `<img src="${myAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px; width:100%; text-align:center;"></i>`}
-                    </div>
-                    <span style="font-size:11px; font-weight:500; color:var(--text-primary);">${myName}</span>
-                    <span style="font-size:9px; color:var(--text-secondary); opacity:0.6;">${myTime}</span>
-                </div>
-
-                <!-- 对方 -->
-                <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
-                    <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
-                        ${partnerAvatar ? `<img src="${partnerAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px; width:100%; text-align:center;"></i>`}
-                    </div>
-                    <span style="font-size:11px; font-weight:500; color:var(--text-primary);">${partnerName}</span>
-                    <span style="font-size:9px; color:var(--text-secondary); opacity:0.6;">${partnerTime}</span>
-                </div>
-            </div>
-
+            <!-- 原本的日期行已移除，符合需求 -->
         </div>
     `;
 }
