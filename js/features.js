@@ -1129,8 +1129,75 @@ function _buildDailyGreeting() {
     } catch(e) { console.warn('Daily greeting build error:', e); }
 }
 
+window.toggleImmersiveMode = function(force) {
+    var isOn = (force !== undefined) ? force : !document.body.classList.contains('immersive-mode');
+    document.body.classList.toggle('immersive-mode', isOn);
+    var toggle = document.getElementById('immersive-toggle');
+    if (toggle) toggle.classList.toggle('active', isOn);
+    try { localStorage.setItem('immersive_mode', isOn ? '1' : '0'); } catch(e) {}
+    if (!isOn && typeof showNotification === 'function') showNotification('已退出沉浸式模式', 'info');
+};
 
+(function() {
+    var btn = document.getElementById('immersive-exit-btn');
+    if (!btn) return;
+    var isDragging = false, hasMoved = false;
+    var startX, startY, origRight, origBottom;
+    
+    function getRight() { return parseInt(btn.style.right) || 20; }
+    function getBottom() { return parseInt(btn.style.bottom) || 100; }
+    
+    function onStart(e) {
+        isDragging = true; hasMoved = false;
+        btn.classList.add('dragging');
+        var touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX;
+        startY = touch.clientY;
+        origRight = getRight();
+        origBottom = getBottom();
+        e.preventDefault();
+    }
+    function onMove(e) {
+        if (!isDragging) return;
+        var touch = e.touches ? e.touches[0] : e;
+        var dx = touch.clientX - startX;
+        var dy = touch.clientY - startY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasMoved = true;
+        var newRight = Math.max(10, Math.min(window.innerWidth - 54, origRight - dx));
+        var newBottom = Math.max(10, Math.min(window.innerHeight - 54, origBottom - dy));
+        btn.style.right = newRight + 'px';
+        btn.style.bottom = newBottom + 'px';
+        btn.style.left = 'auto';
+        btn.style.top = 'auto';
+        e.preventDefault();
+    }
+    function onEnd(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        btn.classList.remove('dragging');
+        if (!hasMoved) {
+            window.toggleImmersiveMode(false);
+        }
+    }
+    btn.addEventListener('mousedown', onStart, {passive: false});
+    btn.addEventListener('touchstart', onStart, {passive: false});
+    document.addEventListener('mousemove', onMove, {passive: false});
+    document.addEventListener('touchmove', onMove, {passive: false});
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+    
+    btn.removeAttribute('onclick');
+})();
 
+(function() {
+    try {
+        if (localStorage.getItem('immersive_mode') === '1') {
+            document.body.classList.add('immersive-mode');
+            var t = document.getElementById('immersive-toggle');
+            if (t) t.classList.add('active');
+        }
+    } catch(e) {}
+})();
 
 window.openDailyGreetingEditor = function() {
     var modal = document.getElementById('dg-editor-modal');

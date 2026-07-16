@@ -41,12 +41,6 @@
         let currentAnniversaryType = 'anniversary';
         let customThemes = [];
         let themeSchemes = []; 
-        let homeBannerTimer = null;
-        let typingIndicatorState = {
-            visible: false,
-            timer: null,
-            hideTimer: null
-        };
         const DOMElements = {
             html: document.documentElement,
             chatContainer: document.getElementById('chat-container'),
