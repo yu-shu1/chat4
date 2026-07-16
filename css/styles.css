@@ -588,6 +588,8 @@
             will-change: transform;
         }
 
+
+
         .header {
             padding: 0;
             padding-top: env(safe-area-inset-top, 0px);
@@ -608,62 +610,6 @@
             opacity: 1;
         }
 
-        body.immersive-mode .header {
-            transform: translateY(-110%);
-            opacity: 0;
-            pointer-events: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.4s ease;
-        }
-        body.immersive-mode .chat-container {
-            padding-top: calc(12px + env(safe-area-inset-top, 0px));
-        }
-        #immersive-exit-btn {
-            display: none;
-            position: fixed;
-            bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
-            right: 20px;
-            left: auto;
-            top: auto;
-            transform: none;
-            z-index: 9999;
-            background: rgba(var(--accent-color-rgb), 0.12);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(var(--accent-color-rgb), 0.22);
-            border-radius: 14px;
-            width: 34px;
-            height: 34px;
-            padding: 0;
-            font-size: 15px;
-            color: var(--accent-color);
-            cursor: grab;
-            letter-spacing: 0;
-            opacity: 0.38;
-            transition: background 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease, transform 0.22s ease;
-            font-family: var(--font-family);
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
-            touch-action: none;
-        }
-        #immersive-exit-btn:hover {
-            background: rgba(var(--accent-color-rgb), 0.26);
-            opacity: 0.95;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
-            transform: translateY(-1px);
-        }
-        #immersive-exit-btn.dragging {
-            cursor: grabbing;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-            transition: none;
-        }
-        body.immersive-mode #immersive-exit-btn {
-            display: flex;
-        }
 
         .header-inner {
             display: flex;
@@ -674,6 +620,67 @@
             padding: 4px 10px 4px;
             width: 100%;
             gap: 4px;
+        }
+
+        /* 顶部栏布局微调 */
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 10px;
+            gap: 4px;
+        }
+        
+        .header-left,
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex: 1;
+            justify-content: center;
+        }
+        
+        /* 返回按钮保持与原有 action-btn 风格一致 */
+        #home-back-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        #home-back-btn:hover {
+            background-color: var(--message-received-bg);
+            color: var(--text-primary);
+            transform: translateY(-1px) scale(1.07);
+        }
+        
+        /* 状态文字样式保留原有风格 */
+        .status {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 1px 5px;
+            border-radius: 6px;
+            transition: background-color 0.3s ease;
+            white-space: nowrap;
+        }
+        .status:hover {
+            background-color: var(--message-received-bg);
         }
 
         .avatar {
@@ -1107,15 +1114,6 @@
             padding-right: env(safe-area-inset-right, 0px);
         }
 
-        body.immersive-mode .input-area-wrapper {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-        }
-        body.immersive-mode .main-chat-area {
-            padding-bottom: 80px;
-        }
         .input-area {
             display: flex;
             padding: 12px 15px;
