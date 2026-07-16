@@ -1098,11 +1098,11 @@
             background-color: var(--input-area-bg);
             transition: background-color 0.5s ease;
             position: fixed;
-            bottom: 0 !important;;
+            bottom: 0;
             left: 0;
             right: 0;
             z-index: 50;
-            padding-bottom: 0 !important;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
             padding-left: env(safe-area-inset-left, 0px);
             padding-right: env(safe-area-inset-right, 0px);
         }
@@ -1118,7 +1118,7 @@
         }
         .input-area {
             display: flex;
-            padding: 6px 10px !important;   /* 减小上下内边距 */
+            padding: 12px 15px;
             gap: 10px;
             border-top: 1px solid var(--border-color);
             align-items: flex-end;
@@ -11075,7 +11075,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px 16px 4px;
+    padding: 20px 24px 10px;
     z-index: 1;
     min-height: 0; /* 允许flex收缩 */
 }
@@ -11090,10 +11090,10 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 12px;
-    text-align: center;
+    align-items: center;        /* 子元素水平居中 */
+    justify-content: center;    /* 子元素垂直居中 */
+    padding: 20px;
+    text-align: center;         /* 文本居中（但内部有左对齐的问候语） */
     transition: all 0.3s ease;
 }
 
@@ -11106,15 +11106,9 @@
 }
 
 /* ★ 新增：留白区域 (占 2 行) */
-/* 修改 home-spacer 样式，允许内容显示 */
 .home-spacer {
     flex: 2;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 16px 4px;
-    min-height: 0;
-    overflow: hidden;
+    /* 完全透明，只占空间 */
 }
 
 /* ---- 底部功能网格 (占 3 行) ---- */
@@ -11228,7 +11222,7 @@
     .home-app-icon .app-label {
         font-size: 10px;
     }
-    . -greeting {
+    .banner-greeting {
         font-size: 18px;
     }
 }
@@ -11244,5 +11238,4 @@
         font-size: 9px;
     }
 }
-
 
