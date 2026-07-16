@@ -244,14 +244,11 @@ function updateBannerGreeting() {
     // ---- 1. 我的时间（实时） ----
     const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-    // ---- 2. 对方时间（动态流逝，按间隔刷新，带随机流速） ----
-    const nowReal = Date.now();
-    // 初始化（若不存在则设置）
+    // ---- 2. 对方时间（按间隔更新，带随机流速） ----
     if (!settings.partnerTimeRef) {
-        settings.partnerTimeRef = nowReal;
+        settings.partnerTimeRef = Date.now();
     }
     if (!settings.partnerTime) {
-        // 随机初始化一个当天的时间点（只取时分）
         const initH = Math.floor(Math.random() * 24);
         const initM = Math.floor(Math.random() * 60);
         const initDate = new Date();
@@ -262,32 +259,30 @@ function updateBannerGreeting() {
         settings.partnerSpeedFactor = 1;
     }
     if (!settings.partnerNextInterval) {
-        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000; // 6~26小时
+        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000;
     }
 
+    const nowReal = Date.now();
     const elapsedReal = nowReal - settings.partnerTimeRef;
     let displayTime;
     let needSave = false;
 
     if (elapsedReal >= settings.partnerNextInterval) {
-        // 刷新时间
         const newH = Math.floor(Math.random() * 24);
         const newM = Math.floor(Math.random() * 60);
         const newDate = new Date();
         newDate.setHours(newH, newM, 0, 0);
         settings.partnerTime = newDate.getTime();
         settings.partnerTimeRef = nowReal;
-        // 重置流速因子，且有0.01概率触发不同流速
         if (Math.random() < 0.01) {
-            settings.partnerSpeedFactor = 0.75 + Math.random() * 0.5; // 0.75 ~ 1.25
+            settings.partnerSpeedFactor = 0.75 + Math.random() * 0.5;
         } else {
             settings.partnerSpeedFactor = 1;
         }
-        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000; // 重新随机间隔
+        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000;
         needSave = true;
         displayTime = settings.partnerTime;
     } else {
-        // 计算偏移后的时间
         const offset = elapsedReal * settings.partnerSpeedFactor;
         displayTime = settings.partnerTime + offset;
     }
@@ -329,9 +324,9 @@ function updateBannerGreeting() {
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    // ---- 4. 构建头像 + 名字 + 时间的 HTML ----
-    const avatarHtml = (src, name, timeStr) => `
-        <div style="display:flex; flex-direction:column; align-items:center;">
+    // ---- 4. 构建头像 + 名字 + 时间的 HTML（增加点击换头像） ----
+    const avatarHtml = (src, name, timeStr, isMe) => `
+        <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" onclick="window._openAvatarModal && window._openAvatarModal(${isMe})">
             <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
                 ${src ? `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
             </div>
@@ -355,25 +350,25 @@ function updateBannerGreeting() {
         </span>`;
     }
 
-    // ---- ★ 新增加的时间戳：仅显示年月日（与公告栏顶端同款） ----
+    // ---- 时间戳（仅年月日） ----
     const currentTimeStr = now.toLocaleString('zh-CN', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
     });
 
-    // ---- 5. 填充 banner 内容（问候语左对齐，时间戳右对齐） ----
+    // ---- 5. 填充 banner 内容（问候语左对齐，时间戳右对齐，增加左右间距） ----
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
-            <!-- 英文标签 + 时间戳（flex 行，左右对齐） -->
-            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
+            <!-- 英文标签 + 时间戳（flex 行，左右对齐，增加左右内边距至 16px） -->
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 16px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
                 <span>${englishLabel}</span>
                 <span>${currentTimeStr}</span>
             </div>
 
             <div style="display:flex; gap:24px; margin:2px 0 4px;">
-                ${avatarHtml(myAvatar, myName, myTimeStr)}
-                ${avatarHtml(partnerAvatar, partnerName, partnerTimeStr)}
+                ${avatarHtml(myAvatar, myName, myTimeStr, true)}
+                ${avatarHtml(partnerAvatar, partnerName, partnerTimeStr, false)}
             </div>
 
             <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
@@ -387,7 +382,6 @@ function updateBannerGreeting() {
         </div>
     `;
 }
-
 
 
 /**
