@@ -358,8 +358,8 @@ function updateBannerGreeting() {
 }
 
 /**
- * 更新桌面中间的公告栏剩余内容（天气、状态、心情、寄语）
- * 数据源与公告栏完全一致，随主题变化
+ * 更新桌面中间的公告栏剩余内容（天气、状态、心情）
+ * 去除时间戳和每日寄语，完整显示心情备注
  */
 function updateHomeSpacer() {
     const container = document.getElementById('home-spacer-content');
@@ -386,16 +386,6 @@ function updateHomeSpacer() {
         }
     }
 
-    // ---- 获取每日寄语（与公告栏一致） ----
-    let customData = {};
-    try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e) {}
-    let notes = customData.notes || [];
-    if (notes.length === 0) notes = ['今天也要元气满满，我在这里陪着你 ✦'];
-    const dailySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
-    function seededRandom(seed) { return (Math.abs(Math.sin(seed * 9301 + 49297) * 233280) % 233280) / 233280; }
-    const noteIndex = Math.floor(seededRandom(dailySeed + 1) * notes.length);
-    const noteText = notes[noteIndex] || '今天也要元气满满 ✦';
-
     // ---- 构建卡片 HTML ----
     container.innerHTML = `
         <div class="home-spacer-card" style="
@@ -411,12 +401,16 @@ function updateHomeSpacer() {
             max-width: 400px;
             box-sizing: border-box;
         ">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                <div style="font-size: 14px; font-weight: 600; color: var(--accent-color);">${partnerName} 今日</div>
+            <!-- 标题行 · 梦角 今天状态 · + 装饰线 -->
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--accent-color); letter-spacing: 0.5px; white-space: nowrap;">
+                    · ${partnerName} 今天状态 ·
+                </div>
                 <div style="flex: 1; height: 1px; background: linear-gradient(90deg, var(--accent-color), transparent);"></div>
-                <div style="font-size: 11px; color: var(--text-secondary);">${now.toLocaleDateString('zh-CN', {month:'short', day:'numeric'})}</div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+
+            <!-- 状态 + 天气 -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
                 <div style="background: var(--primary-bg); border-radius: 10px; padding: 8px 10px; text-align: center;">
                     <div style="font-size: 11px; color: var(--text-secondary);">状态</div>
                     <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${status || '—'}</div>
@@ -426,20 +420,24 @@ function updateHomeSpacer() {
                     <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${weather || '—'}</div>
                 </div>
             </div>
+
+            <!-- 心情 + 完整备注 -->
             ${partnerMood ? `
-            <div style="background: var(--primary-bg); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 18px;">${partnerMood.kaomoji}</span>
-                <span style="font-size: 13px; color: var(--text-primary);">${partnerMood.label}</span>
-                ${partnerNote ? `<span style="font-size: 12px; color: var(--text-secondary); margin-left: auto; font-style: italic; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">“${partnerNote}”</span>` : ''}
+            <div style="background: var(--primary-bg); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">${partnerMood.kaomoji}</span>
+                    <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">${partnerMood.label}</span>
+                </div>
+                ${partnerNote ? `<div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; word-break: break-word; padding-left: 4px;">${partnerNote}</div>` : ''}
             </div>
-            ` : ''}
-            <div style="font-size: 13px; color: var(--text-secondary); text-align: center; font-style: italic; border-top: 1px dashed rgba(var(--accent-color-rgb), 0.2); padding-top: 8px;">
-                “${noteText}”
+            ` : `
+            <div style="background: var(--primary-bg); border-radius: 10px; padding: 10px 12px; text-align: center; color: var(--text-secondary); font-size: 13px;">
+                ${partnerName} 今天还没有留下心情记录
             </div>
+            `}
         </div>
     `;
 }
-
 
 /**
  * 初始化功能网格
