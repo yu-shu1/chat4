@@ -274,8 +274,38 @@ function updateBannerGreeting() {
         data = _getDailyGreetingData();
     }
     const festival = data.festival;
-    const emoji = festival?.emoji || '😊';   // 与公告栏默认图标一致
 
+    // ---------- 图标映射 ----------
+    const festivalIconMap = {
+        '元旦': 'fa-calendar-alt',
+        '情人节': 'fa-heart',
+        '春节': 'fa-dragon',
+        '元宵节': 'fa-circle',   // 无灯笼图标，用圆代替
+        '七夕节': 'fa-star-and-crescent',
+        '中秋节': 'fa-moon',
+        '国庆节': 'fa-flag',
+        '圣诞节': 'fa-tree',
+        '妇女节': 'fa-venus',
+        '劳动节': 'fa-hammer',
+        '儿童节': 'fa-child',
+        '教师节': 'fa-chalkboard-teacher',
+        '感恩节': 'fa-hands-helping',
+        '跨年夜': 'fa-clock',
+    };
+    const defaultIcon = 'fa-star';
+
+    let iconClass = defaultIcon;
+    if (festival && festival.name) {
+        iconClass = festivalIconMap[festival.name] || defaultIcon;
+    } else {
+        // 非节日，按时间段
+        if (hour < 6) iconClass = 'fa-moon';
+        else if (hour < 12) iconClass = 'fa-sun';
+        else if (hour < 18) iconClass = 'fa-cloud-sun';
+        else iconClass = 'fa-moon';
+    }
+
+    // 英文标签和问候语（保持不变）
     let englishLabel = 'GOOD EVENING';
     if (hour < 6) englishLabel = 'GOOD NIGHT';
     else if (hour < 12) englishLabel = 'GOOD MORNING';
@@ -303,14 +333,12 @@ function updateBannerGreeting() {
 
     const dateStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
+    // 修改：使用 <i> 替换文本 emoji
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
-            <!-- 英文标签 - 左对齐，左侧留边距 -->
             <div style="width:100%; text-align:left; padding-left:10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
                 ${englishLabel}
             </div>
-
-            <!-- 双人头像（居中） -->
             <div style="display:flex; gap:24px; margin:2px 0 4px;">
                 <div style="display:flex; flex-direction:column; align-items:center;">
                     <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
@@ -325,8 +353,6 @@ function updateBannerGreeting() {
                     <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${partnerName}</span>
                 </div>
             </div>
-
-            <!-- 主标题 + 晃动 emoji（与公告栏完全一致的圆形背景+浮动动画） -->
             <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:8px; margin-top:2px;">
                 <div style="
                     width:44px; 
@@ -341,20 +367,14 @@ function updateBannerGreeting() {
                     flex-shrink:0;
                     border:1.5px solid rgba(255,255,255,0.18);
                 ">
-                    ${emoji}
+                    <i class="fas ${iconClass}" style="color:var(--accent-color);"></i>
                 </div>
                 <span>${selectedTitle}</span>
             </div>
-
-            <!-- 每日寄语（单行，完整显示） -->
             <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;" title="${selectedNote}">
                 ${selectedNote}
             </div>
-
-            <!-- 装饰分隔线 -->
             <div style="width:32px; height:1.5px; background:var(--accent-color); opacity:0.25; border-radius:2px; margin:4px 0 2px;"></div>
-
-            <!-- 时间戳（居中） -->
             <div style="font-size:9px; color:var(--text-secondary); opacity:0.45; letter-spacing:0.3px;">${dateStr}</div>
         </div>
     `;
