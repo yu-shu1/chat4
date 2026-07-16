@@ -378,6 +378,8 @@ fileInput.addEventListener('change', function(e) {
                         hideModal(modal.modal);
                     });
             };
+            
+            window._openAvatarModal = openAvatarModal;
 
             DOMElements.partner.name.addEventListener('click', () => openNameModal(true));
             DOMElements.me.name.addEventListener('click', () => openNameModal(false));
