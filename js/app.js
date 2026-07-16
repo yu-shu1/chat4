@@ -280,9 +280,12 @@ function updateBannerGreeting() {
 
     const now = new Date();
     const hour = now.getHours();
+    const months = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
 
+    // ---- 1. 我的时间（实时） ----
     const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
+    // ---- 2. 对方时间（按间隔更新，带随机流速） ----
     if (!settings.partnerTime) settings.partnerTime = Date.now();
     if (!settings.partnerNextInterval) {
         settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
@@ -302,6 +305,7 @@ function updateBannerGreeting() {
     const partnerDate = new Date(settings.partnerTime);
     const partnerTimeStr = partnerDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
+    // ---- 3. 原有的节庆、标题、格言数据 ----
     let data = {};
     if (typeof _getDailyGreetingData === 'function') {
         data = _getDailyGreetingData();
@@ -343,13 +347,18 @@ function updateBannerGreeting() {
         </div>
     `;
 
-    // ★★★ 修改点：给 emoji 加上外框 ★★★
-    const emojiBoxStyle = `display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:14px; background:rgba(var(--accent-color-rgb), 0.12); border:1.5px solid rgba(var(--accent-color-rgb), 0.22); animation: floatEmoji 3.6s ease-in-out infinite; flex-shrink:0; box-shadow:0 4px 12px rgba(0,0,0,0.06);`;
     let emojiHtml = '';
     if (festival?.emoji) {
-        emojiHtml = `<div style="${emojiBoxStyle} font-size:20px;">${festival.emoji}</div>`;
+        emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${festival.emoji}</span>`;
     } else {
-        emojiHtml = `<div style="${emojiBoxStyle}"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="width:20px; height:20px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>`;
+        emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; width:22px; height:22px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="width:100%; height:100%;">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+        </span>`;
     }
 
     bannerEl.innerHTML = `
@@ -363,17 +372,26 @@ function updateBannerGreeting() {
                 ${avatarHtml(partnerAvatar, partnerName, partnerTimeStr)}
             </div>
 
-            <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
-                ${emojiHtml}
-                <span>${selectedTitle}</span>
+            <!-- ★ 修改点：问候语 + 时间戳左右对齐 -->
+            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-top:2px;">
+                <div style="display:flex; align-items:center; gap:6px; font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px;">
+                    ${emojiHtml}
+                    <span>${selectedTitle}</span>
+                </div>
+                <div style="font-size:11px; color:var(--text-secondary); letter-spacing:1px; font-family:monospace; opacity:0.7;">
+                    ${now.getFullYear()} · ${months[now.getMonth()]}月${now.getDate()}日
+                </div>
             </div>
 
             <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;" title="${selectedNote}">
                 ${selectedNote}
             </div>
+            <!-- 原本的日期行已移除，符合需求 -->
         </div>
     `;
 }
+
+
 
 
 /**
