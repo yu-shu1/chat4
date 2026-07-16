@@ -284,56 +284,95 @@ function updateBannerGreeting() {
     // ---- 1. 我的时间（实时） ----
     const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-    // ---- 2. 对方时间（按流速动态推进） ----
-    const nowReal = Date.now();
-
-    // 首次初始化
-    if (!settings.partnerBaseTime) {
-        const randomOffset = (Math.random() * 48 - 24) * 3600000; // -24~+24小时
-        settings.partnerBaseTime = nowReal + randomOffset;
-        settings.partnerBaseRealTime = nowReal;
-        settings.partnerTimeScale = 1;
-        settings.partnerNextRefresh = nowReal + (6 + Math.random() * 20) * 3600000; // 6~26小时
-        throttledSaveData();
+    // ---- 2. 对方时间（按间隔更新，带随机流速） ----
+    if (!settings.partnerTime) settings.partnerTime = Date.now();
+    if (!settings.partnerNextInterval) {
+        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
     }
-
-    // 检查是否到了刷新时间
-    if (nowReal > settings.partnerNextRefresh) {
-        // 重新生成基准时间（随机偏移）
-        const randomOffset = (Math.random() * 48 - 24) * 3600000;
-        settings.partnerBaseTime = nowReal + randomOffset;
-        settings.partnerBaseRealTime = nowReal;
-        settings.partnerTimeScale = 1; // 重置为正常流速
-
-        // 随机决定是否启用特殊流速（1% 概率）
+    const currentTs = Date.now();
+    if (currentTs - settings.partnerTime > settings.partnerNextInterval) {
+        let newTime = currentTs;
         if (Math.random() < 0.01) {
-            // 流速范围 0.8 ~ 1.333（对应对方1分钟 = 真实45~75秒）
-            settings.partnerTimeScale = 0.8 + Math.random() * 0.533;
+            const offset = (Math.random() - 0.5) * 8 * 3600000;
+            newTime = currentTs + offset;
+            if (newTime < 0) newTime = 0;
         }
-
-        // 设定下次刷新时间（6~26小时后）
-        settings.partnerNextRefresh = nowReal + (6 + Math.random() * 20) * 3600000;
+        settings.partnerTime = newTime;
+        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
         throttledSaveData();
     }
+    const partnerDate = new Date(settings.partnerTime);
+    const partnerTimeStr = partnerDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-    // 计算当前对方时间
-    const elapsed = (nowReal - settings.partnerBaseRealTime) * settings.partnerTimeScale;
-    const partnerTime = new Date(settings.partnerBaseTime + elapsed);
-    const partnerTimeStr = partnerTime.toLocaleTimeString('zh-CN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
+    // ---- 3. 原有的节庆、标题、格言数据 ----
+    let data = {};
+    if (typeof _getDailyGreetingData === 'function') {
+        data = _getDailyGreetingData();
+    }
+    const festival = data.festival;
+
+    let englishLabel = 'GOOD EVENING';
+    if (hour < 6) englishLabel = 'GOOD NIGHT';
+    else if (hour < 12) englishLabel = 'GOOD MORNING';
+    else if (hour < 18) englishLabel = 'GOOD AFTERNOON';
+    if (festival?.label) englishLabel = festival.label;
+
+    let customData = {};
+    try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e) {}
+    let titles = customData.titles || [];
+    let notes = customData.notes || [];
+    if (titles.length === 0) titles = ['早上好', '今天也要开心哦', '你在我心里呀', '想你'];
+    if (notes.length === 0) notes = ['今天也要元气满满，我在这里陪着你 ✦', '每一天都因为有你而特别 ✦', '想到你就觉得很安心 ✦', '你是我最喜欢的人 ✦'];
+
+    const dailySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
+    function seededRandom(seed) { return (Math.abs(Math.sin(seed * 9301 + 49297) * 233280) % 233280) / 233280; }
+    const titleIndex = Math.floor(seededRandom(dailySeed) * titles.length);
+    const noteIndex = Math.floor(seededRandom(dailySeed + 1) * notes.length);
+    const selectedTitle = titles[titleIndex] || '早上好';
+    const selectedNote = notes[noteIndex] || '今天也要元气满满 ✦';
+
+    const partnerAvatar = DOMElements?.partner?.avatar?.querySelector('img')?.src || '';
+    const myAvatar = DOMElements?.me?.avatar?.querySelector('img')?.src || '';
+    const partnerName = settings?.partnerName || '梦角';
+    const myName = settings?.myName || '我';
+
+    // ---- 4. 构建头像 + 名字 + 时间的 HTML ----
+    const avatarHtml = (src, name, timeStr) => `
+        <div style="display:flex; flex-direction:column; align-items:center;">
+            <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
+                ${src ? `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
+            </div>
+            <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${name}</span>
+            <span style="font-size:10px; color:var(--text-secondary); margin-top:1px;">${timeStr}</span>
+        </div>
+    `;
+
+    // 节庆表情
+    let emojiHtml = '';
+    if (festival?.emoji) {
+        emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${festival.emoji}</span>`;
+    } else {
+        emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; width:22px; height:22px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="width:100%; height:100%;">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+        </span>`;
+    }
+
+    // ---- ★ 新增加的时间戳：仅显示年月日（与公告栏顶端同款） ----
+    const currentTimeStr = now.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
     });
-
-    // ---- 3. 原有的节庆、标题、格言数据（保持不变） ----
-    // ...（中间代码保持不变，省略）...
-
-    // ---- 4. 头像 HTML（保持不变） ----
-    // ...（保持不变）...
 
     // ---- 5. 填充 banner 内容（问候语左对齐，时间戳右对齐） ----
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
+            <!-- 英文标签 + 时间戳（flex 行，左右对齐） -->
             <div style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
                 <span>${englishLabel}</span>
                 <span>${currentTimeStr}</span>
@@ -355,6 +394,7 @@ function updateBannerGreeting() {
         </div>
     `;
 }
+
 
 
 /**
