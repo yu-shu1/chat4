@@ -280,7 +280,6 @@ function updateBannerGreeting() {
 
     const now = new Date();
     const hour = now.getHours();
-    const months = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
 
     // ---- 1. 我的时间（实时） ----
     const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -337,6 +336,7 @@ function updateBannerGreeting() {
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
+    // ---- 4. 构建头像 + 名字 + 时间的 HTML ----
     const avatarHtml = (src, name, timeStr) => `
         <div style="display:flex; flex-direction:column; align-items:center;">
             <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
@@ -347,6 +347,7 @@ function updateBannerGreeting() {
         </div>
     `;
 
+    // 节庆表情
     let emojiHtml = '';
     if (festival?.emoji) {
         emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${festival.emoji}</span>`;
@@ -361,10 +362,20 @@ function updateBannerGreeting() {
         </span>`;
     }
 
+    // ---- ★ 新增加的时间戳：仅显示年月日（与公告栏顶端同款） ----
+    const currentTimeStr = now.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    // ---- 5. 填充 banner 内容（问候语左对齐，时间戳右对齐） ----
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
-            <div style="width:100%; text-align:left; padding-left:10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
-                ${englishLabel}
+            <!-- 英文标签 + 时间戳（flex 行，左右对齐） -->
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
+                <span>${englishLabel}</span>
+                <span>${currentTimeStr}</span>
             </div>
 
             <div style="display:flex; gap:24px; margin:2px 0 4px;">
@@ -372,25 +383,17 @@ function updateBannerGreeting() {
                 ${avatarHtml(partnerAvatar, partnerName, partnerTimeStr)}
             </div>
 
-            <!-- ★ 修改点：问候语 + 时间戳左右对齐 -->
-            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-top:2px;">
-                <div style="display:flex; align-items:center; gap:6px; font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px;">
-                    ${emojiHtml}
-                    <span>${selectedTitle}</span>
-                </div>
-                <div style="font-size:11px; color:var(--text-secondary); letter-spacing:1px; font-family:monospace; opacity:0.7;">
-                    ${now.getFullYear()} · ${months[now.getMonth()]}月${now.getDate()}日
-                </div>
+            <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
+                ${emojiHtml}
+                <span>${selectedTitle}</span>
             </div>
 
             <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;" title="${selectedNote}">
                 ${selectedNote}
             </div>
-            <!-- 原本的日期行已移除，符合需求 -->
         </div>
     `;
 }
-
 
 
 
