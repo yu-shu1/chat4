@@ -239,11 +239,12 @@ window.addEventListener('load', function() {
  * 显示桌面并初始化网格
  * 如果公告弹窗正在显示，则只设置待激活标志，不实际激活
  */
+// app.js 中替换 showHomeScreen 函数
 function showHomeScreen() {
     const homeScreen = document.getElementById('home-screen');
     if (!homeScreen) return;
 
-    // ★ 覆盖内联 display:none
+    // 覆盖内联 display:none
     homeScreen.style.display = 'flex';
 
     const modal = document.getElementById('daily-greeting-modal');
@@ -255,15 +256,24 @@ function showHomeScreen() {
 
     updateBannerGreeting();
     initHomeGrid();
-    updateHomeSpacer();   // ← 新增
+    updateHomeSpacer();
     homeScreen.classList.add('active');
     homeScreen._pendingActivation = false;
+
+    // ----- 启动定时器（每分钟刷新一次时间） -----
+    if (homeBannerTimer) clearInterval(homeBannerTimer);
+    homeBannerTimer = setInterval(() => {
+        if (homeScreen.classList.contains('active')) {
+            updateBannerGreeting();
+        }
+    }, 60000);
 }
 
 
 /**
  * 更新横幅上的问候语
  */
+// app.js 中替换 updateBannerGreeting 函数
 function updateBannerGreeting() {
     const bannerEl = document.getElementById('banner-greeting');
     if (!bannerEl) return;
@@ -271,6 +281,30 @@ function updateBannerGreeting() {
     const now = new Date();
     const hour = now.getHours();
 
+    // ---- 1. 我的时间（实时） ----
+    const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+    // ---- 2. 对方时间（按间隔更新，带随机流速） ----
+    if (!settings.partnerTime) settings.partnerTime = Date.now();
+    if (!settings.partnerNextInterval) {
+        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
+    }
+    const currentTs = Date.now();
+    if (currentTs - settings.partnerTime > settings.partnerNextInterval) {
+        let newTime = currentTs;
+        if (Math.random() < 0.01) {
+            const offset = (Math.random() - 0.5) * 8 * 3600000;
+            newTime = currentTs + offset;
+            if (newTime < 0) newTime = 0;
+        }
+        settings.partnerTime = newTime;
+        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
+        throttledSaveData();
+    }
+    const partnerDate = new Date(settings.partnerTime);
+    const partnerTimeStr = partnerDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+    // ---- 3. 原有的节庆、标题、格言数据 ----
     let data = {};
     if (typeof _getDailyGreetingData === 'function') {
         data = _getDailyGreetingData();
@@ -302,14 +336,22 @@ function updateBannerGreeting() {
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    const dateStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    // ---- 4. 构建头像 + 名字 + 时间的 HTML ----
+    const avatarHtml = (src, name, timeStr) => `
+        <div style="display:flex; flex-direction:column; align-items:center;">
+            <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
+                ${src ? `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
+            </div>
+            <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${name}</span>
+            <span style="font-size:10px; color:var(--text-secondary); margin-top:1px;">${timeStr}</span>
+        </div>
+    `;
 
-    // 联动公告栏的 emoji（文字或 SVG）
+    // 节庆表情
     let emojiHtml = '';
     if (festival?.emoji) {
         emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${festival.emoji}</span>`;
     } else {
-        // 默认 SVG 微笑图标（与公告栏默认图标风格一致）
         emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; width:22px; height:22px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="width:100%; height:100%;">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
@@ -320,25 +362,25 @@ function updateBannerGreeting() {
         </span>`;
     }
 
+    // ---- ★ 新增加的时间戳：仅显示年月日（与公告栏顶端同款） ----
+    const currentTimeStr = now.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    // ---- 5. 填充 banner 内容（问候语左对齐，时间戳右对齐） ----
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
-            <div style="width:100%; text-align:left; padding-left:10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
-                ${englishLabel}
+            <!-- 英文标签 + 时间戳（flex 行，左右对齐） -->
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
+                <span>${englishLabel}</span>
+                <span>${currentTimeStr}</span>
             </div>
 
             <div style="display:flex; gap:24px; margin:2px 0 4px;">
-                <div style="display:flex; flex-direction:column; align-items:center;">
-                    <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
-                        ${myAvatar ? `<img src="${myAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
-                    </div>
-                    <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${myName}</span>
-                </div>
-                <div style="display:flex; flex-direction:column; align-items:center;">
-                    <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
-                        ${partnerAvatar ? `<img src="${partnerAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
-                    </div>
-                    <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${partnerName}</span>
-                </div>
+                ${avatarHtml(myAvatar, myName, myTimeStr)}
+                ${avatarHtml(partnerAvatar, partnerName, partnerTimeStr)}
             </div>
 
             <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
@@ -349,13 +391,11 @@ function updateBannerGreeting() {
             <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;" title="${selectedNote}">
                 ${selectedNote}
             </div>
-
-            <div style="width:32px; height:1.5px; background:var(--accent-color); opacity:0.25; border-radius:2px; margin:4px 0 2px;"></div>
-
-            <div style="font-size:9px; color:var(--text-secondary); opacity:0.45; letter-spacing:0.3px;">${dateStr}</div>
         </div>
     `;
 }
+
+
 
 /**
  * 更新桌面中间的公告栏剩余内容（天气、状态、心情）
@@ -438,6 +478,8 @@ function updateHomeSpacer() {
         </div>
     `;
 }
+
+
 
 /**
  * 初始化功能网格
@@ -533,6 +575,7 @@ function createAppButton(app) {
 /**
  * 处理桌面功能点击
  */
+// app.js — 完整的 handleHomeAction 函数
 function handleHomeAction(action) {
     const homeScreen = document.getElementById('home-screen');
 
@@ -570,7 +613,15 @@ function handleHomeAction(action) {
 
     switch (action) {
         case 'chat':
-            if (homeScreen) homeScreen.classList.remove('active');
+            if (homeScreen) {
+                homeScreen.classList.remove('active');
+                homeScreen._pendingActivation = false;
+                // 停止定时器，避免在聊天界面空转
+                if (window.homeBannerTimer) {
+                    clearInterval(window.homeBannerTimer);
+                    window.homeBannerTimer = null;
+                }
+            }
             const chatContainer = document.getElementById('chat-container');
             if (chatContainer) {
                 setTimeout(() => {
@@ -622,7 +673,6 @@ function handleHomeAction(action) {
             });
             break;
 
-        // ===== 新增以下三个 case =====
         case 'decision':
             safeShowModal('decision-menu-modal');
             break;
@@ -640,6 +690,7 @@ function handleHomeAction(action) {
             break;
     }
 }
+
 
 // =============================================
 // 覆盖 closeDailyGreeting 函数，在关闭公告时激活桌面
