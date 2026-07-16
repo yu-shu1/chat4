@@ -11109,10 +11109,12 @@
     line-height: 1.6;
 }
 
-/* ★ 新增：留白区域 (占 2 行) */
-.home-spacer {
-    flex: 2;
-    /* 完全透明，只占空间 */
+.home-spacer-card {
+    transition: all 0.3s ease;
+}
+.home-spacer-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
 }
 
 /* ---- 底部功能网格 (占 3 行) ---- */
