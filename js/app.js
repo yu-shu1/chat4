@@ -283,7 +283,7 @@ function updateBannerGreeting() {
     else if (hour < 18) englishLabel = 'GOOD AFTERNOON';
     if (festival?.label) englishLabel = festival.label;
 
-    // 主标题（从自定义数据或默认）
+    // 主标题和每日寄语（从自定义数据或默认）
     let customData = {};
     try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e) {}
     let titles = customData.titles || [];
@@ -308,41 +308,41 @@ function updateBannerGreeting() {
     // 日期
     const dateStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
-    // 晃动 emoji（与公告栏一致）
+    // 晃动 emoji（与公告栏左上角联动）
     const emoji = festival?.emoji || '🌅';
 
     // 构建 HTML（紧凑、不溢出）
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
-            <!-- 英文标签 - 左对齐，左侧留白 -->
-            <div style="width:100%; text-align:left; padding-left:6px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:2px;">
+            <!-- 英文标签 - 左对齐，左侧留边距 -->
+            <div style="width:100%; text-align:left; padding-left:10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
                 ${englishLabel}
             </div>
 
             <!-- 双人头像（居中） -->
-            <div style="display:flex; gap:20px; margin:2px 0 4px;">
+            <div style="display:flex; gap:24px; margin:2px 0 4px;">
                 <div style="display:flex; flex-direction:column; align-items:center;">
-                    <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
-                        ${myAvatar ? `<img src="${myAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:20px; color:var(--text-secondary); line-height:40px;"></i>`}
+                    <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
+                        ${myAvatar ? `<img src="${myAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
                     </div>
-                    <span style="font-size:10px; margin-top:2px; font-weight:500; color:var(--text-primary);">${myName}</span>
+                    <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${myName}</span>
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:center;">
-                    <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
-                        ${partnerAvatar ? `<img src="${partnerAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:20px; color:var(--text-secondary); line-height:40px;"></i>`}
+                    <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
+                        ${partnerAvatar ? `<img src="${partnerAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
                     </div>
-                    <span style="font-size:10px; margin-top:2px; font-weight:500; color:var(--text-primary);">${partnerName}</span>
+                    <span style="font-size:11px; margin-top:3px; font-weight:500; color:var(--text-primary);">${partnerName}</span>
                 </div>
             </div>
 
             <!-- 主标题 + 晃动 emoji（居中） -->
-            <div style="font-size:16px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
-                <span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:18px;">${emoji}</span>
+            <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
+                <span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${emoji}</span>
                 <span>${selectedTitle}</span>
             </div>
 
-            <!-- 每日寄语（单行，溢出隐藏） -->
-            <div style="font-size:12px; color:var(--text-secondary); max-width:90%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;">
+            <!-- 每日寄语（单行，完整显示，带title提示） -->
+            <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;" title="${selectedNote}">
                 ${selectedNote}
             </div>
 
