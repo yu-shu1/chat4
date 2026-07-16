@@ -269,21 +269,19 @@ function updateBannerGreeting() {
     const now = new Date();
     const hour = now.getHours();
 
-    // 获取公告栏数据（复用 _getDailyGreetingData）
     let data = {};
     if (typeof _getDailyGreetingData === 'function') {
         data = _getDailyGreetingData();
     }
     const festival = data.festival;
+    const emoji = festival?.emoji || '😊';
 
-    // 英文标签（与公告栏一致）
     let englishLabel = 'GOOD EVENING';
     if (hour < 6) englishLabel = 'GOOD NIGHT';
     else if (hour < 12) englishLabel = 'GOOD MORNING';
     else if (hour < 18) englishLabel = 'GOOD AFTERNOON';
     if (festival?.label) englishLabel = festival.label;
 
-    // 主标题和每日寄语（从自定义数据或默认）
     let customData = {};
     try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e) {}
     let titles = customData.titles || [];
@@ -291,7 +289,6 @@ function updateBannerGreeting() {
     if (titles.length === 0) titles = ['早上好', '今天也要开心哦', '你在我心里呀', '想你'];
     if (notes.length === 0) notes = ['今天也要元气满满，我在这里陪着你 ✦', '每一天都因为有你而特别 ✦', '想到你就觉得很安心 ✦', '你是我最喜欢的人 ✦'];
 
-    // 随机种子（与公告栏一致）
     const dailySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
     function seededRandom(seed) { return (Math.abs(Math.sin(seed * 9301 + 49297) * 233280) % 233280) / 233280; }
     const titleIndex = Math.floor(seededRandom(dailySeed) * titles.length);
@@ -299,19 +296,13 @@ function updateBannerGreeting() {
     const selectedTitle = titles[titleIndex] || '早上好';
     const selectedNote = notes[noteIndex] || '今天也要元气满满 ✦';
 
-    // 头像和昵称
     const partnerAvatar = DOMElements?.partner?.avatar?.querySelector('img')?.src || '';
     const myAvatar = DOMElements?.me?.avatar?.querySelector('img')?.src || '';
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    // 日期
     const dateStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
-    // 晃动 emoji（与公告栏左上角联动）
-    const emoji = festival?.emoji || '🌅';
-
-    // 构建 HTML（紧凑、不溢出）
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
             <!-- 英文标签 - 左对齐，左侧留边距 -->
@@ -335,9 +326,23 @@ function updateBannerGreeting() {
                 </div>
             </div>
 
-            <!-- 主标题 + 晃动 emoji（居中） -->
-            <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
-                <span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${emoji}</span>
+            <!-- 主标题 + 晃动 emoji（居中，带圆形背景，与公告栏同款） -->
+            <div style="font-size:17px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:8px; margin-top:2px;">
+                <div style="
+                    width:44px; 
+                    height:44px; 
+                    border-radius:16px; 
+                    background:rgba(var(--accent-color-rgb), 0.12); 
+                    display:flex; 
+                    align-items:center; 
+                    justify-content:center; 
+                    animation: floatEmoji 3.6s ease-in-out infinite; 
+                    font-size:22px;
+                    flex-shrink:0;
+                    border:1.5px solid rgba(var(--accent-color-rgb), 0.15);
+                ">
+                    ${emoji}
+                </div>
                 <span>${selectedTitle}</span>
             </div>
 
@@ -354,6 +359,7 @@ function updateBannerGreeting() {
         </div>
     `;
 }
+
 
 /**
  * 初始化功能网格
@@ -504,10 +510,8 @@ function handleHomeAction(action) {
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }, 100);
             }
-            const input = document.getElementById('message-input');
-            if (input) setTimeout(() => input.focus(), 200);
             break;
-
+            
         case 'mood':
             safeShowModal('mood-modal', renderMoodCalendar);
             break;
