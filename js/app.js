@@ -366,7 +366,7 @@ function updateBannerGreeting() {
 
     // ---- 4. 构建头像 + 名字 + 时间的 HTML（增加点击换头像） ----
     const avatarHtml = (src, name, timeStr, isMe) => `
-        <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" onclick="window._openAvatarModal && window._openAvatarModal(${isMe})">
+        <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" onclick="window._openAvatarModal && window._openAvatarModal(${!isMe})">
             <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
                 ${src ? `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:22px; color:var(--text-secondary); line-height:48px;"></i>`}
             </div>
