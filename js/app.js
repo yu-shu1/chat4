@@ -259,7 +259,7 @@ function updateBannerGreeting() {
         settings.partnerSpeedFactor = 1;
     }
     if (!settings.partnerNextInterval) {
-        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000;
+        settings.partnerNextInterval = (6 + Math.random() * 12) * 3600000;
     }
 
     const nowReal = Date.now();
@@ -279,7 +279,7 @@ function updateBannerGreeting() {
         } else {
             settings.partnerSpeedFactor = 1;
         }
-        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000;
+        settings.partnerNextInterval = (6 + Math.random() * 12) * 3600000;
         needSave = true;
         displayTime = settings.partnerTime;
     } else {
