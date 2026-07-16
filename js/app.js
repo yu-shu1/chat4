@@ -268,80 +268,89 @@ function updateBannerGreeting() {
 
     const now = new Date();
     const hour = now.getHours();
-    let timeGreeting = '下午好';
-    if (hour < 6) timeGreeting = '夜深了';
-    else if (hour < 12) timeGreeting = '早上好';
-    else if (hour < 18) timeGreeting = '下午好';
-    else timeGreeting = '晚上好';
 
-    // 获取节日数据（与公告栏一致）
+    // 获取公告栏数据（复用 _getDailyGreetingData）
     let data = {};
     if (typeof _getDailyGreetingData === 'function') {
         data = _getDailyGreetingData();
     }
     const festival = data.festival;
-    let mainTitle = festival ? festival.name + '快乐' : timeGreeting;
 
-    // 读取自定义公告数据
+    // 英文标签（与公告栏一致）
+    let englishLabel = 'GOOD EVENING';
+    if (hour < 6) englishLabel = 'GOOD NIGHT';
+    else if (hour < 12) englishLabel = 'GOOD MORNING';
+    else if (hour < 18) englishLabel = 'GOOD AFTERNOON';
+    if (festival?.label) englishLabel = festival.label;
+
+    // 主标题（从自定义数据或默认）
     let customData = {};
     try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e) {}
     let titles = customData.titles || [];
     let notes = customData.notes || [];
-    if (titles.length === 0) titles = [timeGreeting, '今天也要开心哦', '你在我心里呀', '想你'];
+    if (titles.length === 0) titles = ['早上好', '今天也要开心哦', '你在我心里呀', '想你'];
     if (notes.length === 0) notes = ['今天也要元气满满，我在这里陪着你 ✦', '每一天都因为有你而特别 ✦', '想到你就觉得很安心 ✦', '你是我最喜欢的人 ✦'];
 
-    // 使用日期种子随机选取（与公告栏保持一致）
+    // 随机种子（与公告栏一致）
     const dailySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
     function seededRandom(seed) { return (Math.abs(Math.sin(seed * 9301 + 49297) * 233280) % 233280) / 233280; }
     const titleIndex = Math.floor(seededRandom(dailySeed) * titles.length);
     const noteIndex = Math.floor(seededRandom(dailySeed + 1) * notes.length);
-    const selectedTitle = titles[titleIndex] || mainTitle;
+    const selectedTitle = titles[titleIndex] || '早上好';
     const selectedNote = notes[noteIndex] || '今天也要元气满满 ✦';
 
-    // 获取头像和昵称
+    // 头像和昵称
     const partnerAvatar = DOMElements?.partner?.avatar?.querySelector('img')?.src || '';
     const myAvatar = DOMElements?.me?.avatar?.querySelector('img')?.src || '';
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    // 格式化日期
+    // 日期
     const dateStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
-    // 构建新内容（左上角问候语 + 居中内容，风格与公告栏一致）
+    // 晃动 emoji（与公告栏一致）
+    const emoji = festival?.emoji || '🌅';
+
+    // 构建 HTML（紧凑、不溢出）
     bannerEl.innerHTML = `
-        <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:4px;">
-            <!-- 左上角问候语（靠左） -->
-            <div style="width:100%; text-align:left; font-size:11px; color:var(--text-secondary); letter-spacing:2px; opacity:0.7; margin-bottom:2px;">
-                ${timeGreeting}
+        <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
+            <!-- 英文标签 - 左对齐，左侧留白 -->
+            <div style="width:100%; text-align:left; padding-left:6px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:2px;">
+                ${englishLabel}
             </div>
 
-            <!-- 头像双人组（居中） -->
-            <div style="display:flex; gap:30px; margin:6px 0 8px;">
+            <!-- 双人头像（居中） -->
+            <div style="display:flex; gap:20px; margin:2px 0 4px;">
                 <div style="display:flex; flex-direction:column; align-items:center;">
-                    <div style="width:52px; height:52px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
-                        ${myAvatar ? `<img src="${myAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:26px; color:var(--text-secondary); line-height:52px;"></i>`}
+                    <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
+                        ${myAvatar ? `<img src="${myAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:20px; color:var(--text-secondary); line-height:40px;"></i>`}
                     </div>
-                    <span style="font-size:12px; margin-top:4px; font-weight:500; color:var(--text-primary);">${myName}</span>
+                    <span style="font-size:10px; margin-top:2px; font-weight:500; color:var(--text-primary);">${myName}</span>
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:center;">
-                    <div style="width:52px; height:52px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
-                        ${partnerAvatar ? `<img src="${partnerAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:26px; color:var(--text-secondary); line-height:52px;"></i>`}
+                    <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
+                        ${partnerAvatar ? `<img src="${partnerAvatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas fa-user" style="font-size:20px; color:var(--text-secondary); line-height:40px;"></i>`}
                     </div>
-                    <span style="font-size:12px; margin-top:4px; font-weight:500; color:var(--text-primary);">${partnerName}</span>
+                    <span style="font-size:10px; margin-top:2px; font-weight:500; color:var(--text-primary);">${partnerName}</span>
                 </div>
             </div>
 
-            <!-- 主标题（居中） -->
-            <div style="font-size:18px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px;">${selectedTitle}</div>
+            <!-- 主标题 + 晃动 emoji（居中） -->
+            <div style="font-size:16px; font-weight:700; color:var(--text-primary); letter-spacing:0.5px; display:flex; align-items:center; gap:6px; margin-top:2px;">
+                <span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:18px;">${emoji}</span>
+                <span>${selectedTitle}</span>
+            </div>
 
-            <!-- 每日寄语（居中，斜体，与公告栏风格一致） -->
-            <div style="font-size:13px; color:var(--text-secondary); margin-top:2px; font-style:italic; max-width:80%; text-align:center;">${selectedNote}</div>
+            <!-- 每日寄语（单行，溢出隐藏） -->
+            <div style="font-size:12px; color:var(--text-secondary); max-width:90%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;">
+                ${selectedNote}
+            </div>
 
-            <!-- 装饰分隔线（参考公告栏） -->
-            <div style="width:40px; height:2px; background:var(--accent-color); opacity:0.3; border-radius:2px; margin:6px 0 2px;"></div>
+            <!-- 装饰分隔线 -->
+            <div style="width:32px; height:1.5px; background:var(--accent-color); opacity:0.25; border-radius:2px; margin:4px 0 2px;"></div>
 
             <!-- 时间戳（居中） -->
-            <div style="font-size:10px; color:var(--text-secondary); opacity:0.5; letter-spacing:0.5px;">${dateStr}</div>
+            <div style="font-size:9px; color:var(--text-secondary); opacity:0.45; letter-spacing:0.3px;">${dateStr}</div>
         </div>
     `;
 }
