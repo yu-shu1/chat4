@@ -234,6 +234,7 @@ window.addEventListener('load', function() {
 // =============================================
 // 新增：桌面层逻辑
 // =============================================
+// app.js 中替换 updateBannerGreeting 函数
 function updateBannerGreeting() {
     const bannerEl = document.getElementById('banner-greeting');
     if (!bannerEl) return;
@@ -244,36 +245,34 @@ function updateBannerGreeting() {
     // ---- 1. 我的时间（实时） ----
     const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-    // ---- 2. 对方时间（按间隔更新，带随机流速） ----
-    if (!settings.partnerTimeRef) {
-        settings.partnerTimeRef = Date.now();
-    }
+    // ---- 2. 对方时间（每分钟跳动一次，带随机流速） ----
+    const nowReal = Date.now();
+
+    // 初始化
     if (!settings.partnerTime) {
         const initH = Math.floor(Math.random() * 24);
         const initM = Math.floor(Math.random() * 60);
         const initDate = new Date();
         initDate.setHours(initH, initM, 0, 0);
         settings.partnerTime = initDate.getTime();
-    }
-    if (!settings.partnerSpeedFactor) {
+        settings.partnerTimeRef = nowReal;
         settings.partnerSpeedFactor = 1;
-    }
-    if (!settings.partnerNextInterval) {
         settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000;
     }
 
-    const nowReal = Date.now();
-    const elapsedReal = nowReal - settings.partnerTimeRef;
-    let displayTime;
     let needSave = false;
 
-    if (elapsedReal >= settings.partnerNextInterval) {
+    // 检查是否达到重置间隔（基于真实时间）
+    if (nowReal - settings.partnerTimeRef > settings.partnerNextInterval) {
+        // 重置：随机生成新的时间
         const newH = Math.floor(Math.random() * 24);
         const newM = Math.floor(Math.random() * 60);
         const newDate = new Date();
         newDate.setHours(newH, newM, 0, 0);
         settings.partnerTime = newDate.getTime();
         settings.partnerTimeRef = nowReal;
+
+        // 速度因子：0.01 概率改变（0.75 ~ 1.25）
         if (Math.random() < 0.01) {
             settings.partnerSpeedFactor = 0.75 + Math.random() * 0.5;
         } else {
@@ -281,18 +280,16 @@ function updateBannerGreeting() {
         }
         settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000;
         needSave = true;
-        displayTime = settings.partnerTime;
     } else {
-        const offset = elapsedReal * settings.partnerSpeedFactor;
-        displayTime = settings.partnerTime + offset;
+        // 每分钟增加（速度因子 × 1 分钟）
+        settings.partnerTime += 60000 * settings.partnerSpeedFactor;
+        needSave = true;
     }
 
-    if (needSave) throttledSaveData();
-
-    const displayDate = new Date(displayTime);
+    const displayDate = new Date(settings.partnerTime);
     const partnerTimeStr = displayDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-    // ---- 3. 原有的节庆、标题、格言数据 ----
+    // ---- 3. 原有的节庆、标题、格言数据（不变） ----
     let data = {};
     if (typeof _getDailyGreetingData === 'function') {
         data = _getDailyGreetingData();
@@ -324,7 +321,7 @@ function updateBannerGreeting() {
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    // ---- 4. 构建头像 + 名字 + 时间的 HTML（增加点击换头像） ----
+    // ---- 4. 头像 + 名字 + 时间（不变） ----
     const avatarHtml = (src, name, timeStr, isMe) => `
         <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" onclick="window._openAvatarModal && window._openAvatarModal(${isMe})">
             <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
@@ -335,7 +332,6 @@ function updateBannerGreeting() {
         </div>
     `;
 
-    // 节庆表情
     let emojiHtml = '';
     if (festival?.emoji) {
         emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${festival.emoji}</span>`;
@@ -350,17 +346,15 @@ function updateBannerGreeting() {
         </span>`;
     }
 
-    // ---- 时间戳（仅年月日） ----
     const currentTimeStr = now.toLocaleString('zh-CN', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
     });
 
-    // ---- 5. 填充 banner 内容（问候语左对齐，时间戳右对齐，增加左右间距） ----
+    // ---- 5. 填充 banner ----
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
-            <!-- 英文标签 + 时间戳（flex 行，左右对齐，增加左右内边距至 16px） -->
             <div style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 16px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
                 <span>${englishLabel}</span>
                 <span>${currentTimeStr}</span>
@@ -381,8 +375,9 @@ function updateBannerGreeting() {
             </div>
         </div>
     `;
-}
 
+    if (needSave) throttledSaveData();
+}
 
 /**
  * 显示桌面并初始化网格
