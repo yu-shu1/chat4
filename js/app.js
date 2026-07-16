@@ -281,33 +281,27 @@ function updateBannerGreeting() {
     const now = new Date();
     const hour = now.getHours();
 
-    // ---- 1. 我的时间（实时） ----
     const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-    // ---- 2. 对方时间（按间隔更新，带随机流速） ----
     if (!settings.partnerTime) settings.partnerTime = Date.now();
     if (!settings.partnerNextInterval) {
         settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
     }
     const currentTs = Date.now();
     if (currentTs - settings.partnerTime > settings.partnerNextInterval) {
-        // 更新时间戳
         let newTime = currentTs;
-        // 0.01 概率触发不规律流速（随机偏移 ±4 小时）
         if (Math.random() < 0.01) {
             const offset = (Math.random() - 0.5) * 8 * 3600000;
             newTime = currentTs + offset;
             if (newTime < 0) newTime = 0;
         }
         settings.partnerTime = newTime;
-        // 重新生成 6~30 小时间隔
         settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
         throttledSaveData();
     }
     const partnerDate = new Date(settings.partnerTime);
     const partnerTimeStr = partnerDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-    // ---- 3. 原有的节庆、标题、格言数据 ----
     let data = {};
     if (typeof _getDailyGreetingData === 'function') {
         data = _getDailyGreetingData();
@@ -339,7 +333,6 @@ function updateBannerGreeting() {
     const partnerName = settings?.partnerName || '梦角';
     const myName = settings?.myName || '我';
 
-    // ---- 4. 构建头像 + 名字 + 时间的 HTML ----
     const avatarHtml = (src, name, timeStr) => `
         <div style="display:flex; flex-direction:column; align-items:center;">
             <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--border-color); border:2px solid var(--accent-color);">
@@ -350,22 +343,15 @@ function updateBannerGreeting() {
         </div>
     `;
 
-    // 节庆表情（保持与原来一致）
+    // ★★★ 修改点：给 emoji 加上外框 ★★★
+    const emojiBoxStyle = `display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:14px; background:rgba(var(--accent-color-rgb), 0.12); border:1.5px solid rgba(var(--accent-color-rgb), 0.22); animation: floatEmoji 3.6s ease-in-out infinite; flex-shrink:0; box-shadow:0 4px 12px rgba(0,0,0,0.06);`;
     let emojiHtml = '';
     if (festival?.emoji) {
-        emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; font-size:20px;">${festival.emoji}</span>`;
+        emojiHtml = `<div style="${emojiBoxStyle} font-size:20px;">${festival.emoji}</div>`;
     } else {
-        emojiHtml = `<span style="display:inline-block; animation: floatEmoji 3.6s ease-in-out infinite; width:22px; height:22px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="width:100%; height:100%;">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                <line x1="9" y1="9" x2="9.01" y2="9"/>
-                <line x1="15" y1="9" x2="15.01" y2="9"/>
-            </svg>
-        </span>`;
+        emojiHtml = `<div style="${emojiBoxStyle}"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.8" style="width:20px; height:20px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>`;
     }
 
-    // ---- 5. 填充 banner 内容（已删除日期行） ----
     bannerEl.innerHTML = `
         <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; max-width:100%; overflow:hidden;">
             <div style="width:100%; text-align:left; padding-left:10px; font-size:9px; color:var(--text-secondary); letter-spacing:2px; opacity:0.65; font-family:monospace; margin-bottom:1px;">
@@ -385,9 +371,6 @@ function updateBannerGreeting() {
             <div style="font-size:12px; color:var(--text-secondary); max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; font-style:italic; margin-top:1px;" title="${selectedNote}">
                 ${selectedNote}
             </div>
-
-
-            <!-- 原本的日期行已移除，符合需求 -->
         </div>
     `;
 }
