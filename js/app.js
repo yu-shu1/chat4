@@ -386,7 +386,6 @@ function updateBannerGreeting() {
                 ${selectedNote}
             </div>
 
-            <div style="width:32px; height:1.5px; background:var(--accent-color); opacity:0.25; border-radius:2px; margin:4px 0 2px;"></div>
 
             <!-- 原本的日期行已移除，符合需求 -->
         </div>
