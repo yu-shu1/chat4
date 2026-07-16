@@ -101,54 +101,52 @@
 </div>
 
     
-<header class="header">
-    <!-- 格言横幅（保持不变） -->
-    <div class="header-motto"></div>
+<button id="immersive-exit-btn" onclick="toggleImmersiveMode(false)" title="退出沉浸模式">
+<i class="fas fa-expand"></i>
+</button>
 
-    <div class="header-inner">
-        <!-- 左侧：返回按钮 + 对方状态 -->
-        <div class="header-left">
-            <button id="home-back-btn" class="action-btn" title="返回桌面">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <div class="status" id="partner-status">
-                <span>在线</span>
+    <div class="header">
+        <div class="header-motto"></div>
+        <div class="header-inner">
+         <div class="user-info">
+                <div id="partner-name" class="username">
+                    梦角
+                </div>
+                <div id="partner-avatar-container" class="avatar-container">
+                    <div class="avatar" id="partner-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+                <div class="status" id="partner-status">
+                    <span>在线</span>
+                </div>
             </div>
-        </div>
-
-        <!-- 中部：原有操作按钮 -->
-        <div class="header-actions">
-            <button id="go-home-btn" class="action-btn" title="回到桌面" onclick="showHomeScreen()">
-                <i class="fas fa-home"></i>
-            </button>
-            <button id="session-manager-btn" class="action-btn" title="会话管理">
-                <i class="fas fa-comments"></i>
-            </button>
-            <button id="group-chat-btn" class="action-btn" title="群聊设置">
-                <i class="fas fa-users"></i>
-            </button>
-            <button id="daily-greeting-btn" class="action-btn" title="今日公告" onclick="reopenDailyGreeting()">
-                <i class="fas fa-newspaper"></i>
-            </button>
-            <button id="theme-toggle" class="action-btn" title="切换主题">
-                <i class="fas fa-moon"></i>
-            </button>
-            <button id="advanced-shortcut" class="action-btn" title="高级功能" onclick="showModal(document.getElementById('advanced-modal'))">
-                <i class="fas fa-tools"></i>
-            </button>
-            <button id="settings-btn" class="action-btn" title="设置">
-                <i class="fas fa-cog"></i>
-            </button>
-        </div>
-
-        <!-- 右侧：我方状态 -->
-        <div class="header-right">
-            <div class="status" id="my-status-container">
-                <span id="my-status-text">在线</span>
+            <div class="header-actions">
+                <button id="go-home-btn" class="action-btn" title="回到桌面" onclick="showHomeScreen()"><i class="fas fa-home"></i></button>
+                <button id="session-manager-btn" class="action-btn" title="会话管理"><i class="fas fa-comments"></i></button>
+                <button id="group-chat-btn" class="action-btn" title="群聊设置"><i class="fas fa-users"></i></button>
+                <button id="daily-greeting-btn" class="action-btn" title="今日公告" onclick="reopenDailyGreeting()"><i class="fas fa-newspaper"></i></button>
+                <button id="theme-toggle" class="action-btn" title="切换主题"><i class="fas fa-moon"></i></button>
+                <button id="advanced-shortcut" class="action-btn" title="高级功能" onclick="showModal(document.getElementById('advanced-modal'))"><i class="fas fa-tools"></i></button>
+                <button id="settings-btn" class="action-btn" title="设置"><i class="fas fa-cog"></i></button>
+            </div>
+             <div class="user-info">
+                <div class="username" id="my-name">
+                    我
+                </div>
+               
+                <div id="my-avatar-container" class="avatar-container">
+                    <div class="avatar" id="my-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+               
+                <div class="status" id="my-status-container">
+                    <span id="my-status-text">在线</span>
+                </div>
             </div>
         </div>
     </div>
-</header>
 
     <div class="main-chat-area">
 
@@ -1265,6 +1263,11 @@
                 <div class="cs-panel" id="cs-panel-display">
                     <p class="cs-group-label">界面模式</p>
                     <div class="cs-card cs-immersive-wrap">
+                        <div class="setting-pill-row" id="immersive-toggle" onclick="toggleImmersiveMode()">
+                            <span class="setting-pill-icon"><i class="fas fa-expand-arrows-alt"></i></span>
+                            <span class="setting-pill-label">沉浸式模式 <span style="font-size:11px;color:var(--text-secondary);font-weight:400;">隐藏顶部栏，专注聊天</span></span>
+                            <div class="setting-pill-switch"><div class="setting-pill-knob"></div></div>
+                        </div>
                         <div class="setting-pill-row" id="bottom-collapse-cs-toggle" onclick="window._toggleBottomCollapse && window._toggleBottomCollapse()" style="border-top:1px solid var(--border-color);">
                             <span class="setting-pill-icon"><i class="fas fa-compress-alt"></i></span>
                             <span class="setting-pill-label">底部栏收纳 <span style="font-size:11px;color:var(--text-secondary);font-weight:400;" id="bottom-collapse-cs-desc">收起次要按钮，保持输入区整洁</span></span>
