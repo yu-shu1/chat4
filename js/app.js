@@ -284,25 +284,58 @@ function updateBannerGreeting() {
     // ---- 1. 我的时间（实时） ----
     const myTimeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-    // ---- 2. 对方时间（按间隔更新，带随机流速） ----
-    if (!settings.partnerTime) settings.partnerTime = Date.now();
+    // ---- 2. 对方时间（动态流逝，按间隔刷新，带随机流速） ----
+    const nowReal = Date.now();
+    // 初始化（若不存在则设置）
+    if (!settings.partnerTimeRef) {
+        settings.partnerTimeRef = nowReal;
+    }
+    if (!settings.partnerTime) {
+        // 随机初始化一个当天的时间点（只取时分）
+        const initH = Math.floor(Math.random() * 24);
+        const initM = Math.floor(Math.random() * 60);
+        const initDate = new Date();
+        initDate.setHours(initH, initM, 0, 0);
+        settings.partnerTime = initDate.getTime();
+    }
+    if (!settings.partnerSpeedFactor) {
+        settings.partnerSpeedFactor = 1;
+    }
     if (!settings.partnerNextInterval) {
-        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
+        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000; // 6~26小时
     }
-    const currentTs = Date.now();
-    if (currentTs - settings.partnerTime > settings.partnerNextInterval) {
-        let newTime = currentTs;
+
+    const elapsedReal = nowReal - settings.partnerTimeRef;
+    let displayTime;
+    let needSave = false;
+
+    if (elapsedReal >= settings.partnerNextInterval) {
+        // 刷新时间
+        const newH = Math.floor(Math.random() * 24);
+        const newM = Math.floor(Math.random() * 60);
+        const newDate = new Date();
+        newDate.setHours(newH, newM, 0, 0);
+        settings.partnerTime = newDate.getTime();
+        settings.partnerTimeRef = nowReal;
+        // 重置流速因子，且有0.01概率触发不同流速
         if (Math.random() < 0.01) {
-            const offset = (Math.random() - 0.5) * 8 * 3600000;
-            newTime = currentTs + offset;
-            if (newTime < 0) newTime = 0;
+            settings.partnerSpeedFactor = 0.75 + Math.random() * 0.5; // 0.75 ~ 1.25
+        } else {
+            settings.partnerSpeedFactor = 1;
         }
-        settings.partnerTime = newTime;
-        settings.partnerNextInterval = 6 * 3600000 + Math.random() * 24 * 3600000;
-        throttledSaveData();
+        settings.partnerNextInterval = (6 + Math.random() * 20) * 3600000; // 重新随机间隔
+        needSave = true;
+        displayTime = settings.partnerTime;
+    } else {
+        // 计算偏移后的时间
+        const offset = elapsedReal * settings.partnerSpeedFactor;
+        displayTime = settings.partnerTime + offset;
     }
-    const partnerDate = new Date(settings.partnerTime);
-    const partnerTimeStr = partnerDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+    if (needSave) throttledSaveData();
+
+    const displayDate = new Date(displayTime);
+    const partnerTimeStr = displayDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
     // ---- 3. 原有的节庆、标题、格言数据 ----
     let data = {};
@@ -394,7 +427,6 @@ function updateBannerGreeting() {
         </div>
     `;
 }
-
 
 
 /**
