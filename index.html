@@ -108,19 +108,21 @@
     <div class="header">
         <div class="header-motto"></div>
         <div class="header-inner">
-         <div class="user-info">
-                <div id="partner-name" class="username">
-                    梦角
-                </div>
+            <!-- ★ 新增：返回按钮（位于左侧） -->
+            <button class="action-btn" id="back-to-home-btn" title="返回桌面" onclick="showHomeScreen()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+        
+            <!-- 左侧用户信息（隐藏） -->
+            <div class="user-info" style="display: none;">
+                <div id="partner-name" class="username">梦角</div>
                 <div id="partner-avatar-container" class="avatar-container">
-                    <div class="avatar" id="partner-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
+                    <div class="avatar" id="partner-avatar"><i class="fas fa-user"></i></div>
                 </div>
-                <div class="status" id="partner-status">
-                    <span>在线</span>
-                </div>
+                <div class="status" id="partner-status"><span>在线</span></div>
             </div>
+        
+            <!-- 中间操作按钮（不变） -->
             <div class="header-actions">
                 <button id="go-home-btn" class="action-btn" title="回到桌面" onclick="showHomeScreen()"><i class="fas fa-home"></i></button>
                 <button id="session-manager-btn" class="action-btn" title="会话管理"><i class="fas fa-comments"></i></button>
@@ -130,23 +132,20 @@
                 <button id="advanced-shortcut" class="action-btn" title="高级功能" onclick="showModal(document.getElementById('advanced-modal'))"><i class="fas fa-tools"></i></button>
                 <button id="settings-btn" class="action-btn" title="设置"><i class="fas fa-cog"></i></button>
             </div>
-             <div class="user-info">
-                <div class="username" id="my-name">
-                    我
-                </div>
-               
+        
+            <!-- 右侧用户信息（隐藏） -->
+            <div class="user-info" style="display: none;">
+                <div class="username" id="my-name">我</div>
                 <div id="my-avatar-container" class="avatar-container">
-                    <div class="avatar" id="my-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
+                    <div class="avatar" id="my-avatar"><i class="fas fa-user"></i></div>
                 </div>
-               
                 <div class="status" id="my-status-container">
                     <span id="my-status-text">在线</span>
                 </div>
             </div>
         </div>
     </div>
+    
 
     <div class="main-chat-area">
 
