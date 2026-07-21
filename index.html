@@ -106,10 +106,10 @@
         <div class="header-motto"></div>
         <div class="header-inner">
             <!-- ★ 新增：返回按钮（位于左侧） -->
-            <button class="action-btn" id="back-to-home-btn" title="返回桌面" onclick="showHomeScreen()">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-        
+            <button class="back-btn" id="back-to-home-btn" title="返回桌面" onclick="showHomeScreen()">
+                <i class="fas fa-chevron-left"></i>
+            </button>        
+            
             <!-- 左侧用户信息（隐藏） -->
             <div class="user-info" style="display: none;">
                 <div id="partner-name" class="username">梦角</div>
@@ -1263,11 +1263,6 @@
                             <span class="setting-pill-icon"><i class="fas fa-compress-alt"></i></span>
                             <span class="setting-pill-label">底部栏收纳 <span style="font-size:11px;color:var(--text-secondary);font-weight:400;" id="bottom-collapse-cs-desc">收起次要按钮，保持输入区整洁</span></span>
                             <div class="setting-pill-switch" id="bottom-collapse-cs-switch"><div class="setting-pill-knob" id="bottom-collapse-cs-knob"></div></div>
-                        </div>
-                        <div class="setting-pill-row" id="header-opacity-toggle" onclick="window._toggleHeaderOpacity && window._toggleHeaderOpacity()" style="border-top:1px solid var(--border-color);">
-                            <span class="setting-pill-icon"><i class="fas fa-eye"></i></span>
-                            <span class="setting-pill-label">顶部栏常驻清晰 <span style="font-size:11px;color:var(--text-secondary);font-weight:400;">关闭后顶部栏悬停才清晰</span></span>
-                            <div class="setting-pill-switch" id="header-opacity-switch"><div class="setting-pill-knob" id="header-opacity-knob"></div></div>
                         </div>
                         <div class="setting-pill-row" id="poke-symbol-toggle" onclick="window._openPokeSymSettings && window._openPokeSymSettings()" style="border-top:1px solid var(--border-color);">
                             <span class="setting-pill-icon"><i class="fas fa-asterisk"></i></span>
