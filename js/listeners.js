@@ -528,8 +528,6 @@ if (_chatSettingsEl) _chatSettingsEl.addEventListener('click', () => {
     if (autoToggle) autoToggle.classList.toggle('active', !!settings.autoSendEnabled);
     updateAutoSendUI();
     updateDelayUI();
-    const immToggle = document.getElementById('immersive-toggle');
-    if (immToggle) immToggle.classList.toggle('active', document.body.classList.contains('immersive-mode'));
     const rrStyle = settings.readReceiptStyle || 'icon';
     const rrIconBtn = document.getElementById('rr-style-icon');
     const rrTextBtn = document.getElementById('rr-style-text');
