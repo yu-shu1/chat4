@@ -665,6 +665,20 @@
             display: flex;
         }
 
+        /* 让 header-inner 从左开始排列 */
+        .header-inner {
+            justify-content: flex-start;
+        }
+        
+        /* 操作按钮区域占据剩余空间并居中 */
+        .header-actions {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            gap: 2px;
+        }
+
+
         .header-inner {
             display: flex;
             justify-content: space-between;
@@ -11245,3 +11259,10 @@
     }
 }
 
+/* 从顶部栏彻底移除头像和昵称（不占位、不可交互） */
+#partner-name,
+#partner-avatar-container,
+#my-name,
+#my-avatar-container {
+    display: none !important;
+}
