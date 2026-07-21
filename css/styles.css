@@ -593,7 +593,7 @@
             padding-top: env(safe-area-inset-top, 0px);
             border-bottom: 1px solid var(--border-color);
             background-color: var(--header-bg);
-            opacity: 0.82;
+            opacity: 1;
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             box-shadow: 0 1px 0 rgba(0,0,0,0.06);
@@ -603,9 +603,6 @@
             display: flex;
             flex-direction: column;
             transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, opacity 0.3s ease;
-        }
-        .header:hover {
-            opacity: 1;
         }
 
 
@@ -11201,3 +11198,29 @@
 #my-avatar-container {
     display: none !important;
 }
+
+/* 简约返回按钮 */
+.back-btn {
+    width: auto;                /* 只贴合图标宽度 */
+    padding: 0 12px;            /* 左右留出点击区域 */
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-secondary);
+    font-size: 20px;            /* 适当放大，增强视觉占比 */
+    line-height: 1;
+    transition: color 0.2s ease, transform 0.15s ease;
+}
+
+/* 悬停时仅改变颜色，不出现背景块 */
+.back-btn:hover {
+    background: transparent !important;
+    color: var(--text-primary);
+    transform: none;
+    box-shadow: none !important;
+}
+
+/* 点击时轻微下沉，保留交互反馈 */
+.back-btn:active {
+    transform: scale(0.9) !important;
+}
+
