@@ -144,45 +144,6 @@
     setTimeout(_syncPokeDesc, 600);
 })();
 
-(function() {
-    var KEY = 'headerAlwaysClear';
-    function _get() { return localStorage.getItem(KEY) === 'true'; }
-
-    function _applyHeader() {
-        var en = _get();
-        var id = 'header-clear-override';
-        var t  = document.getElementById(id);
-        if (!t) { t = document.createElement('style'); t.id = id; document.head.appendChild(t); }
-        if (en) {
-            t.textContent = '.header { opacity: 1 !important; }';
-        } else {
-            t.textContent = [
-                '.header { opacity: 0.5 !important; transition: opacity 0.3s ease !important; }',
-                '.header:hover { opacity: 1 !important; }'
-            ].join(' ');
-        }
-    }
-
-    function _syncUI() {
-        var en  = _get();
-        var row = document.getElementById('header-opacity-toggle');
-        if (row) row.classList.toggle('active', en);
-        var spans = document.querySelectorAll('#header-opacity-toggle .setting-pill-label span');
-        if (spans.length) spans[0].textContent = en ? '已开启，始终清晰' : '关闭后悬停才清晰';
-    }
-
-    window._toggleHeaderOpacity = function() {
-        localStorage.setItem(KEY, String(!_get()));
-        _applyHeader(); _syncUI();
-        if (typeof showNotification === 'function')
-            showNotification(_get() ? '顶部栏已常驻清晰 ✓' : '顶部栏已恢复悬停清晰', 'success', 1800);
-    };
-
-    _applyHeader();
-    document.addEventListener('DOMContentLoaded', function(){ _applyHeader(); _syncUI(); });
-    setTimeout(function(){ _applyHeader(); _syncUI(); }, 500);
-    setTimeout(function(){ _applyHeader(); _syncUI(); }, 1500);
-})();
 
 (function() {
     var KEY = 'keepaliveAudioEnabled';
